@@ -730,6 +730,24 @@
           <div id="stage-skin-overlay" class="stage-skin-overlay skin-keyhole-gold"></div>
           <div class="stage-watermark">KEYHOLE LIVE FEED</div>
         </div>
+
+        <!-- Local Stage Media & Skin Overlay Panel -->
+        <div style="padding:10px 16px; background:var(--paper-2); border-top:1px solid var(--line); display:flex; flex-wrap:wrap; gap:10px; align-items:center; font-size:0.8rem;">
+          <label style="display:flex; align-items:center; gap:6px; flex:1; min-width:200px;">
+            <span style="color:var(--gold-bright); font-weight:600;">Load Local Media:</span>
+            <input type="file" id="local-stage-file-input" accept="image/*,video/*" class="gate-input" style="padding:4px 8px; font-size:0.8rem;" />
+          </label>
+
+          <label style="display:flex; align-items:center; gap:6px;">
+            <span style="color:var(--muted); font-weight:600;">Stage Skin:</span>
+            <select id="stage-skin-select" class="gate-input" style="padding:4px 8px; font-size:0.8rem;">
+              <option value="keyhole_gold">Classic Keyhole Gold HUD</option>
+              <option value="neon_cyber">Neon Cyber Frame</option>
+              <option value="glass_vignette">Minimalist Glass Vignette</option>
+              <option value="streamer_vip">Streamer VIP HUD</option>
+            </select>
+          </label>
+        </div>
       </div>
 
       <!-- Integrated Chat Panel -->
@@ -1928,6 +1946,41 @@ function setupEventListeners() {
       if (elBtnGenTranslate) {
         elBtnGenTranslate.addEventListener('click', handleGenerateAndTranslate);
       }
+
+      // Local Stage File & Skin Select Listeners
+      const elLocalFileInput = document.getElementById('local-stage-file-input');
+      const elStageSkinSelect = document.getElementById('stage-skin-select');
+
+      if (elLocalFileInput) {
+        elLocalFileInput.addEventListener('change', handleLocalStageFileUpload);
+      }
+      if (elStageSkinSelect) {
+        elStageSkinSelect.addEventListener('change', (e) => {
+          const skinName = (e.target.value || 'keyhole_gold').replace('_', '-');
+          if (elStageSkinOverlay) {
+            elStageSkinOverlay.className = `stage-skin-overlay skin-${skinName}`;
+          }
+        });
+      }
+    }
+
+    function handleLocalStageFileUpload(e) {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+
+      const fileUrl = URL.createObjectURL(file);
+      if (file.type.startsWith('video/')) {
+        elStageVideo.src = fileUrl;
+        elStageVideo.style.display = 'block';
+        elStageFallbackImg.style.display = 'none';
+        elStageVideo.play().catch(() => {});
+      } else {
+        elStageVideo.style.display = 'none';
+        elStageFallbackImg.src = fileUrl;
+        elStageFallbackImg.style.display = 'block';
+      }
+
+      appendSystemMessage(`[Stage Player] Loaded local media file: ${file.name}`);
     }
 
     // Initialize on DOM load

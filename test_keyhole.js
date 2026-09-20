@@ -100,4 +100,10 @@ test('Keyhole Application HTML & Architecture Integrity', async (t) => {
     assert.ok(indexHtml.includes('id="disp-translated-meaning"'), 'Translated meaning display span present');
     assert.ok(indexHtml.includes('function handleGenerateAndTranslate()'), 'handleGenerateAndTranslate handler defined');
   });
+
+  await t.test('Local stage media file upload & stage skin selector controls exist', () => {
+    assert.ok(indexHtml.includes('id="local-stage-file-input"'), 'Local stage file input present');
+    assert.ok(indexHtml.includes('id="stage-skin-select"'), 'Stage skin selector dropdown present');
+    assert.ok(indexHtml.includes('function handleLocalStageFileUpload(e)'), 'handleLocalStageFileUpload handler defined');
+  });
 });
