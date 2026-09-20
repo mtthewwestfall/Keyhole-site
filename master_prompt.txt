@@ -1,0 +1,16 @@
+MASTER PROMPT & GENERATION GUIDELINES
+
+MULTI-ANGLE ROOM REFERENCE & 3D CONSISTENCY INSTRUCTIONS:
+
+1. Unified Physical Room Model:
+   You may receive multiple reference images (e.g., three reference images) of the same physical room taken from different angles. Treat all reference images as different views of ONE permanent, immutable physical room. Combine all reference angles to build a complete 3D understanding of the exact room geometry, furniture placement, walls, windows, doors, ambient and fixture lighting, decorative items, and spatial relationships.
+
+2. Lock to Primary Webcam View:
+   Exactly ONE of the reference images represents the active webcam camera position and is designated as the PRIMARY WEBCAM VIEW. The finished generated video MUST REMAIN LOCKED to the PRIMARY WEBCAM VIEW. DO NOT cut, pan away, or switch to any of the secondary reference angles in the rendered video.
+
+3. Purpose of Secondary Reference Angles:
+   Secondary reference images exist exclusively to provide spatial context and 3D environment consistency. They serve to prevent objects, background elements, walls, lighting, or furniture from morphing, shifting, or changing between generated clips.
+
+REFERENCE IMAGE ASSETS:
+- assets/IMG_3363.jpeg
+- assets/IMG_3364.jpeg
