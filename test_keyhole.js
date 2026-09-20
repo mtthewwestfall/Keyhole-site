@@ -65,10 +65,10 @@ test('Keyhole Application HTML & Architecture Integrity', async (t) => {
     assert.ok(indexHtml.includes('@media (min-width: 820px)'), 'Responsive media queries configured for mobile first');
   });
 
-  await t.test('Gemini AI Studio UI & Sims Furniture Editor elements exist in DOM', () => {
-    assert.ok(indexHtml.includes('id="gemini-studio-btn"'), 'Gemini studio nav button present');
-    assert.ok(indexHtml.includes('id="gemini-studio-modal"'), 'Gemini studio modal present');
-    assert.ok(indexHtml.includes('id="gemini-prompt-output"'), 'Gemini prompt output textarea present');
+  await t.test('Display Control Center UI & Display Editor elements exist in DOM', () => {
+    assert.ok(indexHtml.includes('id="gemini-studio-btn"'), 'Display control center nav button present');
+    assert.ok(indexHtml.includes('Display Control Center'), 'Display Control Center title present');
+    assert.ok(indexHtml.includes('id="gemini-studio-modal"'), 'Display control center modal present');
     assert.ok(indexHtml.includes('id="stage-skin-overlay"'), 'Stage webcam skin overlay container present');
   });
 

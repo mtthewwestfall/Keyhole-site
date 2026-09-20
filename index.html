@@ -686,7 +686,7 @@
     </a>
     <div class="header-nav">
       <span id="nav-badge" class="badge badge-live">Live</span>
-      <button id="gemini-studio-btn" class="btn-small btn-gold-outline">Gemini Studio & Room Editor</button>
+      <button id="gemini-studio-btn" class="btn-small btn-gold-outline">Display Control Center</button>
       <button id="switch-character-btn" class="btn-small" style="display:none;">Change Room</button>
       <button id="reset-session-btn" class="btn-small">Reset Session</button>
     </div>
@@ -789,22 +789,22 @@
     </div>
   </div>
 
-    <!-- GEMINI STUDIO & SIMS ROOM EDITOR MODAL -->
+    <!-- DISPLAY CONTROL CENTER MODAL -->
   <div id="gemini-studio-modal" class="modal-backdrop">
     <div class="modal-card-large">
       <button id="gemini-modal-close-btn" class="modal-close">&times;</button>
-      <h2 class="modal-title">Gemini AI Studio & Sims Room Editor</h2>
+      <h2 class="modal-title">Display Control Center</h2>
       <p class="modal-desc">
-        Configure Gemini image generation parameters enforcing multi-angle 3D spatial consistency and primary webcam view locking. Customize Sims-style realistic furniture and webcam skins.
+        User Display Control Center: Manage live stream feeds, upload picture & video references, translate fruit code signals, and configure stage HUD skins.
       </p>
 
       <div class="studio-grid">
-        <!-- Column 1: Rules & Customization -->
+        <!-- Column 1: Reference Picture & Stage Settings -->
         <div style="display:flex; flex-direction:column; gap:12px;">
 
-          <!-- Section A: Gemini Rules -->
+          <!-- Section A: Display Rules -->
           <div class="studio-section">
-            <div class="studio-sec-title">Gemini Generation Rules</div>
+            <div class="studio-sec-title">Display Settings & Lock</div>
             <label class="furniture-chip" style="margin-bottom:6px;">
               <input type="checkbox" id="rule-multiangle-check" checked />
               <span>Multi-Angle 3D Spatial Consistency System</span>
@@ -814,42 +814,29 @@
               <span>Lock Output strictly to PRIMARY WEBCAM VIEW</span>
             </label>
             <div style="display:flex; gap:10px; margin-top:8px;">
-              <label style="font-size:0.8rem; color:var(--muted);">Motion Mode:
+              <label style="font-size:0.8rem; color:var(--muted);">Stage Display Mode:
                 <select id="gemini-motion-select" class="gate-input" style="padding:4px 8px; font-size:0.8rem; margin-top:4px;">
                   <option value="live_webcam">Live Motion Webcam Video</option>
-                  <option value="static_render">Static High-Res Render Image</option>
+                  <option value="static_render">Static Reference Picture Display</option>
                 </select>
               </label>
             </div>
           </div>
 
-          <!-- Section B: Sims-Style Furniture Additions -->
+          <!-- Section B: Room Display Elements -->
           <div class="studio-section">
-            <div class="studio-sec-title">Sims-Style Furniture Additions</div>
+            <div class="studio-sec-title">Room Display Enhancements</div>
             <div class="furniture-grid">
-              <label class="furniture-chip"><input type="checkbox" class="furniture-add-check" value="Velvet Platform Bed" checked /> Bed: Velvet Platform Bed</label>
-              <label class="furniture-chip"><input type="checkbox" class="furniture-add-check" value="Plush L-Sofa" checked /> Seating: Plush L-Sofa</label>
-              <label class="furniture-chip"><input type="checkbox" class="furniture-add-check" value="Ambient Neon Wall Sign" checked /> Decor: Neon Wall Sign</label>
-              <label class="furniture-chip"><input type="checkbox" class="furniture-add-check" value="Warm Ambient Floor Lamp" checked /> Lighting: Ambient Floor Lamp</label>
-              <label class="furniture-chip"><input type="checkbox" class="furniture-add-check" value="Potted Monstera Plant" /> Plant: Potted Monstera</label>
-              <label class="furniture-chip"><input type="checkbox" class="furniture-add-check" value="Full-Length Floor Mirror" /> Decor: Floor Mirror</label>
+              <label class="furniture-chip"><input type="checkbox" class="furniture-add-check" value="Velvet Platform Bed" checked /> Velvet Platform Bed</label>
+              <label class="furniture-chip"><input type="checkbox" class="furniture-add-check" value="Plush L-Sofa" checked /> Plush L-Sofa</label>
+              <label class="furniture-chip"><input type="checkbox" class="furniture-add-check" value="Ambient Neon Wall Sign" checked /> Ambient Neon Sign</label>
+              <label class="furniture-chip"><input type="checkbox" class="furniture-add-check" value="Warm Ambient Floor Lamp" checked /> Warm Ambient Lamp</label>
             </div>
           </div>
 
-          <!-- Section C: Furniture Removals -->
+          <!-- Section C: Stage HUD Overlay Skins -->
           <div class="studio-section">
-            <div class="studio-sec-title">Remove / Clean Furniture</div>
-            <div class="furniture-grid">
-              <label class="furniture-chip"><input type="checkbox" class="furniture-remove-check" value="Office Work Desk" /> Remove Desk</label>
-              <label class="furniture-chip"><input type="checkbox" class="furniture-remove-check" value="Coffee Table" /> Remove Coffee Table</label>
-              <label class="furniture-chip"><input type="checkbox" class="furniture-remove-check" value="Wall Artwork" /> Remove Wall Art</label>
-              <label class="furniture-chip"><input type="checkbox" class="furniture-remove-check" value="Background Shelving" /> Remove Shelving</label>
-            </div>
-          </div>
-
-          <!-- Section D: Webcam Skins -->
-          <div class="studio-section">
-            <div class="studio-sec-title">Webcam Overlay Skins</div>
+            <div class="studio-sec-title">Stage HUD Overlay Skins</div>
             <select id="webcam-skin-select" class="gate-input" style="padding:6px 10px; font-size:0.85rem;">
               <option value="keyhole_gold">Classic Keyhole Gold HUD</option>
               <option value="neon_cyber">Neon Cyber Frame</option>
@@ -858,28 +845,23 @@
             </select>
           </div>
 
+          <div style="display:flex; gap:8px;">
+            <button id="btn-apply-gemini-stage" class="btn-verify" style="flex:1; font-size:0.85rem; padding:10px;">Apply Control Center Settings to Stage</button>
+          </div>
+          <div id="gemini-status-feedback" style="font-size:0.8rem; color:var(--gold-bright); display:none;"></div>
+
         </div>
 
-        <!-- Column 2: Prompt Master Output & Stage Control -->
+        <!-- Column 2: Translation & Extended Display Controls -->
         <div style="display:flex; flex-direction:column; gap:12px;">
 
-          <div class="studio-section" style="flex:1; display:flex; flex-direction:column;">
-            <div class="studio-sec-title">Formatted Gemini Master Prompt</div>
-            <p style="font-size:0.78rem; color:var(--muted); margin:0 0 6px;">
-              Auto-generated prompt adhering strictly to 3D spatial consistency & view locking rules for Gemini generation:
-            </p>
-            <textarea id="gemini-prompt-output" class="prompt-output-box" readonly style="flex:1;"></textarea>
-
-            <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
-              <button id="btn-copy-prompt" class="btn-small" style="background:var(--paper); border:1px solid var(--line);">Copy Prompt</button>
-              <button id="btn-simulate-gemini" class="btn-small" style="background:var(--teal-soft); color:var(--teal); border:1px solid var(--teal);">Simulate Gemini Gen</button>
-              <button id="btn-apply-gemini-stage" class="btn-verify" style="flex:1; min-width:160px; font-size:0.85rem; padding:8px 12px;">Apply to Active Room Stage</button>
-            </div>
-            <div id="gemini-status-feedback" style="font-size:0.8rem; color:var(--gold-bright); margin-top:8px; display:none;"></div>
-          </div>
+          <!-- Hidden Prompt elements for backward compatibility -->
+          <textarea id="gemini-prompt-output" style="display:none;" readonly></textarea>
+          <button id="btn-copy-prompt" style="display:none;"></button>
+          <button id="btn-simulate-gemini" style="display:none;"></button>
 
           <!-- Section E: Translation & Extended Display Engine -->
-          <div class="studio-section" style="margin-top:12px;">
+          <div class="studio-section">
             <div class="studio-sec-title">Translation & Extended Display Generator</div>
 
             <div style="display:flex; flex-direction:column; gap:8px; font-size:0.82rem;">
@@ -1792,7 +1774,7 @@
 
       const activeChar = CHARACTERS[state.activeCharId];
       if (activeChar) {
-        appendSystemMessage(`[Gemini AI Studio] Applied room model with ${state.geminiStudio.furnitureAdditions.length} furniture items & ${state.geminiStudio.webcamSkin} skin.`);
+        appendSystemMessage(`[Display Control Center] Applied stage display settings with ${state.geminiStudio.webcamSkin} skin.`);
       }
 
       closeGeminiStudioModal();
