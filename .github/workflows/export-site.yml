@@ -1,0 +1,22 @@
+name: Export site artifact
+
+on:
+  push:
+    branches:
+      - chatgpt-netlify-export
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/upload-artifact@v4
+        with:
+          name: keyhole-site-export
+          path: |
+            .
+            !.git
+          include-hidden-files: true
