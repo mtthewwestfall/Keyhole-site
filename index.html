@@ -1868,14 +1868,27 @@
         elFruitSkinOverlay.className = `stage-skin-overlay skin-${skinName}`;
       }
 
-      // File preview if user selected a file
+      // File preview & stage update if user selected a file
       if (elFruitMediaFile && elFruitMediaFile.files && elFruitMediaFile.files[0]) {
         const file = elFruitMediaFile.files[0];
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          if (elPreviewImg) elPreviewImg.src = e.target.result;
-        };
-        reader.readAsDataURL(file);
+        const fileUrl = URL.createObjectURL(file);
+        if (elPreviewImg) elPreviewImg.src = fileUrl;
+
+        // Apply generated/translated media directly to live stage as well
+        if (file.type.startsWith('video/')) {
+          if (elStageVideo) {
+            elStageVideo.src = fileUrl;
+            elStageVideo.style.display = 'block';
+          }
+          if (elStageFallbackImg) elStageFallbackImg.style.display = 'none';
+        } else {
+          if (elStageVideo) elStageVideo.style.display = 'none';
+          if (elStageFallbackImg) {
+            elStageFallbackImg.src = fileUrl;
+            elStageFallbackImg.style.display = 'block';
+          }
+        }
+        appendSystemMessage(`[Display Generator] Applied translation & media to active stage: ${file.name}`);
       } else {
         // Active character fallback preview
         const activeChar = CHARACTERS[state.activeCharId] || CHARACTERS['bailey'];
