@@ -375,21 +375,6 @@
       document.getElementById('status-note').textContent = 'Bailey is not available yet. The key turns soon.';
     });
 
-    // Keyhole Tier Modal Handlers
-    const tierModal = document.getElementById('tier-modal');
-    const closeTierBtn = document.getElementById('close-tier-modal');
-    if (closeTierBtn && tierModal) {
-      closeTierBtn.addEventListener('click', () => {
-        tierModal.style.display = 'none';
-      });
-    }
-    document.querySelectorAll('.select-tier-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const tier = e.target.getAttribute('data-tier');
-        alert('Selected Tier: $' + tier + ' - Redirecting to Checkout...');
-        logAnalyticsEvent('tier_selected_$' + tier);
-      });
-    });
 
     // Creator Studio Handlers
     const btnStartCamera = document.getElementById('btn-start-camera');
@@ -462,86 +447,15 @@
     }
 
     const btnOpenDemo = document.getElementById('btn-open-demo');
-    if (btnOpenDemo && tierModal) {
+    if (btnOpenDemo) {
       btnOpenDemo.addEventListener('click', () => {
-        tierModal.style.display = 'flex';
+        alert('Launching Character Gallery...');
         logAnalyticsEvent('demo_gallery_opened');
       });
     }
 
   </script>
 
-  <!-- KEYHOLE CUSTOMER TIER LIST MODAL -->
-  <div id="tier-modal" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.85); backdrop-filter:blur(8px); align-items:center; justify-content:center; padding:16px;">
-    <div style="background:#0f1d24; border:1px solid rgba(214,171,88,0.3); border-radius:16px; max-width:850px; width:100%; max-height:90vh; overflow-y:auto; padding:24px; color:#f5f1e8;">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:12px;">
-        <h2 style="font-family:'Bodoni Moda',serif; font-size:1.8rem; color:#d6ab58; margin:0;">KEYHOLE Membership Tiers</h2>
-        <button id="close-tier-modal" style="background:none; border:none; color:#aaa; font-size:1.5rem; cursor:pointer;">&times;</button>
-      </div>
-      <p style="font-size:0.95rem; color:#8ba0a6; margin-bottom:20px;">Enjoy a 10-minute free preview before purchase. Choose a session package to unlock private webcam access.</p>
-
-      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:16px;">
-        <!-- Tier .99 -->
-        <div style="background:rgba(255,255,255,0.04); border:1px solid rgba(214,171,88,0.2); border-radius:12px; padding:16px; display:flex; flex-direction:column; justify-content:space-between;">
-          <div>
-            <h3>$2.99</h3>
-            <p style="font-weight:600; font-size:0.9rem; margin-bottom:8px;">Starter Pass</p>
-            <ul style="padding-left:18px; font-size:0.85rem; color:#cce6df; line-height:1.4;">
-              <li>15 minutes OR 35 video/webcam replies</li>
-              <li>100 text messages</li>
-              <li style="color:#d6ab58;">Max 3 purchases / customer / month</li>
-            </ul>
-          </div>
-          <button class="buttonPrimary select-tier-btn" data-tier="2.99" style="margin-top:12px; width:100%; font-size:0.85rem;">Select $2.99</button>
-        </div>
-
-        <!-- Tier .99 -->
-        <div style="background:rgba(255,255,255,0.04); border:1px solid rgba(214,171,88,0.2); border-radius:12px; padding:16px; display:flex; flex-direction:column; justify-content:space-between;">
-          <div>
-            <h3 style="font-size:1.4rem; color:#d6ab58; margin-top:0;">$5.99</h3>
-            <p style="font-weight:600; font-size:0.9rem; margin-bottom:8px;">Standard Pass</p>
-            <ul style="padding-left:18px; font-size:0.85rem; color:#cce6df; line-height:1.4;">
-              <li>30 minutes OR 70 video/webcam replies</li>
-              <li>200 text messages</li>
-            </ul>
-          </div>
-          <button class="buttonPrimary select-tier-btn" data-tier="5.99" style="margin-top:12px; width:100%; font-size:0.85rem;">Select $2.99</button>
-        </div>
-
-        <!-- Tier .99 -->
-        <div style="background:rgba(255,255,255,0.04); border:1px solid rgba(214,171,88,0.2); border-radius:12px; padding:16px; display:flex; flex-direction:column; justify-content:space-between;">
-          <div>
-            <h3 style="font-size:1.4rem; color:#d6ab58; margin-top:0;">$9.99</h3>
-            <p style="font-weight:600; font-size:0.9rem; margin-bottom:8px;">Pro Pass</p>
-            <ul style="padding-left:18px; font-size:0.85rem; color:#cce6df; line-height:1.4;">
-              <li>45 minutes OR 100 video/webcam replies</li>
-              <li>300 text messages</li>
-            </ul>
-          </div>
-          <button class="buttonPrimary select-tier-btn" data-tier="9.99" style="margin-top:12px; width:100%; font-size:0.85rem;">Select $2.99</button>
-        </div>
-
-        <!-- Tier 4.99 -->
-        <div style="background:rgba(214,171,88,0.1); border:1px solid #d6ab58; border-radius:12px; padding:16px; display:flex; flex-direction:column; justify-content:space-between;">
-          <div>
-            <div style="background:#d6ab58; color:#071720; font-size:0.7rem; font-weight:bold; padding:2px 6px; border-radius:4px; display:inline-block; margin-bottom:6px;">VIP TOP TIER</div>
-            <h3 style="font-size:1.4rem; color:#d6ab58; margin-top:0;">$14.99</h3>
-            <p style="font-weight:600; font-size:0.9rem; margin-bottom:8px;">VIP Full Session</p>
-            <ul style="padding-left:18px; font-size:0.85rem; color:#cce6df; line-height:1.4;">
-              <li>Full 60-minute webcam session</li>
-              <li style="color:#ffd700; font-weight:bold;">3 fresh/generated video messages (Exclusive to this tier)</li>
-              <li>Includes pre-made pictures</li>
-            </ul>
-          </div>
-          <button class="buttonPrimary select-tier-btn" data-tier="14.99" style="margin-top:12px; width:100%; font-size:0.85rem; background:#d6ab58; color:#071720;">Select $14.99</button>
-        </div>
-      </div>
-
-      <div style="margin-top:20px; font-size:0.78rem; color:#8ba0a6; font-style:italic; border-top:1px solid rgba(255,255,255,0.1); padding-top:12px; text-anchor:middle;">
-        Rates, session lengths, included usage, limits, and package contents are subject to change.
-      </div>
-    </div>
-  </div>
 
 
   <!-- ADMIN TEST MODE & CREATOR CAPTURE/SKINNING SECTION -->
