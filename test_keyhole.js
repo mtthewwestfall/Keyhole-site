@@ -94,4 +94,14 @@ test('Keyhole Application HTML & Architecture Integrity', async (t) => {
     assert.ok(indexHtml.includes('id="admin-key-secondary"'), 'Secondary admin password field exists');
     assert.ok(indexHtml.includes('async function verifyAdminDualSecrets'), 'verifyAdminDualSecrets verification function defined');
   });
+
+  await t.test('Fruit Command Code Generator & Translation Engine elements exist and map correctly', () => {
+    assert.ok(indexHtml.includes('id="fruit-command-select"'), 'Fruit command select present');
+    assert.ok(indexHtml.includes('id="btn-generate-translate"'), 'Generate & Translate button present');
+    assert.ok(indexHtml.includes('id="disp-translated-meaning"'), 'Translation meaning display present');
+    assert.ok(indexHtml.includes('id="expand-surroundings-check"'), 'Expand surroundings checkbox present');
+    assert.ok(indexHtml.includes('FRUIT_COMMAND_MAP'), 'Fruit command mapping dictionary defined');
+    assert.ok(indexHtml.includes("'/cherries': 'bra comes off'"), 'Cherries fruit code maps to bra comes off');
+    assert.ok(indexHtml.includes('onerror="this.onerror=null;'), 'Fallback image onerror handler present');
+  });
 });
