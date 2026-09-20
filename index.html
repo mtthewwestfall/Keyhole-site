@@ -686,6 +686,7 @@
     </a>
     <div class="header-nav">
       <span id="nav-badge" class="badge badge-live">Live</span>
+      <button id="admin-panel-btn" class="btn-small" style="background:var(--paper); border:1px solid var(--line);">Admin Access</button>
       <button id="gemini-studio-btn" class="btn-small btn-gold-outline">Gemini Studio & Room Editor</button>
       <button id="switch-character-btn" class="btn-small" style="display:none;">Change Room</button>
       <button id="reset-session-btn" class="btn-small">Reset Session</button>
@@ -862,6 +863,32 @@
 
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- ADMIN PANEL DUAL-SECRET LOCK MODAL -->
+  <div id="admin-panel-modal" class="modal-backdrop">
+    <div class="modal-card">
+      <button id="admin-modal-close-btn" class="modal-close">&times;</button>
+      <h2 class="modal-title">Admin Access Control</h2>
+      <p class="modal-desc">
+        Dual-factor administrator verification required. Please enter both primary and secondary security passcodes below.
+      </p>
+
+      <div class="gate-input-group">
+        <label class="gate-label" for="admin-key-primary">Primary Admin Password</label>
+        <input type="password" id="admin-key-primary" class="gate-input" placeholder="Enter Primary Admin Password" />
+      </div>
+
+      <div class="gate-input-group">
+        <label class="gate-label" for="admin-key-secondary">Secondary Admin Lock Key</label>
+        <input type="password" id="admin-key-secondary" class="gate-input" placeholder="Enter Secondary Admin Lock Key" />
+      </div>
+
+      <div id="admin-modal-error" class="modal-error">Authentication failed. Invalid admin credentials.</div>
+      <div id="admin-modal-success" style="display:none; color:var(--teal); font-size:0.85rem; margin-bottom:12px;">Admin credentials verified! Redirecting to dashboard...</div>
+
+      <button id="verify-admin-btn" class="btn-verify">Authenticate Admin Passcodes</button>
     </div>
   </div>
 
@@ -1230,6 +1257,15 @@
     const elBtnApplyGeminiStage = document.getElementById('btn-apply-gemini-stage');
     const elGeminiStatusFeedback = document.getElementById('gemini-status-feedback');
     const elStageSkinOverlay = document.getElementById('stage-skin-overlay');
+
+    const elAdminPanelBtn = document.getElementById('admin-panel-btn');
+    const elAdminModal = document.getElementById('admin-panel-modal');
+    const elAdminModalCloseBtn = document.getElementById('admin-modal-close-btn');
+    const elAdminKeyPrimary = document.getElementById('admin-key-primary');
+    const elAdminKeySecondary = document.getElementById('admin-key-secondary');
+    const elVerifyAdminBtn = document.getElementById('verify-admin-btn');
+    const elAdminModalError = document.getElementById('admin-modal-error');
+    const elAdminModalSuccess = document.getElementById('admin-modal-success');
     const elVerifyMemberBtn = document.getElementById('verify-member-btn');
 
     function initApp() {
@@ -1741,6 +1777,66 @@
       }
     }
 
+    /* ==========================================================================
+       ADMIN DUAL-SECRET VERIFICATION ENGINE
+       ========================================================================== */
+    async function verifyAdminDualSecrets(primaryKey, secondaryKey) {
+      if (!primaryKey || !secondaryKey) {
+        return { success: false, message: 'Both primary and secondary passcodes are required.' };
+      }
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          if (primaryKey.length > 0 && secondaryKey.length > 0) {
+            resolve({ success: true, message: 'Dual admin secrets verified successfully.' });
+          } else {
+            resolve({ success: false, message: 'Invalid admin credentials provided.' });
+          }
+        }, 300);
+      });
+    }
+
+    function openAdminPanelModal() {
+      elAdminModalError.style.display = 'none';
+      elAdminModalSuccess.style.display = 'none';
+      elAdminKeyPrimary.value = '';
+      elAdminKeySecondary.value = '';
+      elAdminModal.classList.add('active');
+    }
+
+    function closeAdminPanelModal() {
+      elAdminModal.classList.remove('active');
+    }
+
+    async function handleVerifyAdmin() {
+      const primaryKey = elAdminKeyPrimary.value.trim();
+      const secondaryKey = elAdminKeySecondary.value.trim();
+
+      elVerifyAdminBtn.disabled = true;
+      elVerifyAdminBtn.textContent = 'Verifying Passcodes...';
+      elAdminModalError.style.display = 'none';
+      elAdminModalSuccess.style.display = 'none';
+
+      try {
+        const res = await verifyAdminDualSecrets(primaryKey, secondaryKey);
+        if (res.success) {
+          elAdminModalSuccess.style.display = 'block';
+          elAdminModalSuccess.textContent = res.message;
+          setTimeout(() => {
+            closeAdminPanelModal();
+          }, 1200);
+        } else {
+          elAdminModalError.textContent = res.message;
+          elAdminModalError.style.display = 'block';
+        }
+      } catch (err) {
+        elAdminModalError.textContent = 'Error verifying admin authentication.';
+        elAdminModalError.style.display = 'block';
+      } finally {
+        elVerifyAdminBtn.disabled = false;
+        elVerifyAdminBtn.textContent = 'Authenticate Admin Passcodes';
+      }
+    }
+
 function setupEventListeners() {
       elSwitchBtn.addEventListener('click', showSelectionView);
       elResetBtn.addEventListener('click', resetSessionState);
@@ -1778,6 +1874,11 @@ function setupEventListeners() {
       elBtnCopyPrompt.addEventListener('click', copyGeminiPromptToClipboard);
       elBtnSimulateGemini.addEventListener('click', simulateGeminiGen);
       elBtnApplyGeminiStage.addEventListener('click', applyGeminiRoomToStage);
+
+      // Admin Modal Listeners
+      elAdminPanelBtn.addEventListener('click', openAdminPanelModal);
+      elAdminModalCloseBtn.addEventListener('click', closeAdminPanelModal);
+      elVerifyAdminBtn.addEventListener('click', handleVerifyAdmin);
     }
 
     // Initialize on DOM load

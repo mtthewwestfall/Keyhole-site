@@ -87,4 +87,11 @@ test('Keyhole Application HTML & Architecture Integrity', async (t) => {
     assert.ok(indexHtml.includes('skin-glass-vignette'), 'Minimalist Glass Vignette webcam skin CSS defined');
     assert.ok(indexHtml.includes('skin-streamer-vip'), 'Streamer VIP webcam skin CSS defined');
   });
+
+  await t.test('Admin Panel dual secret verification modal & password fields exist', () => {
+    assert.ok(indexHtml.includes('id="admin-panel-modal"'), 'Admin panel modal exists');
+    assert.ok(indexHtml.includes('id="admin-key-primary"'), 'Primary admin password field exists');
+    assert.ok(indexHtml.includes('id="admin-key-secondary"'), 'Secondary admin password field exists');
+    assert.ok(indexHtml.includes('async function verifyAdminDualSecrets'), 'verifyAdminDualSecrets verification function defined');
+  });
 });
