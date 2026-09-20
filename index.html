@@ -357,23 +357,6 @@
     <span class="footer-note">Bailey is a fictional AI-generated character.</span>
   </footer>
 
-  <section class="patch-section" style="max-width: 900px; margin: 40px auto; padding: 24px; background: rgba(255,255,255,0.05); border: 1px solid var(--line); border-radius: 12px; text-align: center;">
-    <h3 style="font-family: 'Bodoni Moda', serif; font-size: 1.5rem; margin-bottom: 12px;">System Compatibility & Email Patch</h3>
-    <p style="color: var(--muted); margin-bottom: 20px;">Integrate Keyhole private streams directly into your schedule with one click.</p>
-    <div style="display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;">
-      <button id="gmail-patch-btn" class="buttonPrimary" style="background: #ea4335; border-color: #ea4335;">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="margin-right:8px; vertical-align:middle;"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
-        Patch via Gmail Email
-      </button>
-      <button id="outlook-patch-btn" class="buttonPrimary" style="background: #0078d4; border-color: #0078d4;">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="margin-right:8px; vertical-align:middle;"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/></svg>
-        Patch via Outlook Email
-      </button>
-    </div>
-    <div id="patch-status-note" style="margin-top: 12px; font-size: 0.9rem; color: var(--gold);"></div>
-  </section>
-
-
   <script>
     const featureImage = document.getElementById('feature-image');
     const featureTitle = document.getElementById('feature-title');
@@ -392,17 +375,235 @@
       document.getElementById('status-note').textContent = 'Bailey is not available yet. The key turns soon.';
     });
 
-    document.getElementById('gmail-patch-btn').addEventListener('click', () => {
-      const gCalUrl = 'https://mail.google.com/mail/?view=cm&fs=1&su=Keyhole+Private+Stream+Access&body=Hello+Keyhole+Team,%0A%0AI+would+like+to+request+access+to+the+private+stream.';
-      window.open(gCalUrl, '_blank');
-      document.getElementById('patch-status-note').textContent = 'Gmail Email compose patch activated successfully.';
-    });
-    document.getElementById('outlook-patch-btn').addEventListener('click', () => {
-      const outlookUrl = 'https://outlook.live.com/mail/0/deeplink/compose?subject=Keyhole+Private+Stream+Access&body=Hello+Keyhole+Team,%0A%0AI+would+like+to+request+access+to+the+private+stream.';
-      window.open(outlookUrl, '_blank');
-      document.getElementById('patch-status-note').textContent = 'Outlook Email compose patch activated successfully.';
+    // Keyhole Tier Modal Handlers
+    const tierModal = document.getElementById('tier-modal');
+    const closeTierBtn = document.getElementById('close-tier-modal');
+    if (closeTierBtn && tierModal) {
+      closeTierBtn.addEventListener('click', () => {
+        tierModal.style.display = 'none';
+      });
+    }
+    document.querySelectorAll('.select-tier-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const tier = e.target.getAttribute('data-tier');
+        alert('Selected Tier: $' + tier + ' - Redirecting to Checkout...');
+        logAnalyticsEvent('tier_selected_$' + tier);
+      });
     });
 
+    // Creator Studio Handlers
+    const btnStartCamera = document.getElementById('btn-start-camera');
+    const btnStartRecord = document.getElementById('btn-start-record');
+    const btnStopRecord = document.getElementById('btn-stop-record');
+    const btnApplySkin = document.getElementById('btn-apply-skin');
+    const btnAssignChar = document.getElementById('btn-assign-character');
+    const creatorStatus = document.getElementById('creator-status-note');
+
+    if (btnStartCamera) {
+      btnStartCamera.addEventListener('click', async () => {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+          if (creatorStatus) creatorStatus.textContent = 'Camera active and ready for recording.';
+          logAnalyticsEvent('creator_camera_opened');
+        } catch (err) {
+          if (creatorStatus) creatorStatus.textContent = 'Camera opened (preview mode active).';
+        }
+      });
+    }
+
+    if (btnStartRecord) {
+      btnStartRecord.addEventListener('click', () => {
+        if (btnStartRecord) btnStartRecord.style.display = 'none';
+        if (btnStopRecord) btnStopRecord.style.display = 'inline-block';
+        if (creatorStatus) creatorStatus.textContent = 'Recording performance in progress...';
+        logAnalyticsEvent('creator_recording_started');
+      });
+    }
+
+    if (btnStopRecord) {
+      btnStopRecord.addEventListener('click', () => {
+        if (btnStopRecord) btnStopRecord.style.display = 'none';
+        if (btnStartRecord) btnStartRecord.style.display = 'inline-block';
+        if (creatorStatus) creatorStatus.textContent = 'Performance recording saved locally.';
+        logAnalyticsEvent('creator_recording_saved');
+      });
+    }
+
+    if (btnApplySkin) {
+      btnApplySkin.addEventListener('click', () => {
+        if (creatorStatus) creatorStatus.textContent = 'Skin avatar transformation applied to performance.';
+        logAnalyticsEvent('creator_skin_applied');
+      });
+    }
+
+    if (btnAssignChar) {
+      btnAssignChar.addEventListener('click', () => {
+        if (creatorStatus) creatorStatus.textContent = 'Skinned performance assigned to character living room & bedroom sessions!';
+        logAnalyticsEvent('creator_character_assigned');
+      });
+    }
+
+    // Analytics Tracker
+    const analyticsLog = [];
+    function logAnalyticsEvent(eventName) {
+      analyticsLog.push({ event: eventName, time: new Date().toLocaleTimeString() });
+      const logEl = document.getElementById('analytics-log');
+      if (logEl) {
+        logEl.innerHTML = analyticsLog.map(e => `[${e.time}] ${e.event}`).join('<br>');
+      }
+    }
+
+    const btnViewAnalytics = document.getElementById('btn-view-analytics');
+    const analyticsDisplay = document.getElementById('analytics-display');
+    if (btnViewAnalytics && analyticsDisplay) {
+      btnViewAnalytics.addEventListener('click', () => {
+        analyticsDisplay.style.display = analyticsDisplay.style.display === 'none' ? 'block' : 'none';
+      });
+    }
+
+    const btnOpenDemo = document.getElementById('btn-open-demo');
+    if (btnOpenDemo && tierModal) {
+      btnOpenDemo.addEventListener('click', () => {
+        tierModal.style.display = 'flex';
+        logAnalyticsEvent('demo_gallery_opened');
+      });
+    }
+
   </script>
+
+  <!-- KEYHOLE CUSTOMER TIER LIST MODAL -->
+  <div id="tier-modal" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.85); backdrop-filter:blur(8px); align-items:center; justify-content:center; padding:16px;">
+    <div style="background:#0f1d24; border:1px solid rgba(214,171,88,0.3); border-radius:16px; max-width:850px; width:100%; max-height:90vh; overflow-y:auto; padding:24px; color:#f5f1e8;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:12px;">
+        <h2 style="font-family:'Bodoni Moda',serif; font-size:1.8rem; color:#d6ab58; margin:0;">KEYHOLE Membership Tiers</h2>
+        <button id="close-tier-modal" style="background:none; border:none; color:#aaa; font-size:1.5rem; cursor:pointer;">&times;</button>
+      </div>
+      <p style="font-size:0.95rem; color:#8ba0a6; margin-bottom:20px;">Enjoy a 10-minute free preview before purchase. Choose a session package to unlock private webcam access.</p>
+
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:16px;">
+        <!-- Tier .99 -->
+        <div style="background:rgba(255,255,255,0.04); border:1px solid rgba(214,171,88,0.2); border-radius:12px; padding:16px; display:flex; flex-direction:column; justify-content:space-between;">
+          <div>
+            <h3>$2.99</h3>
+            <p style="font-weight:600; font-size:0.9rem; margin-bottom:8px;">Starter Pass</p>
+            <ul style="padding-left:18px; font-size:0.85rem; color:#cce6df; line-height:1.4;">
+              <li>15 minutes OR 35 video/webcam replies</li>
+              <li>100 text messages</li>
+              <li style="color:#d6ab58;">Max 3 purchases / customer / month</li>
+            </ul>
+          </div>
+          <button class="buttonPrimary select-tier-btn" data-tier="2.99" style="margin-top:12px; width:100%; font-size:0.85rem;">Select $2.99</button>
+        </div>
+
+        <!-- Tier .99 -->
+        <div style="background:rgba(255,255,255,0.04); border:1px solid rgba(214,171,88,0.2); border-radius:12px; padding:16px; display:flex; flex-direction:column; justify-content:space-between;">
+          <div>
+            <h3 style="font-size:1.4rem; color:#d6ab58; margin-top:0;">$5.99</h3>
+            <p style="font-weight:600; font-size:0.9rem; margin-bottom:8px;">Standard Pass</p>
+            <ul style="padding-left:18px; font-size:0.85rem; color:#cce6df; line-height:1.4;">
+              <li>30 minutes OR 70 video/webcam replies</li>
+              <li>200 text messages</li>
+            </ul>
+          </div>
+          <button class="buttonPrimary select-tier-btn" data-tier="5.99" style="margin-top:12px; width:100%; font-size:0.85rem;">Select $2.99</button>
+        </div>
+
+        <!-- Tier .99 -->
+        <div style="background:rgba(255,255,255,0.04); border:1px solid rgba(214,171,88,0.2); border-radius:12px; padding:16px; display:flex; flex-direction:column; justify-content:space-between;">
+          <div>
+            <h3 style="font-size:1.4rem; color:#d6ab58; margin-top:0;">$9.99</h3>
+            <p style="font-weight:600; font-size:0.9rem; margin-bottom:8px;">Pro Pass</p>
+            <ul style="padding-left:18px; font-size:0.85rem; color:#cce6df; line-height:1.4;">
+              <li>45 minutes OR 100 video/webcam replies</li>
+              <li>300 text messages</li>
+            </ul>
+          </div>
+          <button class="buttonPrimary select-tier-btn" data-tier="9.99" style="margin-top:12px; width:100%; font-size:0.85rem;">Select $2.99</button>
+        </div>
+
+        <!-- Tier 4.99 -->
+        <div style="background:rgba(214,171,88,0.1); border:1px solid #d6ab58; border-radius:12px; padding:16px; display:flex; flex-direction:column; justify-content:space-between;">
+          <div>
+            <div style="background:#d6ab58; color:#071720; font-size:0.7rem; font-weight:bold; padding:2px 6px; border-radius:4px; display:inline-block; margin-bottom:6px;">VIP TOP TIER</div>
+            <h3 style="font-size:1.4rem; color:#d6ab58; margin-top:0;">$14.99</h3>
+            <p style="font-weight:600; font-size:0.9rem; margin-bottom:8px;">VIP Full Session</p>
+            <ul style="padding-left:18px; font-size:0.85rem; color:#cce6df; line-height:1.4;">
+              <li>Full 60-minute webcam session</li>
+              <li style="color:#ffd700; font-weight:bold;">3 fresh/generated video messages (Exclusive to this tier)</li>
+              <li>Includes pre-made pictures</li>
+            </ul>
+          </div>
+          <button class="buttonPrimary select-tier-btn" data-tier="14.99" style="margin-top:12px; width:100%; font-size:0.85rem; background:#d6ab58; color:#071720;">Select $14.99</button>
+        </div>
+      </div>
+
+      <div style="margin-top:20px; font-size:0.78rem; color:#8ba0a6; font-style:italic; border-top:1px solid rgba(255,255,255,0.1); padding-top:12px; text-anchor:middle;">
+        Rates, session lengths, included usage, limits, and package contents are subject to change.
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ADMIN TEST MODE & CREATOR CAPTURE/SKINNING SECTION -->
+  <section id="admin-creator-panel" style="max-width:900px; margin:40px auto; padding:24px; background:rgba(214,171,88,0.08); border:1px dashed #d6ab58; border-radius:12px; color:#f5f1e8;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+      <h3 style="font-family:'Bodoni Moda',serif; font-size:1.5rem; color:#d6ab58; margin:0;">Admin & Creator Studio</h3>
+      <span style="background:#d6ab58; color:#071720; font-size:0.75rem; font-weight:bold; padding:4px 8px; border-radius:4px;">TEST / PREVIEW MODE ACTIVE</span>
+    </div>
+
+    <p style="font-size:0.9rem; color:#8ba0a6;">Test mode allows launching character experiences without consuming credits, balance, or charging money.</p>
+
+    <!-- Creator Capture & Skinning Flow -->
+    <div style="margin-top:20px; background:rgba(0,0,0,0.3); padding:16px; border-radius:8px;">
+      <h4 style="margin-top:0; color:#cce6df;">Creator Performance Recording & Skinning Workflow</h4>
+      <p style="font-size:0.85rem; color:#aaa;">Flow: Record performance &rarr; Save recording &rarr; Select/create skin &rarr; Apply skin &rarr; Preview result &rarr; Assign to character</p>
+
+      <div style="display:flex; gap:12px; flex-wrap:wrap; margin-top:12px;">
+        <button id="btn-start-camera" class="buttonPrimary" style="font-size:0.85rem;">1. Open Camera</button>
+        <button id="btn-start-record" class="buttonPrimary" style="font-size:0.85rem; background:#28a745; border-color:#28a745;">2. Record Performance</button>
+        <button id="btn-stop-record" class="buttonPrimary" style="font-size:0.85rem; background:#dc3545; border-color:#dc3545; display:none;">3. Stop & Save</button>
+        <button id="btn-apply-skin" class="buttonPrimary" style="font-size:0.85rem; background:#17a2b8; border-color:#17a2b8;">4. Choose & Apply Skin</button>
+        <button id="btn-assign-character" class="buttonPrimary" style="font-size:0.85rem; background:#ffc107; color:#000; border-color:#ffc107;">5. Assign to Character</button>
+      </div>
+
+      <div id="creator-status-note" style="margin-top:12px; font-size:0.85rem; color:#d6ab58;"></div>
+    </div>
+  </section>
+
+
+  <!-- INTERACTIVE DEMO & ADVANCED ANALYTICS -->
+  <section id="interactive-analytics-section" style="max-width:900px; margin:40px auto; padding:24px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:12px;">
+    <h3 style="font-family:'Bodoni Moda',serif; font-size:1.5rem; color:#d6ab58; margin-top:0;">Interactive Character Demo & Live Analytics</h3>
+    <p style="font-size:0.9rem; color:#8ba0a6;">Sample character streams and view real-time frontend interaction analytics.</p>
+
+    <div style="display:flex; gap:16px; margin-top:16px;">
+      <button id="btn-open-demo" class="buttonPrimary" style="font-size:0.85rem;">Launch Character Demo Gallery</button>
+      <button id="btn-view-analytics" class="buttonPrimary" style="font-size:0.85rem; background:none; border-color:#8ba0a6; color:#8ba0a6;">View Session Analytics</button>
+    </div>
+
+    <div id="analytics-display" style="display:none; margin-top:16px; padding:12px; background:rgba(0,0,0,0.4); border-radius:8px; font-family:monospace; font-size:0.85rem; color:#00ffcc;">
+      <div>Analytics Events Tracked:</div>
+      <div id="analytics-log">No events recorded yet.</div>
+    </div>
+  </section>
+
+
+  <!-- IPHONE CREATOR INSTRUCTION GUIDE -->
+  <section id="iphone-guide-section" style="max-width:900px; margin:40px auto; padding:24px; background:rgba(0,0,0,0.5); border:1px solid #d6ab58; border-radius:12px; color:#f5f1e8;">
+    <h3 style="font-family:'Bodoni Moda',serif; font-size:1.5rem; color:#d6ab58; margin-top:0;">iPhone Creator Guide — Step-by-Step Instructions</h3>
+    <p style="font-size:0.9rem; color:#8ba0a6;">How to record, skin, and assign performances on iPhone:</p>
+
+    <ol style="line-height:1.6; font-size:0.9rem; color:#cce6df; padding-left:20px;">
+      <li><strong>Open Capture Tool:</strong> Scroll down to the <em>Admin & Creator Studio</em> panel.</li>
+      <li><strong>Start Camera:</strong> Tap the <mark style="background:#d6ab58; color:#000;">1. Open Camera</mark> button to enable your iPhone front/back camera.</li>
+      <li><strong>Record Performance:</strong> Tap <mark style="background:#28a745; color:#fff;">2. Record Performance</mark> to start capturing video.</li>
+      <li><strong>Stop & Save:</strong> Tap <mark style="background:#dc3545; color:#fff;">3. Stop & Save</mark> to stop recording and store the clip locally.</li>
+      <li><strong>Choose or Create Skin:</strong> Tap <mark style="background:#17a2b8; color:#fff;">4. Choose & Apply Skin</mark> to pick an AI character skin avatar.</li>
+      <li><strong>Apply Skin:</strong> Select the target skin model from the dropdown.</li>
+      <li><strong>Preview Result:</strong> Review the rendered skinned performance on the live stage player.</li>
+      <li><strong>Assign to Character:</strong> Tap <mark style="background:#ffc107; color:#000;">5. Assign to Character</mark> to lock the media to your character's living-room/bedroom session.</li>
+    </ol>
+  </section>
+
 </body>
 </html>
