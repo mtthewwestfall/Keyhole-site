@@ -104,4 +104,11 @@ test('Keyhole Application HTML & Architecture Integrity', async (t) => {
     assert.ok(indexHtml.includes("'/cherries': 'bra comes off'"), 'Cherries fruit code maps to bra comes off');
     assert.ok(indexHtml.includes('onerror="this.onerror=null;'), 'Fallback image onerror handler present');
   });
+
+  await t.test('Interactive sorority chat interaction & bot response functions present', () => {
+    assert.ok(indexHtml.includes('function handleSendMessage()'), 'handleSendMessage function defined');
+    assert.ok(indexHtml.includes('function generateCharacterResponse(char)'), 'generateCharacterResponse function defined');
+    assert.ok(indexHtml.includes('function triggerReactionClip()'), 'triggerReactionClip function defined');
+  });
+  });
 });
