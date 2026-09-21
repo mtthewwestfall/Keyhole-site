@@ -1677,6 +1677,10 @@
 
       const char = CHARACTERS[state.activeCharId];
 
+      if (!state.chatLogs[state.activeCharId]) {
+        state.chatLogs[state.activeCharId] = [];
+      }
+
       // Record user message
       state.chatLogs[state.activeCharId].push({
         sender: 'You',
@@ -1897,6 +1901,13 @@
 
       state.geminiStudio.furnitureAdditions = Array.from(document.querySelectorAll('.furniture-add-check:checked')).map(cb => cb.value);
       state.geminiStudio.furnitureRemovals = Array.from(document.querySelectorAll('.furniture-remove-check:checked')).map(cb => cb.value);
+
+      // Sync skin overlay on fruit translator preview
+      const elFruitSkinOverlay = document.getElementById('fruit-skin-overlay');
+      if (elFruitSkinOverlay && elWebcamSkinSelect) {
+        const skinName = (elWebcamSkinSelect.value || 'keyhole_gold').replace('_', '-');
+        elFruitSkinOverlay.className = `stage-skin-overlay skin-${skinName}`;
+      }
 
       saveSessionState();
       updateGeminiStudioPromptUI();
