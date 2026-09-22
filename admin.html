@@ -1880,6 +1880,26 @@
       return prompt;
     }
 
+    function buildVideoSafePrompt() {
+      // Veo falsely flags Chloe/Bailey as celebrity names — never send those names to video.
+      const whoEl = document.getElementById('gen-who');
+      const who = (whoEl && whoEl.value) || adminState.activeCharId || 'chloe';
+      const isMulti = document.getElementById('gen-rule-multiangle').checked;
+      const isPrimary = document.getElementById('gen-rule-primaryview').checked;
+      const adds = Array.from(document.querySelectorAll('.gen-add-check:checked')).map(c => c.value).join(', ') || 'None';
+      const removes = Array.from(document.querySelectorAll('.gen-remove-check:checked')).map(c => c.value).join(', ') || 'None';
+      let prompt = `ORIGINAL FICTIONAL WEBCAM PERFORMER — match the attached reference image only.\n`;
+      prompt += `Not a celebrity. Not a public figure. Do not use any real person's name.\n`;
+      prompt += `ROOM MODE: ${adminState.roomMode}\n\n`;
+      if (isMulti) prompt += `[RULE 1 - UNIFIED 3D PHYSICAL ROOM]: Walls, furniture, lighting stay stable across the shot.\n\n`;
+      if (isPrimary) prompt += `[RULE 2 - LOCKED PRIMARY WEBCAM VIEW]: Stay locked to the primary webcam angle.\n\n`;
+      prompt += `[FURNITURE]: Add ${adds}. Remove ${removes}.\n`;
+      prompt += `[IDENTITY]: Face, hair, and bust from the reference image only.\n`;
+      prompt += `[OUTFIT]: ${selectedOutfit()}\n`;
+      prompt += `[WHO CODE]: ${who === 'bailey' ? 'B' : 'C'} (internal id only — do not speak or render this as a name)\n`;
+      return prompt;
+    }
+
     function updateGeminiPrompt() {
       const textarea = document.getElementById('gen-prompt-output');
       if (textarea) textarea.value = buildMasterPrompt();
@@ -2228,7 +2248,7 @@
       genFeedback(`Starting Veo webcam clip: ${ADMIN_CHARACTERS[g.character].name} / ${g.beat}…`, true);
       try {
         const start = await api('/admin/generator/webcam', { body: {
-          prompt: `${buildMasterPrompt()}\n[WHO]: ${ADMIN_CHARACTERS[g.character].name} — face+hair+bust from your skin photo\n[OUTFIT]: ${g.outfit}\n[SCENE]: ${g.scene || 'natural webcam moment, subtle motion'}`,
+          prompt: `${buildVideoSafePrompt()}\n[SCENE]: ${g.scene || 'natural webcam moment, subtle motion'}\n[OUTFIT]: ${g.outfit}`,
           character: g.character, beat: g.beat,
           reference_asset_id: g.reference_asset_id, use_reference: g.use_reference,
           duration_seconds: g.clip_seconds, aspect_ratio: '16:9',
