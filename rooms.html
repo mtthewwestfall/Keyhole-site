@@ -655,7 +655,7 @@
         <!-- Door 1: Chloe -->
         <div class="door-card" data-id="chloe" id="door-chloe">
           <div class="door-image-wrap">
-            <img class="door-image" src="assets/IMG_3542.jpeg" alt="Chloe" />
+            <img class="door-image" src="assets/chloe-style-sheet.png" alt="Chloe" />
           </div>
           <div class="door-label">Chloe</div>
         </div>
@@ -663,7 +663,7 @@
         <!-- Door 2: Bailey -->
         <div class="door-card" data-id="bailey" id="door-bailey">
           <div class="door-image-wrap">
-            <img class="door-image" src="assets/IMG_3543.jpeg" alt="Bailey" />
+            <img class="door-image" src="assets/bailey-style-sheet.png" alt="Bailey" />
           </div>
           <div class="door-label">Bailey</div>
         </div>
@@ -839,22 +839,15 @@
         title: 'Dirty-blonde, navy room, city window',
         vibe: 'Dirty-blonde · Navy room · City window',
         bio: 'Dirty-blonde, black tank, navy room, city window.',
-        avatar: 'assets/IMG_3542.jpeg',
+        avatar: 'assets/chloe-profile.png',
+        styleSheet: 'assets/chloe-style-sheet.png',
         roomReferences: {
-          primaryWebcamView: 'assets/IMG_3542.jpeg',
+          primaryWebcamView: 'assets/chloe-profile.png',
           sideAngleRef: '[INTERNAL CONSISTENCY REF ONLY - DO NOT EXPOSE TO CUSTOMER]',
           depthRef: '[INTERNAL CONSISTENCY REF ONLY - DO NOT EXPOSE TO CUSTOMER]'
         },
-        livingRoomMedia: {
-          idleVideo: '',
-          reactionVideos: [],
-          fallbackImage: 'assets/IMG_3542.jpeg'
-        },
-        bedroomMedia: {
-          idleVideo: '',
-          reactionVideos: [],
-          fallbackImage: 'assets/IMG_3548.jpeg'
-        },
+        livingRoomMedia: { idleVideo: '', reactionVideos: [], fallbackImage: 'assets/chloe-profile.png' },
+        bedroomMedia: { idleVideo: '', reactionVideos: [], fallbackImage: 'assets/chloe-room.png' },
         dialogue: {
           greeting: "Welcome in. I'm glad you're here.",
           freePreviewResponses: [
@@ -874,22 +867,15 @@
         title: 'Dark hair, her room only',
         vibe: 'Dark hair · Her room only',
         bio: 'Dark hair, her room only.',
-        avatar: 'assets/IMG_3543.jpeg',
+        avatar: 'assets/bailey-profile.png',
+        styleSheet: 'assets/bailey-style-sheet.png',
         roomReferences: {
-          primaryWebcamView: 'assets/IMG_3543.jpeg',
+          primaryWebcamView: 'assets/bailey-profile.png',
           sideAngleRef: '[INTERNAL CONSISTENCY REF ONLY - DO NOT EXPOSE TO CUSTOMER]',
           depthRef: '[INTERNAL CONSISTENCY REF ONLY - DO NOT EXPOSE TO CUSTOMER]'
         },
-        livingRoomMedia: {
-          idleVideo: '',
-          reactionVideos: [],
-          fallbackImage: 'assets/IMG_3543.jpeg'
-        },
-        bedroomMedia: {
-          idleVideo: '',
-          reactionVideos: [],
-          fallbackImage: 'assets/IMG_3547.jpeg'
-        },
+        livingRoomMedia: { idleVideo: '', reactionVideos: [], fallbackImage: 'assets/bailey-profile.png' },
+        bedroomMedia: { idleVideo: '', reactionVideos: [], fallbackImage: 'assets/bailey-room.jpg' },
         dialogue: {
           greeting: "Hey. I'm glad you came in.",
           freePreviewResponses: [
@@ -1213,7 +1199,7 @@
 
       ['chloe', 'bailey'].forEach(id => {
         const img = document.querySelector(`#door-${id} .door-image`);
-        if (img && CHARACTERS[id]) img.src = CHARACTERS[id].avatar;
+        if (img && CHARACTERS[id]) img.src = CHARACTERS[id].styleSheet || CHARACTERS[id].avatar;
       });
 
       // Two doors listeners
@@ -1427,7 +1413,7 @@
 
       elStageFallbackImg.onerror = () => {
         elStageFallbackImg.onerror = null;
-        elStageFallbackImg.src = 'assets/IMG_3542.jpeg';
+        elStageFallbackImg.src = 'assets/chloe-profile.png';
       };
     }
 
