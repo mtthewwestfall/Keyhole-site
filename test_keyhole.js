@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 
-// Read index.html and admin.html content
-const indexPath = path.resolve('index.html');
+// Read rooms.html (the Keyhole experience; index.html is the cover page) and admin.html
+const indexPath = path.resolve('rooms.html');
 const indexHtml = fs.readFileSync(indexPath, 'utf8');
 
 const adminPath = path.resolve('admin.html');

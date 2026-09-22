@@ -1,0 +1,2135 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="light dark" />
+  <meta name="theme-color" content="#071720" />
+  <link rel="icon" href="data:," />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,500;6..96,600;6..96,700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <title>Keyhole — Private Live Webcams & Connection</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --ink: #f6efdf;
+      --muted: #bac7c8;
+      --paper: #071720;
+      --paper-2: #0d2530;
+      --panel: #102b35;
+      --line: rgba(246, 239, 223, .15);
+      --gold: #d9ad58;
+      --gold-bright: #f0c879;
+      --teal: #58c5ba;
+      --teal-soft: #153d42;
+      --night: #020c11;
+      --red: #e55353;
+      --shadow: 0 24px 65px rgba(0, 0, 0, .35);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-width: 0;
+      overflow-x: hidden;
+      background: var(--night);
+      color: var(--ink);
+      font-family: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    button, input, a { font: inherit; }
+    a { color: inherit; text-decoration: none; }
+    img, video { display: block; max-width: 100%; }
+
+    /* Header */
+    .site-header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(7, 23, 32, 0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--line);
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .brand-logo {
+      font-family: "Bodoni Moda", serif;
+      font-size: 1.4rem;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      color: var(--gold-bright);
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .brand-logo svg {
+      fill: var(--gold);
+      width: 20px;
+      height: 20px;
+    }
+    .header-nav {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+    .badge-live {
+      background: rgba(229, 83, 83, 0.2);
+      color: #ff6b6b;
+      border: 1px solid rgba(229, 83, 83, 0.4);
+    }
+    .badge-live::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      background: #ff4d4d;
+      border-radius: 50%;
+      box-shadow: 0 0 8px #ff4d4d;
+      animation: pulse 1.5s infinite;
+    }
+    .badge-member {
+      background: rgba(217, 173, 88, 0.2);
+      color: var(--gold-bright);
+      border: 1px solid var(--gold);
+    }
+    .btn-small {
+      background: var(--paper-2);
+      color: var(--ink);
+      border: 1px solid var(--line);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-small:hover {
+      background: var(--panel);
+      border-color: var(--gold);
+    }
+
+    /* Views container */
+    .view-section {
+      display: none;
+      min-height: calc(100vh - 61px);
+    }
+    .view-section.active {
+      display: block;
+    }
+
+    /* Selection View */
+    .selection-hero {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 32px 20px 48px;
+    }
+    .selection-title {
+      font-family: "Bodoni Moda", serif;
+      font-size: clamp(2rem, 4vw, 3rem);
+      color: var(--gold-bright);
+      margin: 0 0 8px;
+      text-align: center;
+    }
+    .selection-subtitle {
+      color: var(--muted);
+      text-align: center;
+      max-width: 600px;
+      margin: 0 auto 36px;
+      font-size: 1rem;
+      line-height: 1.5;
+    }
+    .character-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 24px;
+    }
+    .character-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.25s, border-color 0.25s, box-shadow 0.25s;
+      cursor: pointer;
+    }
+    .character-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--gold);
+      box-shadow: var(--shadow);
+    }
+    .card-thumb-wrap {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 4/3;
+      background: var(--paper-2);
+      overflow: hidden;
+    }
+    .card-thumb {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.3s;
+    }
+    .character-card:hover .card-thumb {
+      transform: scale(1.04);
+    }
+    .card-status-pill {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      background: rgba(7, 23, 32, 0.85);
+      backdrop-filter: blur(4px);
+      border: 1px solid var(--line);
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--teal);
+    }
+    .card-body {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
+    .card-name {
+      font-family: "Bodoni Moda", serif;
+      font-size: 1.35rem;
+      color: var(--ink);
+      margin: 0 0 4px;
+    }
+    .card-vibe {
+      color: var(--gold);
+      font-size: 0.85rem;
+      font-weight: 500;
+      margin-bottom: 8px;
+    }
+    .card-bio {
+      color: var(--muted);
+      font-size: 0.88rem;
+      line-height: 1.4;
+      margin-bottom: 16px;
+      flex: 1;
+    }
+    .btn-enter-room {
+      width: 100%;
+      background: linear-gradient(135deg, var(--gold) 0%, #b88732 100%);
+      color: #071720;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      cursor: pointer;
+      text-align: center;
+      transition: opacity 0.2s;
+    }
+    .btn-enter-room:hover {
+      opacity: 0.9;
+    }
+
+
+    /* Session Pricing */
+    .session-pricing {
+      margin-top: 34px;
+      padding-top: 28px;
+      border-top: 1px solid var(--line);
+    }
+    .session-pricing-title {
+      font-family: "Bodoni Moda", serif;
+      font-size: clamp(1.35rem, 3vw, 1.8rem);
+      color: var(--gold-bright);
+      text-align: center;
+      margin: 0 0 18px;
+    }
+    .session-tier-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      max-width: 860px;
+      margin: 0 auto;
+    }
+    .session-tier {
+      background: linear-gradient(180deg, rgba(16,43,53,.98), rgba(7,23,32,.98));
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 18px 14px;
+      text-align: center;
+      box-shadow: 0 12px 32px rgba(0,0,0,.16);
+    }
+    .session-tier.featured {
+      border-color: var(--gold);
+      box-shadow: 0 16px 40px rgba(217,173,88,.12);
+    }
+    .session-tier-time {
+      font-size: .9rem;
+      font-weight: 700;
+      color: var(--ink);
+      margin-bottom: 7px;
+    }
+    .session-tier-price {
+      font-family: "Bodoni Moda", serif;
+      font-size: 1.65rem;
+      font-weight: 700;
+      color: var(--gold-bright);
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+    .session-tier-messages {
+      font-size: .8rem;
+      color: var(--muted);
+    }
+    .session-tier-buy {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 7px 12px;
+      border: 1px solid var(--gold);
+      border-radius: 8px;
+      color: var(--gold-bright);
+      font-size: .78rem;
+      font-weight: 700;
+      text-decoration: none;
+    }
+    .session-tier-buy:hover { background: rgba(217,173,88,.12); }
+    @media (max-width: 680px) {
+      .session-tier-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 380px) {
+      .session-tier-grid { grid-template-columns: 1fr; }
+    }
+
+    /* Room View (Mobile-First Layout) */
+    .room-container {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0;
+      min-height: calc(100vh - 61px);
+    }
+    @media (min-width: 820px) {
+      .room-container {
+        grid-template-columns: 1.3fr 1fr;
+        gap: 20px;
+        padding: 20px;
+      }
+    }
+
+    /* Stage Panel */
+    .stage-panel {
+      position: relative;
+      background: var(--night);
+      display: flex;
+      flex-direction: column;
+    }
+    @media (min-width: 820px) {
+      .stage-panel {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        overflow: hidden;
+      }
+    }
+    .stage-bar {
+      padding: 10px 16px;
+      background: var(--paper-2);
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.85rem;
+    }
+    .stage-character-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .stage-character-name {
+      font-weight: 700;
+      color: var(--gold-bright);
+    }
+    .stage-media-wrap {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16/9;
+      background: #000;
+      overflow: hidden;
+    }
+    .stage-video, .stage-fallback-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .stage-overlay-badge {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      z-index: 10;
+      pointer-events: none;
+    }
+    .stage-watermark {
+      position: absolute;
+      bottom: 12px;
+      right: 12px;
+      font-size: 0.7rem;
+      color: rgba(255, 255, 255, 0.4);
+      pointer-events: none;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    /* Control / Preview bar */
+    .preview-banner {
+      background: var(--panel);
+      border-bottom: 1px solid var(--line);
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.85rem;
+    }
+    .preview-timer {
+      color: var(--gold-bright);
+      font-weight: 700;
+    }
+    .btn-unlock {
+      background: linear-gradient(135deg, var(--gold) 0%, var(--gold-bright) 100%);
+      color: #071720;
+      border: none;
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 0.8rem;
+    }
+
+    /* Chat Panel */
+    .chat-panel {
+      display: flex;
+      flex-direction: column;
+      background: var(--paper);
+      height: 480px;
+      border-top: 1px solid var(--line);
+    }
+    @media (min-width: 820px) {
+      .chat-panel {
+        height: auto;
+        min-height: 520px;
+        max-height: 700px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+      }
+    }
+    .chat-header {
+      padding: 12px 16px;
+      background: var(--paper-2);
+      border-bottom: 1px solid var(--line);
+      font-weight: 600;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .chat-messages {
+      flex: 1;
+      padding: 16px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .chat-bubble {
+      max-width: 85%;
+      padding: 10px 14px;
+      border-radius: 12px;
+      font-size: 0.9rem;
+      line-height: 1.4;
+      word-break: break-word;
+    }
+    .bubble-model {
+      align-self: flex-start;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      color: var(--ink);
+      border-bottom-left-radius: 2px;
+    }
+    .bubble-user {
+      align-self: flex-end;
+      background: var(--teal-soft);
+      border: 1px solid rgba(88, 197, 186, 0.3);
+      color: var(--ink);
+      border-bottom-right-radius: 2px;
+    }
+    .bubble-system {
+      align-self: center;
+      background: rgba(217, 173, 88, 0.15);
+      border: 1px dashed var(--gold);
+      color: var(--gold-bright);
+      font-size: 0.82rem;
+      text-align: center;
+      width: 100%;
+      max-width: 100%;
+    }
+    .invitation-actions {
+      margin-top: 10px;
+      display: flex;
+      gap: 8px;
+    }
+    .btn-accept {
+      background: var(--gold);
+      color: #071720;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 0.8rem;
+    }
+    .btn-decline {
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid var(--line);
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.8rem;
+    }
+
+    .chat-input-wrap {
+      padding: 12px 16px;
+      background: var(--paper-2);
+      border-top: 1px solid var(--line);
+      display: flex;
+      gap: 8px;
+    }
+    .chat-input {
+      flex: 1;
+      background: var(--night);
+      border: 1px solid var(--line);
+      color: var(--ink);
+      padding: 10px 14px;
+      border-radius: 8px;
+      outline: none;
+    }
+    .chat-input:focus {
+      border-color: var(--gold);
+    }
+    .btn-send {
+      background: var(--gold);
+      color: #071720;
+      border: none;
+      padding: 0 16px;
+      border-radius: 8px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    /* Modal Gate */
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      background: rgba(2, 12, 17, 0.85);
+      backdrop-filter: blur(8px);
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-backdrop.active {
+      display: flex;
+    }
+    .modal-card {
+      background: var(--panel);
+      border: 1px solid var(--gold);
+      border-radius: 16px;
+      max-width: 440px;
+      width: 100%;
+      padding: 28px;
+      box-shadow: var(--shadow);
+      position: relative;
+    }
+    .modal-title {
+      font-family: "Bodoni Moda", serif;
+      font-size: 1.6rem;
+      color: var(--gold-bright);
+      margin: 0 0 8px;
+    }
+    .modal-desc {
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.4;
+      margin-bottom: 20px;
+    }
+    .gate-input-group {
+      margin-bottom: 16px;
+    }
+    .gate-label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--gold);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .gate-input {
+      width: 100%;
+      background: var(--night);
+      border: 1px solid var(--line);
+      color: var(--ink);
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 0.95rem;
+    }
+    .gate-input:focus {
+      border-color: var(--gold);
+      outline: none;
+    }
+    .modal-error {
+      color: var(--red);
+      font-size: 0.82rem;
+      margin-bottom: 12px;
+      display: none;
+    }
+    .btn-verify {
+      width: 100%;
+      background: linear-gradient(135deg, var(--gold) 0%, var(--gold-bright) 100%);
+      color: #071720;
+      border: none;
+      padding: 12px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 0.95rem;
+      cursor: pointer;
+    }
+    .modal-close {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      font-size: 1.2rem;
+      cursor: pointer;
+    }
+
+        /* Gemini Studio & Sims Room Editor */
+    .btn-gold-outline {
+      background: transparent;
+      border: 1px solid var(--gold);
+      color: var(--gold-bright);
+      cursor: pointer;
+      border-radius: 6px;
+      padding: 6px 12px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+    .btn-gold-outline:hover {
+      background: rgba(217, 173, 88, 0.15);
+    }
+    .modal-card-large {
+      background: var(--panel);
+      border: 1px solid var(--gold);
+      border-radius: 16px;
+      max-width: 840px;
+      width: 95%;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 24px;
+      box-shadow: var(--shadow);
+      position: relative;
+    }
+    .studio-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-top: 16px;
+    }
+    @media (max-width: 720px) {
+      .studio-grid { grid-template-columns: 1fr; }
+    }
+    .studio-section {
+      background: var(--paper-2);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 14px;
+    }
+    .studio-sec-title {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--gold-bright);
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .furniture-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+    .furniture-chip {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.82rem;
+      color: var(--ink);
+      background: var(--night);
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--line);
+      cursor: pointer;
+    }
+    .furniture-chip input { accent-color: var(--gold); }
+    .prompt-output-box {
+      width: 100%;
+      min-height: 240px;
+      background: var(--night);
+      border: 1px solid var(--line);
+      color: var(--gold-bright);
+      font-family: monospace;
+      font-size: 0.78rem;
+      padding: 10px;
+      border-radius: 8px;
+      resize: vertical;
+      margin-top: 8px;
+      line-height: 1.4;
+    }
+    .stage-skin-overlay {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      border-radius: 12px;
+      box-sizing: border-border;
+      transition: all 0.3s ease;
+      z-index: 10;
+    }
+    .skin-neon-cyber {
+      border: 4px solid #58c5ba;
+      box-shadow: inset 0 0 20px rgba(88, 197, 186, 0.5), 0 0 15px rgba(88, 197, 186, 0.6);
+    }
+    .skin-keyhole-gold {
+      border: 4px solid #d9ad58;
+      box-shadow: inset 0 0 25px rgba(217, 173, 88, 0.4), 0 0 20px rgba(217, 173, 88, 0.5);
+    }
+    .skin-glass-vignette {
+      background: radial-gradient(circle, transparent 50%, rgba(2, 12, 17, 0.85) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+    }
+    .skin-streamer-vip {
+      border: 3px dashed #f0c879;
+      outline: 2px solid #e55353;
+      box-shadow: inset 0 0 30px rgba(229, 83, 83, 0.3);
+    }
+
+    /* Footer */
+    .site-footer {
+      padding: 24px 20px;
+      text-align: center;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Site Header -->
+  <header class="site-header">
+    <a href="#" class="brand-logo" id="logo-btn">
+      <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+      KEYHOLE
+    </a>
+    <div class="header-nav">
+      <span id="nav-badge" class="badge badge-live">Live</span>
+      <button id="gemini-studio-btn" class="btn-small btn-gold-outline">Gemini Studio & Room Editor</button>
+      <button id="switch-character-btn" class="btn-small" style="display:none;">Change Room</button>
+      <button id="reset-session-btn" class="btn-small">Reset Session</button>
+    </div>
+  </header>
+
+  <!-- SELECTION VIEW -->
+  <section id="selection-view" class="view-section active">
+    <div class="selection-hero">
+      <h1 class="selection-title">Select Your Private Room</h1>
+      <p class="selection-subtitle">Step inside a real-time intimate connection. Choose a character below to launch your personal free preview stream.</p>
+
+      <div class="character-grid" id="character-grid">
+        <!-- Dynamically rendered character cards -->
+      </div>
+
+      <section class="session-pricing" aria-labelledby="session-pricing-title">
+        <h2 class="session-pricing-title" id="session-pricing-title">Choose Your Session</h2>
+        <div class="session-tier-grid">
+          <div class="session-tier featured" data-minutes="10" data-free-preview="true">
+            <div class="session-tier-time">Free Preview</div>
+            <div class="session-tier-price">FREE</div>
+            <div class="session-tier-messages">10 minutes</div>
+          </div>
+          <div class="session-tier" data-minutes="10" data-price="4.99">
+            <div class="session-tier-time">10 minutes</div>
+            <div class="session-tier-price">$4.99</div>
+            <div class="session-tier-messages">100 messages</div>
+          </div>
+          <div class="session-tier" data-minutes="15">
+            <div class="session-tier-time">15 minutes</div>
+            <div class="session-tier-price">$7.99</div>
+            <div class="session-tier-messages">100 messages</div>
+          </div>
+          <div class="session-tier" data-minutes="30">
+            <div class="session-tier-time">30 minutes</div>
+            <div class="session-tier-price">$11.99</div>
+            <div class="session-tier-messages">100 messages</div>
+          </div>
+          <div class="session-tier" data-minutes="45">
+            <div class="session-tier-time">45 minutes</div>
+            <div class="session-tier-price">$14.99</div>
+            <div class="session-tier-messages">100 messages</div>
+          </div>
+          <div class="session-tier" data-minutes="55">
+            <div class="session-tier-time">55 minutes</div>
+            <div class="session-tier-price">$17.99</div>
+            <div class="session-tier-messages">100 messages</div>
+          </div>
+          <div class="session-tier featured" data-minutes="60">
+            <div class="session-tier-time">60 minutes</div>
+            <div class="session-tier-price">$19.99</div>
+            <div class="session-tier-messages">100 messages</div>
+          </div>
+          <div class="session-tier" data-minutes="75">
+            <div class="session-tier-time">75 minutes</div>
+            <div class="session-tier-price">$23.99</div>
+            <div class="session-tier-messages">100 messages</div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </section>
+
+  <!-- ROOM VIEW -->
+  <section id="room-view" class="view-section">
+    <div id="preview-banner" class="preview-banner">
+      <div>
+        <span>Free Preview Active</span> — <span id="preview-timer-text" class="preview-timer">10:00 remaining</span>
+      </div>
+      <button id="banner-unlock-btn" class="btn-unlock">Unlock Bedroom Access</button>
+    </div>
+
+    <div class="room-container">
+      <!-- Webcam Stage -->
+      <div class="stage-panel">
+        <div class="stage-bar">
+          <div class="stage-character-info">
+            <span class="stage-character-name" id="stage-char-name">Bailey</span>
+            <span class="muted" id="stage-room-label">• Living Room</span>
+          </div>
+          <span class="badge badge-live" id="stage-status-badge">LIVE WEBCAM</span>
+        </div>
+
+        <div class="stage-media-wrap" id="stage-media-wrap">
+          <video id="stage-video" class="stage-video" autoplay loop muted playsinline style="display:none;"></video>
+          <img id="stage-fallback-img" class="stage-fallback-img" src="" alt="Webcam Feed" />
+          <div id="stage-skin-overlay" class="stage-skin-overlay skin-keyhole-gold"></div>
+          <div class="stage-watermark">KEYHOLE LIVE FEED</div>
+        </div>
+      </div>
+
+      <!-- Integrated Chat Panel -->
+      <div class="chat-panel">
+        <div class="chat-header">
+          <span id="chat-header-title">Private Chat with Bailey</span>
+          <span class="muted" style="font-size:0.75rem;" id="chat-status-text">Connected</span>
+        </div>
+
+        <div class="chat-messages" id="chat-messages">
+          <!-- Chat history rendered dynamically -->
+        </div>
+
+        <div class="chat-input-wrap">
+          <input type="text" id="chat-input" class="chat-input" placeholder="Type a message..." maxlength="280" />
+          <button id="chat-send-btn" class="btn-send">Send</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MEMBERSHIP GATE MODAL -->
+  <div id="membership-modal" class="modal-backdrop">
+    <div class="modal-card">
+      <button id="modal-close-btn" class="modal-close">&times;</button>
+      <h2 class="modal-title" id="modal-title">Unlock Bedroom Access</h2>
+      <p class="modal-desc" id="modal-desc">
+        Your free preview in the living room has reached its limit. To follow her into the private bedroom and continue your conversation, enter your Keyhole Member Key or Passcode.
+      </p>
+
+      <div class="gate-input-group">
+        <label class="gate-label" for="member-key-input">Membership Passcode / Key</label>
+        <input type="text" id="member-key-input" class="gate-input" placeholder="e.g. KEY-VIP-ROOM" value="KEY-VIP-ROOM" />
+      </div>
+
+      <div id="modal-error" class="modal-error">Invalid membership key. Please check your token.</div>
+
+      <button id="verify-member-btn" class="btn-verify">Verify Backend Entitlement & Unlock</button>
+    </div>
+  </div>
+
+    <!-- GEMINI STUDIO & SIMS ROOM EDITOR MODAL -->
+  <div id="gemini-studio-modal" class="modal-backdrop">
+    <div class="modal-card-large">
+      <button id="gemini-modal-close-btn" class="modal-close">&times;</button>
+      <h2 class="modal-title">Gemini AI Studio & Sims Room Editor</h2>
+      <p class="modal-desc">
+        Configure Gemini image generation parameters enforcing multi-angle 3D spatial consistency and primary webcam view locking. Customize Sims-style realistic furniture and webcam skins.
+      </p>
+
+      <div class="studio-grid">
+        <!-- Column 1: Rules & Customization -->
+        <div style="display:flex; flex-direction:column; gap:12px;">
+
+          <!-- Section A: Gemini Rules -->
+          <div class="studio-section">
+            <div class="studio-sec-title">Gemini Generation Rules</div>
+            <label class="furniture-chip" style="margin-bottom:6px;">
+              <input type="checkbox" id="rule-multiangle-check" checked />
+              <span>Multi-Angle 3D Spatial Consistency System</span>
+            </label>
+            <label class="furniture-chip" style="margin-bottom:6px;">
+              <input type="checkbox" id="rule-primaryview-check" checked />
+              <span>Lock Output strictly to PRIMARY WEBCAM VIEW</span>
+            </label>
+            <div style="display:flex; gap:10px; margin-top:8px;">
+              <label style="font-size:0.8rem; color:var(--muted);">Motion Mode:
+                <select id="gemini-motion-select" class="gate-input" style="padding:4px 8px; font-size:0.8rem; margin-top:4px;">
+                  <option value="live_webcam">Live Motion Webcam Video</option>
+                  <option value="static_render">Static High-Res Render Image</option>
+                </select>
+              </label>
+            </div>
+          </div>
+
+          <!-- Section B: Sims-Style Furniture Additions -->
+          <div class="studio-section">
+            <div class="studio-sec-title">Sims-Style Furniture Additions</div>
+            <div class="furniture-grid">
+              <label class="furniture-chip"><input type="checkbox" class="furniture-add-check" value="Velvet Platform Bed" checked /> Bed: Velvet Platform Bed</label>
+              <label class="furniture-chip"><input type="checkbox" class="furniture-add-check" value="Plush L-Sofa" checked /> Seating: Plush L-Sofa</label>
+              <label class="furniture-chip"><input type="checkbox" class="furniture-add-check" value="Ambient Neon Wall Sign" checked /> Decor: Neon Wall Sign</label>
+              <label class="furniture-chip"><input type="checkbox" class="furniture-add-check" value="Warm Ambient Floor Lamp" checked /> Lighting: Ambient Floor Lamp</label>
+              <label class="furniture-chip"><input type="checkbox" class="furniture-add-check" value="Potted Monstera Plant" /> Plant: Potted Monstera</label>
+              <label class="furniture-chip"><input type="checkbox" class="furniture-add-check" value="Full-Length Floor Mirror" /> Decor: Floor Mirror</label>
+            </div>
+          </div>
+
+          <!-- Section C: Furniture Removals -->
+          <div class="studio-section">
+            <div class="studio-sec-title">Remove / Clean Furniture</div>
+            <div class="furniture-grid">
+              <label class="furniture-chip"><input type="checkbox" class="furniture-remove-check" value="Office Work Desk" /> Remove Desk</label>
+              <label class="furniture-chip"><input type="checkbox" class="furniture-remove-check" value="Coffee Table" /> Remove Coffee Table</label>
+              <label class="furniture-chip"><input type="checkbox" class="furniture-remove-check" value="Wall Artwork" /> Remove Wall Art</label>
+              <label class="furniture-chip"><input type="checkbox" class="furniture-remove-check" value="Background Shelving" /> Remove Shelving</label>
+            </div>
+          </div>
+
+          <!-- Section D: Webcam Skins -->
+          <div class="studio-section">
+            <div class="studio-sec-title">Webcam Overlay Skins</div>
+            <select id="webcam-skin-select" class="gate-input" style="padding:6px 10px; font-size:0.85rem;">
+              <option value="keyhole_gold">Classic Keyhole Gold HUD</option>
+              <option value="neon_cyber">Neon Cyber Frame</option>
+              <option value="glass_vignette">Minimalist Glass Vignette</option>
+              <option value="streamer_vip">Streamer VIP HUD</option>
+            </select>
+          </div>
+
+        </div>
+
+        <!-- Column 2: Prompt Master Output & Stage Control -->
+        <div style="display:flex; flex-direction:column; gap:12px;">
+
+          <div class="studio-section" style="flex:1; display:flex; flex-direction:column;">
+            <div class="studio-sec-title">Formatted Gemini Master Prompt</div>
+            <p style="font-size:0.78rem; color:var(--muted); margin:0 0 6px;">
+              Auto-generated prompt adhering strictly to 3D spatial consistency & view locking rules for Gemini generation:
+            </p>
+            <textarea id="gemini-prompt-output" class="prompt-output-box" readonly style="flex:1;"></textarea>
+
+            <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
+              <button id="btn-copy-prompt" class="btn-small" style="background:var(--paper); border:1px solid var(--line);">Copy Prompt</button>
+              <button id="btn-simulate-gemini" class="btn-small" style="background:var(--teal-soft); color:var(--teal); border:1px solid var(--teal);">Simulate Gemini Gen</button>
+              <button id="btn-apply-gemini-stage" class="btn-verify" style="flex:1; min-width:160px; font-size:0.85rem; padding:8px 12px;">Apply to Active Room Stage</button>
+            </div>
+            <div id="gemini-status-feedback" style="font-size:0.8rem; color:var(--gold-bright); margin-top:8px; display:none;"></div>
+          </div>
+
+          <!-- Section E: Translation & Extended Display Engine -->
+          <div class="studio-section" style="margin-top:12px;">
+            <div class="studio-sec-title">Translation & Extended Display Generator</div>
+
+            <div style="display:flex; flex-direction:column; gap:8px; font-size:0.82rem;">
+              <label>Fruit Code Command:
+                <input type="text" id="fruit-code-input" class="gate-input" value="o/banana" placeholder="e.g. o/banana" style="padding:6px 10px; font-size:0.85rem; margin-top:2px;" />
+              </label>
+
+              <label>Output Selection:
+                <select id="fruit-output-select" class="gate-input" style="padding:6px 10px; font-size:0.85rem; margin-top:2px;">
+                  <option value="Pictures">Pictures</option>
+                  <option value="Video Clip">Video Clip</option>
+                  <option value="Live Stream">Live Stream</option>
+                </select>
+              </label>
+
+              <label>Media Source File (Picture or Video):
+                <input type="file" id="fruit-media-file" class="gate-input" style="padding:6px 10px; font-size:0.8rem; margin-top:2px;" />
+              </label>
+
+              <label class="furniture-chip" style="margin-top:4px;">
+                <input type="checkbox" id="fruit-expand-surroundings" />
+                <span>Expand Surroundings (Pretend outpainting background visuals)</span>
+              </label>
+
+              <label>Extended Delay Duration (Seconds):
+                <input type="number" id="fruit-delay-duration" class="gate-input" value="0" min="0" style="padding:6px 10px; font-size:0.85rem; margin-top:2px;" />
+              </label>
+
+              <label class="furniture-chip" style="margin-top:2px;">
+                <input type="checkbox" id="fruit-loop-video" checked />
+                <span>Loop Video After Extended Duration</span>
+              </label>
+
+              <button id="btn-generate-translate" class="btn-verify" style="background:#d63384; border-color:#d63384; color:#fff; font-weight:700; margin-top:6px; padding:10px;">Generate & Translate</button>
+            </div>
+
+            <!-- Extended Display Output Results Panel -->
+            <div style="margin-top:14px; padding:12px; background:var(--night); border:1px solid var(--line); border-radius:8px; font-size:0.82rem; line-height:1.6;">
+              <div style="font-weight:700; color:var(--gold-bright); font-size:0.9rem; margin-bottom:8px; border-bottom:1px solid var(--line); padding-bottom:4px;">Translation & Extended Display</div>
+              <div><strong style="color:var(--muted);">Fruit Code Sent:</strong> <span id="disp-fruit-code" style="color:var(--ink);">o/banana</span></div>
+              <div><strong style="color:var(--muted);">Translated Meaning:</strong> <span id="disp-translated-meaning" style="color:var(--gold-bright); font-weight:600;">Playful companion gesture and interaction</span></div>
+              <div><strong style="color:var(--muted);">Output Mode:</strong> <span id="disp-output-mode" style="color:var(--ink);">image</span></div>
+              <div><strong style="color:var(--muted);">Surroundings Context:</strong> <span id="disp-surroundings-context" style="color:var(--ink);">Standard focus framing</span></div>
+              <div><strong style="color:var(--muted);">Video Loop Config:</strong> <span id="disp-loop-config" style="color:var(--ink);">Standard playback</span></div>
+
+              <div id="fruit-display-preview-wrap" style="margin-top:10px; width:100%; aspect-ratio:16/9; background:var(--paper-2); border:1px solid var(--line); border-radius:6px; overflow:hidden; position:relative; display:flex; align-items:center; justify-content:center;">
+                <img id="fruit-preview-img" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='225' viewBox='0 0 400 225'><rect width='400' height='225' fill='%23071720'/><text x='200' y='115' font-family='sans-serif' font-size='14' fill='%23d9ad58' text-anchor='middle'>TRANSLATION & EXTENDED DISPLAY READY</text></svg>" style="width:100%; height:100%; object-fit:cover;" alt="Translation Display" />
+                <div id="fruit-skin-overlay" class="stage-skin-overlay skin-keyhole-gold"></div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+<footer class="site-footer">
+    <div><strong>21+ Adults Only.</strong> Keyhole Interactive Stream Platform.</div>
+    <div style="margin-top:4px; opacity:0.7;" id="footer-char-note">All characters are fictional AI-generated personalities.</div>
+  </footer>
+
+  <script src="plate-engine.js"></script>
+  <script>
+    /* ==========================================================================
+       KEYHOLE APP CORE & DATA ARCHITECTURE
+       ========================================================================== */
+
+    // 1. CHARACTER PROFILES & THREE-REFERENCE ROOM DEFINITIONS
+    const CHARACTERS = {
+      bailey: {
+        id: 'bailey',
+        name: 'Bailey',
+        title: 'The Co-ed Next Door',
+        vibe: 'Warm, playful & spontaneous',
+        bio: 'Taking a quick study break in her lounge. She loves late-night conversations and vinyl records.',
+        avatar: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300"><rect width="400" height="300" fill="%23102b35"/><circle cx="200" cy="120" r="50" fill="%23d9ad58"/><path d="M120 250 C120 180, 280 180, 280 250 Z" fill="%2358c5ba"/><text x="200" y="280" font-family="serif" font-size="20" fill="%23f6efdf" text-anchor="middle">Bailey (Living Room View)</text></svg>',
+        roomReferences: {
+          primaryWebcamView: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450"><rect width="800" height="450" fill="%230d2530"/><circle cx="400" cy="180" r="80" fill="%23d9ad58"/><path d="M260 380 C260 270, 540 270, 540 380 Z" fill="%2358c5ba"/><text x="400" y="420" font-family="serif" font-size="22" fill="%23f6efdf" text-anchor="middle">Bailey - Primary Living Room Webcam View</text></svg>',
+          sideAngleRef: '[INTERNAL CONSISTENCY REF ONLY - DO NOT EXPOSE TO CUSTOMER]',
+          depthRef: '[INTERNAL CONSISTENCY REF ONLY - DO NOT EXPOSE TO CUSTOMER]'
+        },
+        livingRoomMedia: {
+          idleVideo: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+          reactionVideos: [
+            'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4'
+          ],
+          fallbackImage: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450"><rect width="800" height="450" fill="%23102b35"/><circle cx="400" cy="180" r="80" fill="%23d9ad58"/><text x="400" y="420" font-family="serif" font-size="22" fill="%23f6efdf" text-anchor="middle">Bailey - Living Room Primary View</text></svg>'
+        },
+        bedroomMedia: {
+          idleVideo: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4',
+          reactionVideos: [
+            'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4'
+          ],
+          fallbackImage: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450"><rect width="800" height="450" fill="%231a102b"/><circle cx="400" cy="180" r="80" fill="%23f0c879"/><text x="400" y="420" font-family="serif" font-size="22" fill="%23f6efdf" text-anchor="middle">Bailey - Private Bedroom Primary View</text></svg>'
+        },
+        dialogue: {
+          greeting: "Hey there! I'm so glad you turned the key. What are you up to tonight?",
+          freePreviewResponses: [
+            "I was just listening to music. Tell me something interesting about yourself!",
+            "You have great timing, I was feeling a bit lonely here in the lounge.",
+            "I love chatting like this. Do you come here often?"
+          ],
+          bedroomInvitation: "It's getting a bit quiet out here... Should we head into my bedroom for a more private chat?",
+          acceptResponse: "Mmm, I'd love that. Let me head in first while you unlock your pass!",
+          declineResponse: "No worries, we can hang out here in the living room a little longer!",
+          freeTimeEnding: "Our free preview time in the living room is up! Unlock access now to follow me into the bedroom."
+        }
+      },
+      chloe: {
+        id: 'chloe',
+        name: 'Chloe',
+        title: 'The Chic Artist',
+        vibe: 'Creative, mysterious & elegant',
+        bio: 'Painting in her sunlit studio lounge. She enjoys coffee, vintage art, and deep conversations.',
+        avatar: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300"><rect width="400" height="300" fill="%231f2421"/><circle cx="200" cy="120" r="50" fill="%2358c5ba"/><path d="M120 250 C120 180, 280 180, 280 250 Z" fill="%23d9ad58"/><text x="200" y="280" font-family="serif" font-size="20" fill="%23f6efdf" text-anchor="middle">Chloe (Living Room View)</text></svg>',
+        roomReferences: {
+          primaryWebcamView: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450"><rect width="800" height="450" fill="%231f2421"/><circle cx="400" cy="180" r="80" fill="%2358c5ba"/><text x="400" y="420" font-family="serif" font-size="22" fill="%23f6efdf" text-anchor="middle">Chloe - Primary Living Room Studio View</text></svg>',
+          sideAngleRef: '[INTERNAL CONSISTENCY REF ONLY - DO NOT EXPOSE TO CUSTOMER]',
+          depthRef: '[INTERNAL CONSISTENCY REF ONLY - DO NOT EXPOSE TO CUSTOMER]'
+        },
+        livingRoomMedia: {
+          idleVideo: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
+          reactionVideos: [],
+          fallbackImage: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450"><rect width="800" height="450" fill="%231f2421"/><circle cx="400" cy="180" r="80" fill="%2358c5ba"/><text x="400" y="420" font-family="serif" font-size="22" fill="%23f6efdf" text-anchor="middle">Chloe - Studio Primary View</text></svg>'
+        },
+        bedroomMedia: {
+          idleVideo: '',
+          reactionVideos: [],
+          fallbackImage: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450"><rect width="800" height="450" fill="%232b1a21"/><circle cx="400" cy="180" r="80" fill="%2358c5ba"/><text x="400" y="420" font-family="serif" font-size="22" fill="%23f6efdf" text-anchor="middle">Chloe - Bedroom Studio View</text></svg>'
+        },
+        dialogue: {
+          greeting: "Welcome. I was just sketching out some ideas. What brings you to my room?",
+          freePreviewResponses: [
+            "Inspiration strikes when least expected. You've certainly piqued my curiosity.",
+            "I love art that makes you feel something raw. What inspires you?",
+            "There's something magical about quiet evenings like this."
+          ],
+          bedroomInvitation: "My studio easel is getting crowded... Would you like to join me in my private bedroom instead?",
+          acceptResponse: "A lovely choice. I'll meet you inside once you verify your access.",
+          declineResponse: "Fair enough, we can appreciate the studio atmosphere a bit more.",
+          freeTimeEnding: "Your preview session in my studio has concluded. Unlock membership to join me in the bedroom."
+        }
+      },
+      harper: {
+        id: 'harper',
+        name: 'Harper',
+        title: 'The Fitness Enthusiast',
+        vibe: 'Energetic, confident & bold',
+        bio: 'Unwinding after an intense workout session. Expect witty banter and high energy.',
+        avatar: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300"><rect width="400" height="300" fill="%23251010"/><circle cx="200" cy="120" r="50" fill="%23e55353"/><path d="M120 250 C120 180, 280 180, 280 250 Z" fill="%23f0c879"/><text x="200" y="280" font-family="serif" font-size="20" fill="%23f6efdf" text-anchor="middle">Harper (Living Room View)</text></svg>',
+        roomReferences: {
+          primaryWebcamView: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450"><rect width="800" height="450" fill="%23251010"/><circle cx="400" cy="180" r="80" fill="%23e55353"/><text x="400" y="420" font-family="serif" font-size="22" fill="%23f6efdf" text-anchor="middle">Harper - Primary Living Room View</text></svg>',
+          sideAngleRef: '[INTERNAL CONSISTENCY REF ONLY]',
+          depthRef: '[INTERNAL CONSISTENCY REF ONLY]'
+        },
+        livingRoomMedia: {
+          idleVideo: '',
+          reactionVideos: [],
+          fallbackImage: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450"><rect width="800" height="450" fill="%23251010"/><circle cx="400" cy="180" r="80" fill="%23e55353"/><text x="400" y="420" font-family="serif" font-size="22" fill="%23f6efdf" text-anchor="middle">Harper - Living Room Primary View</text></svg>'
+        },
+        bedroomMedia: {
+          idleVideo: '',
+          reactionVideos: [],
+          fallbackImage: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450"><rect width="800" height="450" fill="%23301515"/><circle cx="400" cy="180" r="80" fill="%23e55353"/><text x="400" y="420" font-family="serif" font-size="22" fill="%23f6efdf" text-anchor="middle">Harper - Bedroom Primary View</text></svg>'
+        },
+        dialogue: {
+          greeting: "Hey! Just finished stretching. Glad you decided to drop by!",
+          freePreviewResponses: [
+            "I love staying active, but relaxing with good company is just as important.",
+            "You look like someone who enjoys a little challenge!",
+            "Keep up that energy! I like someone who speaks their mind."
+          ],
+          bedroomInvitation: "Ready to get comfortable? Let's move into my bedroom suite.",
+          acceptResponse: "Awesome! Unlock your pass and come on in.",
+          declineResponse: "No stress! Let's catch our breath here first.",
+          freeTimeEnding: "Time's up for free preview! Unlock your keyhole pass to enter my bedroom."
+        }
+      },
+      maya: {
+        id: 'maya',
+        name: 'Maya',
+        title: 'The Tech Visionary',
+        vibe: 'Smart, sharp & charismatic',
+        bio: 'Coding her latest AI project while taking break calls. Fascinated by deep tech and late night talks.',
+        avatar: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300"><rect width="400" height="300" fill="%230f2520"/><circle cx="200" cy="120" r="50" fill="%2358c5ba"/><path d="M120 250 C120 180, 280 180, 280 250 Z" fill="%23d9ad58"/><text x="200" y="280" font-family="serif" font-size="20" fill="%23f6efdf" text-anchor="middle">Maya (Living Room View)</text></svg>',
+        roomReferences: {
+          primaryWebcamView: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450"><rect width="800" height="450" fill="%230f2520"/><circle cx="400" cy="180" r="80" fill="%2358c5ba"/><text x="400" y="420" font-family="serif" font-size="22" fill="%23f6efdf" text-anchor="middle">Maya - Primary Living Room Tech Setup View</text></svg>',
+          sideAngleRef: '[INTERNAL CONSISTENCY REF ONLY]',
+          depthRef: '[INTERNAL CONSISTENCY REF ONLY]'
+        },
+        livingRoomMedia: {
+          idleVideo: '',
+          reactionVideos: [],
+          fallbackImage: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450"><rect width="800" height="450" fill="%230f2520"/><circle cx="400" cy="180" r="80" fill="%2358c5ba"/><text x="400" y="420" font-family="serif" font-size="22" fill="%23f6efdf" text-anchor="middle">Maya - Tech Lounge View</text></svg>'
+        },
+        bedroomMedia: {
+          idleVideo: '',
+          reactionVideos: [],
+          fallbackImage: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450"><rect width="800" height="450" fill="%2314302a"/><circle cx="400" cy="180" r="80" fill="%2358c5ba"/><text x="400" y="420" font-family="serif" font-size="22" fill="%23f6efdf" text-anchor="middle">Maya - Bedroom Sanctuary View</text></svg>'
+        },
+        dialogue: {
+          greeting: "System online. Hey! I just closed my terminal to talk to you.",
+          freePreviewResponses: [
+            "Building intelligent interfaces is fun, but real human connection is unmatched.",
+            "Tell me, what's a big goal you're working on right now?",
+            "You have an intriguing vibe. I like it."
+          ],
+          bedroomInvitation: "Let's log off the work desk and move to my private bedroom space.",
+          acceptResponse: "Great choice. Authenticate your pass and join me.",
+          declineResponse: "Understood! We can stay here in the lounge terminal.",
+          freeTimeEnding: "Preview buffer depleted! Please authenticate your Keyhole pass to continue in my bedroom."
+        }
+      },
+      sienna: {
+        id: 'sienna',
+        name: 'Sienna',
+        title: 'The Free Spirit',
+        vibe: 'Relaxed, bohemian & genuine',
+        bio: 'Relaxing on floor cushions with herbal tea and ambient music. Soft lighting and deep empathy.',
+        avatar: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300"><rect width="400" height="300" fill="%232b2114"/><circle cx="200" cy="120" r="50" fill="%23d9ad58"/><path d="M120 250 C120 180, 280 180, 280 250 Z" fill="%23153d42"/><text x="200" y="280" font-family="serif" font-size="20" fill="%23f6efdf" text-anchor="middle">Sienna (Living Room View)</text></svg>',
+        roomReferences: {
+          primaryWebcamView: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450"><rect width="800" height="450" fill="%232b2114"/><circle cx="400" cy="180" r="80" fill="%23d9ad58"/><text x="400" y="420" font-family="serif" font-size="22" fill="%23f6efdf" text-anchor="middle">Sienna - Primary Living Room View</text></svg>',
+          sideAngleRef: '[INTERNAL CONSISTENCY REF ONLY]',
+          depthRef: '[INTERNAL CONSISTENCY REF ONLY]'
+        },
+        livingRoomMedia: {
+          idleVideo: '',
+          reactionVideos: [],
+          fallbackImage: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450"><rect width="800" height="450" fill="%232b2114"/><circle cx="400" cy="180" r="80" fill="%23d9ad58"/><text x="400" y="420" font-family="serif" font-size="22" fill="%23f6efdf" text-anchor="middle">Sienna - Living Room Lounge View</text></svg>'
+        },
+        bedroomMedia: {
+          idleVideo: '',
+          reactionVideos: [],
+          fallbackImage: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450"><rect width="800" height="450" fill="%23382c1b"/><circle cx="400" cy="180" r="80" fill="%23d9ad58"/><text x="400" y="420" font-family="serif" font-size="22" fill="%23f6efdf" text-anchor="middle">Sienna - Bedroom Oasis View</text></svg>'
+        },
+        dialogue: {
+          greeting: "Hi sweet soul. Come sit down and unwind with me.",
+          freePreviewResponses: [
+            "Life moves so fast sometimes. I like taking moments like this to just be present.",
+            "How has your day been feeling overall?",
+            "Your energy feels wonderfully calm tonight."
+          ],
+          bedroomInvitation: "I have candlelight and cozy pillows in my bedroom... Want to move over there?",
+          acceptResponse: "I'll get everything ready for you. Unlock your pass!",
+          declineResponse: "That's okay, we can rest right here as long as you like.",
+          freeTimeEnding: "Our free lounge preview time has ended. Keyhole verification is needed to enter my bedroom."
+        }
+      },
+      elena: {
+        id: 'elena',
+        name: 'Elena',
+        title: 'The Glamorous Hostess',
+        vibe: 'Sophisticated, alluring & witty',
+        bio: 'Sipping champagne in her penthouse lounge. Loves witty humor, luxury, and captivating stories.',
+        avatar: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300"><rect width="400" height="300" fill="%231a0d18"/><circle cx="200" cy="120" r="50" fill="%23f0c879"/><path d="M120 250 C120 180, 280 180, 280 250 Z" fill="%23b88732"/><text x="200" y="280" font-family="serif" font-size="20" fill="%23f6efdf" text-anchor="middle">Elena (Penthouse View)</text></svg>',
+        roomReferences: {
+          primaryWebcamView: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450"><rect width="800" height="450" fill="%231a0d18"/><circle cx="400" cy="180" r="80" fill="%23f0c879"/><text x="400" y="420" font-family="serif" font-size="22" fill="%23f6efdf" text-anchor="middle">Elena - Primary Penthouse Living Room View</text></svg>',
+          sideAngleRef: '[INTERNAL CONSISTENCY REF ONLY]',
+          depthRef: '[INTERNAL CONSISTENCY REF ONLY]'
+        },
+        livingRoomMedia: {
+          idleVideo: '',
+          reactionVideos: [],
+          fallbackImage: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450"><rect width="800" height="450" fill="%231a0d18"/><circle cx="400" cy="180" r="80" fill="%23f0c879"/><text x="400" y="420" font-family="serif" font-size="22" fill="%23f6efdf" text-anchor="middle">Elena - Penthouse Living Room View</text></svg>'
+        },
+        bedroomMedia: {
+          idleVideo: '',
+          reactionVideos: [],
+          fallbackImage: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450"><rect width="800" height="450" fill="%261021"/><circle cx="400" cy="180" r="80" fill="%23f0c879"/><text x="400" y="420" font-family="serif" font-size="22" fill="%23f6efdf" text-anchor="middle">Elena - Private Penthouse Suite View</text></svg>'
+        },
+        dialogue: {
+          greeting: "Good evening darling. I was hoping you'd join me.",
+          freePreviewResponses: [
+            "A glass of champagne and delightful conversation... what could be better?",
+            "You certainly know how to make an impression.",
+            "Tell me your favorite secret pleasure."
+          ],
+          bedroomInvitation: "The skyline view from my bedroom suite is breathtaking... Shall we transition inside?",
+          acceptResponse: "Exquisite. I'll await your entry once you verify your Keyhole pass.",
+          declineResponse: "A tantalizing delay. We'll enjoy the lounge a moment more.",
+          freeTimeEnding: "Our free penthouse preview has concluded. Unlock membership entitlement to enter my bedroom."
+        }
+      }
+    };
+
+    // 2. STATE MANAGER & PERSISTENCE
+    const CONFIG = {
+      defaultPreviewSeconds: 600,
+      invitationMessageThreshold: 3
+    };
+
+    let state = {
+      view: 'selection', // 'selection' | 'room'
+      activeCharId: null,
+      roomMode: 'living_room', // 'living_room' | 'bedroom'
+      previewSecondsLeft: CONFIG.defaultPreviewSeconds,
+      isVerifiedMember: false,
+      userMessageCount: 0,
+      hasInvitedToBedroom: false,
+      chatLogs: {},
+      geminiStudio: {
+        multiAngleLock: true,
+        primaryViewLock: true,
+        motionMode: 'live_webcam',
+        furnitureAdditions: ['Velvet Platform Bed', 'Warm Ambient Floor Lamp'],
+        furnitureRemovals: [],
+        webcamSkin: 'keyhole_gold'
+      }
+    };
+
+    let timerInterval = null;
+
+    /* ==========================================================================
+       PLATE ENGINE — plate-first stage playback (see plate-engine.js)
+       ========================================================================== */
+    const PLATE_SESSION_MINUTES = 15;
+    let plateLibrary = null;
+    let plateEngine = null;
+
+    function fallbackPlateManifest() {
+      const characters = {};
+      Object.keys(CHARACTERS).forEach(id => {
+        const c = CHARACTERS[id];
+        const idle = [c.livingRoomMedia.idleVideo, c.bedroomMedia.idleVideo].filter(Boolean);
+        const tease = (c.livingRoomMedia.reactionVideos || []).concat(c.bedroomMedia.reactionVideos || []);
+        characters[id] = { idle, tease, give: [], stop: [], presence: [] };
+      });
+      return { characters };
+    }
+
+    async function initPlateLibrary() {
+      if (typeof KeyholePlateEngine === 'undefined') return;
+      let manifest = null;
+      try {
+        const res = await fetch('assets/plates/manifest.json', { cache: 'no-store' });
+        if (res.ok) manifest = await res.json();
+      } catch (e) {
+        console.warn('Plate manifest unavailable, using character defaults:', e);
+      }
+      plateLibrary = new KeyholePlateEngine.PlateLibrary({
+        manifest: manifest || fallbackPlateManifest(),
+        storage: window.localStorage
+      });
+    }
+
+    function startPlateSession(charId) {
+      if (!plateLibrary) return;
+      plateEngine = new KeyholePlateEngine.PlateEngine({
+        character: charId,
+        sessionMinutes: PLATE_SESSION_MINUTES,
+        library: plateLibrary,
+        log: new KeyholePlateEngine.PlayLog({ storage: window.localStorage })
+      });
+    }
+
+    function loadSessionState() {
+      try {
+        const saved = localStorage.getItem('keyhole_session_v1');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          state = { ...state, ...parsed };
+        }
+      } catch (e) {
+        console.warn('Failed to load session state:', e);
+      }
+    }
+
+    function saveSessionState() {
+      try {
+        localStorage.setItem('keyhole_session_v1', JSON.stringify(state));
+      } catch (e) {
+        console.warn('Failed to save session state:', e);
+      }
+    }
+
+    function resetSessionState() {
+      localStorage.removeItem('keyhole_session_v1');
+      state = {
+        view: 'selection',
+        activeCharId: null,
+        roomMode: 'living_room',
+        previewSecondsLeft: CONFIG.defaultPreviewSeconds,
+        isVerifiedMember: false,
+        userMessageCount: 0,
+        hasInvitedToBedroom: false,
+        chatLogs: {}
+      };
+      if (timerInterval) clearInterval(timerInterval);
+      renderUI();
+    }
+
+    /* ==========================================================================
+       BACKEND ENTITLEMENT VERIFICATION HOOK (SORORITY-HOUSE INTERFACE)
+       ========================================================================== */
+    /**
+     * Asynchronously verifies membership token against backend API hook.
+     * Never trusts raw frontend buttons or redirects alone.
+     * @param {string} token
+     * @returns {Promise<{success: boolean, message?: string}>}
+     */
+    async function verifyMembershipEntitlement(token) {
+      // Simulate backend network roundtrip to entitlement service
+      await new Promise(resolve => setTimeout(resolve, 600));
+
+      const cleanedToken = (token || '').trim().toUpperCase();
+
+      // Accept valid member tokens or simulated test keys
+      if (cleanedToken.startsWith('KEY-') || cleanedToken === 'VIP' || cleanedToken === 'MEMBER') {
+        return { success: true };
+      }
+
+      return {
+        success: false,
+        message: 'Invalid Membership Token. Use "KEY-VIP-ROOM" for testing.'
+      };
+    }
+
+    /* ==========================================================================
+       UI RENDERING & DOM HANDLERS
+       ========================================================================== */
+
+    const elSelectionView = document.getElementById('selection-view');
+    const elRoomView = document.getElementById('room-view');
+    const elCharacterGrid = document.getElementById('character-grid');
+    const elSwitchBtn = document.getElementById('switch-character-btn');
+    const elResetBtn = document.getElementById('reset-session-btn');
+    const elNavBadge = document.getElementById('nav-badge');
+    const elLogoBtn = document.getElementById('logo-btn');
+
+    // Stage Elements
+    const elStageCharName = document.getElementById('stage-char-name');
+    const elStageRoomLabel = document.getElementById('stage-room-label');
+    const elStageStatusBadge = document.getElementById('stage-status-badge');
+    const elStageVideo = document.getElementById('stage-video');
+    const elStageFallbackImg = document.getElementById('stage-fallback-img');
+
+    // Banner & Chat
+    const elPreviewBanner = document.getElementById('preview-banner');
+    const elPreviewTimerText = document.getElementById('preview-timer-text');
+    const elBannerUnlockBtn = document.getElementById('banner-unlock-btn');
+    const elChatHeaderTitle = document.getElementById('chat-header-title');
+    const elChatMessages = document.getElementById('chat-messages');
+    const elChatInput = document.getElementById('chat-input');
+    const elChatSendBtn = document.getElementById('chat-send-btn');
+    const elFooterCharNote = document.getElementById('footer-char-note');
+
+    // Modal Elements
+    const elModal = document.getElementById('membership-modal');
+    const elModalCloseBtn = document.getElementById('modal-close-btn');
+    const elMemberKeyInput = document.getElementById('member-key-input');
+    const elModalError = document.getElementById('modal-error');
+
+    const elGeminiStudioBtn = document.getElementById('gemini-studio-btn');
+    const elGeminiModal = document.getElementById('gemini-studio-modal');
+    const elGeminiModalCloseBtn = document.getElementById('gemini-modal-close-btn');
+    const elRuleMultiangleCheck = document.getElementById('rule-multiangle-check');
+    const elRulePrimaryviewCheck = document.getElementById('rule-primaryview-check');
+    const elGeminiMotionSelect = document.getElementById('gemini-motion-select');
+    const elWebcamSkinSelect = document.getElementById('webcam-skin-select');
+    const elGeminiPromptOutput = document.getElementById('gemini-prompt-output');
+    const elBtnCopyPrompt = document.getElementById('btn-copy-prompt');
+    const elBtnSimulateGemini = document.getElementById('btn-simulate-gemini');
+    const elBtnApplyGeminiStage = document.getElementById('btn-apply-gemini-stage');
+    const elGeminiStatusFeedback = document.getElementById('gemini-status-feedback');
+    const elStageSkinOverlay = document.getElementById('stage-skin-overlay');
+    const elVerifyMemberBtn = document.getElementById('verify-member-btn');
+
+    async function initApp() {
+      loadSessionState();
+      renderSelectionGrid();
+      setupEventListeners();
+      await initPlateLibrary();
+
+      if (state.view === 'room' && state.activeCharId && CHARACTERS[state.activeCharId]) {
+        enterRoom(state.activeCharId, false);
+      } else {
+        showSelectionView();
+      }
+    }
+
+    function renderSelectionGrid() {
+      elCharacterGrid.innerHTML = '';
+      Object.values(CHARACTERS).forEach(char => {
+        const card = document.createElement('div');
+        card.className = 'character-card';
+        card.dataset.id = char.id;
+        card.innerHTML = `
+          <div class="card-thumb-wrap">
+            <img class="card-thumb" src="${char.avatar}" alt="${char.name}" onerror="this.src='${char.livingRoomMedia.fallbackImage}'" />
+            <span class="card-status-pill">Available for Preview</span>
+          </div>
+          <div class="card-body">
+            <h3 class="card-name">${char.name}</h3>
+            <div class="card-vibe">${char.vibe}</div>
+            <div class="card-bio">${char.bio}</div>
+            <button class="btn-enter-room" data-id="${char.id}">Enter Private Room</button>
+          </div>
+        `;
+        card.addEventListener('click', () => {
+          enterRoom(char.id, true);
+        });
+        elCharacterGrid.appendChild(card);
+      });
+    }
+
+    function showSelectionView() {
+      state.view = 'selection';
+      saveSessionState();
+      elSelectionView.classList.add('active');
+      elRoomView.classList.remove('active');
+      elSwitchBtn.style.display = 'none';
+      elNavBadge.textContent = 'Keyhole Lobby';
+      elNavBadge.className = 'badge badge-member';
+      if (timerInterval) clearInterval(timerInterval);
+    }
+
+    function enterRoom(charId, isNewSelection = true) {
+      const char = CHARACTERS[charId];
+      if (!char) return;
+
+      state.activeCharId = charId;
+      state.view = 'room';
+
+      if (isNewSelection || !plateEngine || plateEngine.character !== charId) {
+        startPlateSession(charId);
+      }
+
+      if (isNewSelection) {
+        state.roomMode = 'living_room';
+        state.previewSecondsLeft = CONFIG.defaultPreviewSeconds;
+        state.userMessageCount = 0;
+        state.hasInvitedToBedroom = false;
+
+        // Initialize chat log if empty
+        if (!state.chatLogs[charId] || state.chatLogs[charId].length === 0) {
+          state.chatLogs[charId] = [
+            { sender: char.name, text: char.dialogue.greeting, timestamp: Date.now(), type: 'model' }
+          ];
+        }
+      }
+
+      saveSessionState();
+      renderRoomView();
+      startPreviewTimer();
+    }
+
+    function renderRoomView() {
+      const char = CHARACTERS[state.activeCharId];
+      if (!char) return;
+
+      elSelectionView.classList.remove('active');
+      elRoomView.classList.add('active');
+      elSwitchBtn.style.display = 'inline-block';
+
+      elStageCharName.textContent = char.name;
+      elChatHeaderTitle.textContent = `Private Chat with ${char.name}`;
+      elFooterCharNote.textContent = `${char.name} is a fictional AI-generated character.`;
+
+      // Update room mode badge & media
+      if (state.roomMode === 'bedroom') {
+        elStageRoomLabel.textContent = '• Private Bedroom';
+        elNavBadge.textContent = 'Bedroom Unlocked';
+        elNavBadge.className = 'badge badge-member';
+        elPreviewBanner.style.display = 'none';
+
+        setupStageMedia(char.bedroomMedia);
+      } else {
+        elStageRoomLabel.textContent = '• Free Preview Lounge';
+        elNavBadge.textContent = 'Preview Stream';
+        elNavBadge.className = 'badge badge-live';
+
+        if (state.isVerifiedMember) {
+          elPreviewBanner.style.display = 'none';
+        } else {
+          elPreviewBanner.style.display = 'flex';
+          updateTimerDisplay();
+        }
+
+        setupStageMedia(char.livingRoomMedia);
+      }
+
+      renderChatMessages();
+    }
+
+    function setupStageMedia(mediaGroup) {
+      if (!mediaGroup) return;
+
+      if (plateEngine && plateEngine.library.beatEnabled(plateEngine.character, 'idle')) {
+        plateEngine.next('idle').then(res => {
+          if (res.action === 'plate' || res.action === 'generated') {
+            showStageIdle({ idleVideo: res.url, fallbackImage: mediaGroup.fallbackImage });
+          } else {
+            showStageIdle(mediaGroup);
+          }
+        });
+        return;
+      }
+      showStageIdle(mediaGroup);
+    }
+
+    function showStageIdle(mediaGroup) {
+      // Primary customer-facing webcam stage (never exposes internal consistency reference angles)
+      elStageVideo.loop = true;
+      if (mediaGroup.idleVideo) {
+        elStageVideo.src = mediaGroup.idleVideo;
+        elStageVideo.style.display = 'block';
+        elStageVideo.onerror = () => {
+          // Graceful video fallback on load error
+          elStageVideo.style.display = 'none';
+          elStageFallbackImg.src = mediaGroup.fallbackImage;
+          elStageFallbackImg.style.display = 'block';
+        };
+        elStageFallbackImg.style.display = 'none';
+      } else {
+        elStageVideo.style.display = 'none';
+        elStageFallbackImg.src = mediaGroup.fallbackImage;
+        elStageFallbackImg.style.display = 'block';
+      }
+
+      elStageFallbackImg.onerror = () => {
+        // Ultimate fallback SVG image
+        elStageFallbackImg.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450"><rect width="800" height="450" fill="%23071720"/><text x="400" y="225" font-family="sans-serif" font-size="20" fill="%23d9ad58" text-anchor="middle">KEYHOLE LIVE FEED AVAILABLE</text></svg>';
+      };
+    }
+
+    function triggerReactionClip() {
+      const char = CHARACTERS[state.activeCharId];
+      if (!char) return;
+
+      const mediaGroup = (state.roomMode === 'bedroom') ? char.bedroomMedia : char.livingRoomMedia;
+
+      if (plateEngine) {
+        // Bedroom asks for a give; the engine withholds on cooldown/repeat and we fall back to a tease plate.
+        const beat = state.roomMode === 'bedroom' ? 'give' : 'tease';
+        plateEngine.next(beat).then(res => {
+          if (res.action === 'plate' || res.action === 'generated') return res;
+          return beat === 'give' ? plateEngine.next('tease') : res;
+        }).then(res => {
+          if (res.action === 'plate' || res.action === 'generated') playStageCut(res.url, mediaGroup);
+        });
+        return;
+      }
+
+      if (mediaGroup && mediaGroup.reactionVideos && mediaGroup.reactionVideos.length > 0) {
+        playStageCut(mediaGroup.reactionVideos[0], mediaGroup);
+      }
+    }
+
+    function playStageCut(clipUrl, mediaGroup) {
+      elStageVideo.src = clipUrl;
+      elStageVideo.style.display = 'block';
+      elStageFallbackImg.style.display = 'none';
+      elStageVideo.loop = false;
+      elStageVideo.play().catch(() => {});
+
+      // Return to idle loop on video end
+      elStageVideo.onended = () => {
+        setupStageMedia(mediaGroup);
+      };
+    }
+
+    function startPreviewTimer() {
+      if (timerInterval) clearInterval(timerInterval);
+
+      if (state.roomMode === 'bedroom' || state.isVerifiedMember) {
+        return;
+      }
+
+      timerInterval = setInterval(() => {
+        if (state.previewSecondsLeft > 0) {
+          state.previewSecondsLeft--;
+          saveSessionState();
+          updateTimerDisplay();
+        } else {
+          clearInterval(timerInterval);
+          onPreviewTimeExpired();
+        }
+      }, 1000);
+    }
+
+    function updateTimerDisplay() {
+      elPreviewTimerText.textContent = `${state.previewSecondsLeft}s remaining`;
+    }
+
+    function onPreviewTimeExpired() {
+      const char = CHARACTERS[state.activeCharId];
+      if (!char) return;
+
+      // Add system message and open gate modal
+      appendSystemMessage(char.dialogue.freeTimeEnding);
+      openMembershipGateModal("Free Preview Expired", char.dialogue.freeTimeEnding);
+    }
+
+    function renderChatMessages() {
+      const logs = state.chatLogs[state.activeCharId] || [];
+      elChatMessages.innerHTML = '';
+      logs.forEach(msg => {
+        const bubble = document.createElement('div');
+        if (msg.type === 'system') {
+          bubble.className = 'chat-bubble bubble-system';
+          bubble.innerHTML = msg.text;
+        } else {
+          bubble.className = `chat-bubble ${msg.sender === 'You' ? 'bubble-user' : 'bubble-model'}`;
+          bubble.textContent = msg.text;
+
+          if (msg.hasInvitation) {
+            const actionWrap = document.createElement('div');
+            actionWrap.className = 'invitation-actions';
+            actionWrap.innerHTML = `
+              <button class="btn-accept" id="invitation-accept-btn">Accept Invitation</button>
+              <button class="btn-decline" id="invitation-decline-btn">Stay in Lounge</button>
+            `;
+            bubble.appendChild(actionWrap);
+          }
+        }
+        elChatMessages.appendChild(bubble);
+      });
+
+      // Attach listener for invitation buttons
+      const btnAccept = document.getElementById('invitation-accept-btn');
+      const btnDecline = document.getElementById('invitation-decline-btn');
+
+      if (btnAccept) {
+        btnAccept.addEventListener('click', handleAcceptInvitation);
+      }
+      if (btnDecline) {
+        btnDecline.addEventListener('click', handleDeclineInvitation);
+      }
+
+      elChatMessages.scrollTop = elChatMessages.scrollHeight;
+    }
+
+    function handleSendMessage() {
+      const text = elChatInput.value.trim();
+      if (!text || !state.activeCharId) return;
+
+      const char = CHARACTERS[state.activeCharId];
+
+      if (!state.chatLogs[state.activeCharId]) {
+        state.chatLogs[state.activeCharId] = [];
+      }
+
+      // Record user message
+      state.chatLogs[state.activeCharId].push({
+        sender: 'You',
+        text: text,
+        timestamp: Date.now(),
+        type: 'user'
+      });
+
+      elChatInput.value = '';
+      state.userMessageCount++;
+      saveSessionState();
+      renderChatMessages();
+
+      // Trigger video reaction clip on stage
+      triggerReactionClip();
+
+      // Generate character response
+      setTimeout(() => {
+        generateCharacterResponse(char);
+      }, 700);
+    }
+
+    function generateCharacterResponse(char) {
+      if (state.roomMode === 'living_room' && state.userMessageCount >= CONFIG.invitationMessageThreshold && !state.hasInvitedToBedroom && !state.isVerifiedMember) {
+        // Trigger bedroom invitation
+        state.hasInvitedToBedroom = true;
+        state.chatLogs[state.activeCharId].push({
+          sender: char.name,
+          text: char.dialogue.bedroomInvitation,
+          timestamp: Date.now(),
+          type: 'model',
+          hasInvitation: true
+        });
+      } else {
+        // Pick personality response
+        const responses = char.dialogue.freePreviewResponses;
+        const responseText = responses[Math.floor(Math.random() * responses.length)];
+
+        state.chatLogs[state.activeCharId].push({
+          sender: char.name,
+          text: responseText,
+          timestamp: Date.now(),
+          type: 'model'
+        });
+      }
+
+      saveSessionState();
+      renderChatMessages();
+    }
+
+    function handleAcceptInvitation() {
+      const char = CHARACTERS[state.activeCharId];
+      appendSystemMessage(`You accepted ${char.name}'s invitation to the bedroom!`);
+
+      if (char) {
+        state.chatLogs[state.activeCharId].push({
+          sender: char.name,
+          text: char.dialogue.acceptResponse,
+          timestamp: Date.now(),
+          type: 'model'
+        });
+      }
+
+      saveSessionState();
+      renderChatMessages();
+
+      // Trigger membership gate modal
+      openMembershipGateModal("Unlock Private Bedroom", `Enter your Keyhole membership key to follow ${char.name} into her bedroom.`);
+    }
+
+    function handleDeclineInvitation() {
+      const char = CHARACTERS[state.activeCharId];
+      if (char) {
+        state.chatLogs[state.activeCharId].push({
+          sender: char.name,
+          text: char.dialogue.declineResponse,
+          timestamp: Date.now(),
+          type: 'model'
+        });
+        saveSessionState();
+        renderChatMessages();
+      }
+    }
+
+    function appendSystemMessage(text) {
+      if (!state.activeCharId) return;
+      state.chatLogs[state.activeCharId].push({
+        sender: 'System',
+        text: text,
+        timestamp: Date.now(),
+        type: 'system'
+      });
+      saveSessionState();
+      renderChatMessages();
+    }
+
+    function openMembershipGateModal(title, desc) {
+      if (title) document.getElementById('modal-title').textContent = title;
+      if (desc) document.getElementById('modal-desc').textContent = desc;
+      elModalError.style.display = 'none';
+      elModal.classList.add('active');
+    }
+
+    function closeMembershipGateModal() {
+      elModal.classList.remove('active');
+    }
+
+    async function handleVerifyMembership() {
+      const token = elMemberKeyInput.value;
+      elVerifyMemberBtn.disabled = true;
+      elVerifyMemberBtn.textContent = 'Verifying Backend Entitlement...';
+      elModalError.style.display = 'none';
+
+      try {
+        const res = await verifyMembershipEntitlement(token);
+        if (res.success) {
+          state.isVerifiedMember = true;
+          state.roomMode = 'bedroom'; // Seamlessly transition SAME customer + SAME character to bedroom
+          saveSessionState();
+
+          closeMembershipGateModal();
+          appendSystemMessage(`Membership verified! You are now in ${CHARACTERS[state.activeCharId].name}'s private bedroom.`);
+
+          renderRoomView();
+        } else {
+          elModalError.textContent = res.message || 'Verification failed.';
+          elModalError.style.display = 'block';
+        }
+      } catch (err) {
+        elModalError.textContent = 'Error connecting to entitlement backend.';
+        elModalError.style.display = 'block';
+      } finally {
+        elVerifyMemberBtn.disabled = false;
+        elVerifyMemberBtn.textContent = 'Verify Backend Entitlement & Unlock';
+      }
+    }
+
+        /* ==========================================================================
+       GEMINI AI STUDIO & SIMS ROOM EDITOR ENGINE
+       ========================================================================== */
+    function buildGeminiMasterPrompt() {
+      const activeChar = CHARACTERS[state.activeCharId] || CHARACTERS['bailey'];
+      const roomLabel = (state.roomMode === 'bedroom') ? 'Private Bedroom Suite' : 'Living Room Lounge View';
+
+      const adds = (state.geminiStudio && state.geminiStudio.furnitureAdditions && state.geminiStudio.furnitureAdditions.length > 0)
+        ? state.geminiStudio.furnitureAdditions.join(', ')
+        : 'None specified';
+
+      const removes = (state.geminiStudio && state.geminiStudio.furnitureRemovals && state.geminiStudio.furnitureRemovals.length > 0)
+        ? state.geminiStudio.furnitureRemovals.join(', ')
+        : 'None specified';
+
+      let prompt = `GEMINI MULTI-ANGLE ROOM GENERATION MASTER PROMPT\n`;
+      prompt += `--------------------------------------------------\n`;
+      prompt += `CHARACTER: ${activeChar.name} (${activeChar.title})\n`;
+      prompt += `ACTIVE ENVIRONMENT: ${roomLabel}\n\n`;
+
+      if (!state.geminiStudio || state.geminiStudio.multiAngleLock) {
+        prompt += `[RULE 1 - UNIFIED 3D PHYSICAL ROOM MODEL]:\n`;
+        prompt += `Reference images (e.g. IMG_3363 / IMG_3364) represent ONE permanent, 3D consistent physical room. All furniture, geometry, walls, and lighting must remain spatially stable across generated clips.\n\n`;
+      }
+
+      if (!state.geminiStudio || state.geminiStudio.primaryViewLock) {
+        prompt += `[RULE 2 - PRIMARY WEBCAM VIEW LOCK]:\n`;
+        prompt += `Rendered output MUST remain strictly locked to the PRIMARY WEBCAM VIEW camera position. DO NOT cut, pan away, or switch to secondary reference views.\n\n`;
+      }
+
+      prompt += `[SIMS-STYLE REALISTIC FURNITURE CUSTOMIZATION]:\n`;
+      prompt += `- Furniture Additions (Realistic Textures): ${adds}\n`;
+      prompt += `- Furniture Removals / Clean Items: ${removes}\n\n`;
+
+      prompt += `[WEBCAM OVERLAY & RENDER OUTPUT]:\n`;
+      prompt += `- Motion Format: ${(state.geminiStudio && state.geminiStudio.motionMode === 'live_webcam') ? 'Live Webcam Stream (Dynamic Motion Video)' : 'Static High-Res Reference Render'}\n`;
+      prompt += `- Webcam Overlay Skin: ${(state.geminiStudio && state.geminiStudio.webcamSkin) ? state.geminiStudio.webcamSkin : 'keyhole_gold'}\n`;
+
+      return prompt;
+    }
+
+    function updateGeminiStudioPromptUI() {
+      if (elGeminiPromptOutput) {
+        elGeminiPromptOutput.value = buildGeminiMasterPrompt();
+      }
+    }
+
+    function openGeminiStudioModal() {
+      syncDOMToGeminiStudioState();
+      updateGeminiStudioPromptUI();
+      elGeminiModal.classList.add('active');
+    }
+
+    function closeGeminiStudioModal() {
+      elGeminiModal.classList.remove('active');
+    }
+
+    function syncDOMToGeminiStudioState() {
+      if (!state.geminiStudio) return;
+      elRuleMultiangleCheck.checked = !!state.geminiStudio.multiAngleLock;
+      elRulePrimaryviewCheck.checked = !!state.geminiStudio.primaryViewLock;
+      elGeminiMotionSelect.value = state.geminiStudio.motionMode || 'live_webcam';
+      elWebcamSkinSelect.value = state.geminiStudio.webcamSkin || 'keyhole_gold';
+
+      document.querySelectorAll('.furniture-add-check').forEach(cb => {
+        cb.checked = state.geminiStudio.furnitureAdditions ? state.geminiStudio.furnitureAdditions.includes(cb.value) : false;
+      });
+      document.querySelectorAll('.furniture-remove-check').forEach(cb => {
+        cb.checked = state.geminiStudio.furnitureRemovals ? state.geminiStudio.furnitureRemovals.includes(cb.value) : false;
+      });
+    }
+
+    function syncGeminiStudioFromDOM() {
+      if (!state.geminiStudio) {
+        state.geminiStudio = { multiAngleLock: true, primaryViewLock: true, motionMode: 'live_webcam', furnitureAdditions: [], furnitureRemovals: [], webcamSkin: 'keyhole_gold' };
+      }
+      state.geminiStudio.multiAngleLock = elRuleMultiangleCheck.checked;
+      state.geminiStudio.primaryViewLock = elRulePrimaryviewCheck.checked;
+      state.geminiStudio.motionMode = elGeminiMotionSelect.value;
+      state.geminiStudio.webcamSkin = elWebcamSkinSelect.value;
+
+      state.geminiStudio.furnitureAdditions = Array.from(document.querySelectorAll('.furniture-add-check:checked')).map(cb => cb.value);
+      state.geminiStudio.furnitureRemovals = Array.from(document.querySelectorAll('.furniture-remove-check:checked')).map(cb => cb.value);
+
+      // Sync skin overlay on fruit translator preview
+      const elFruitSkinOverlay = document.getElementById('fruit-skin-overlay');
+      if (elFruitSkinOverlay && elWebcamSkinSelect) {
+        const skinName = (elWebcamSkinSelect.value || 'keyhole_gold').replace('_', '-');
+        elFruitSkinOverlay.className = `stage-skin-overlay skin-${skinName}`;
+      }
+
+      saveSessionState();
+      updateGeminiStudioPromptUI();
+    }
+
+    function applyGeminiRoomToStage() {
+      syncGeminiStudioFromDOM();
+
+      // Apply selected skin overlay
+      if (elStageSkinOverlay) {
+        const skinName = (state.geminiStudio.webcamSkin || 'keyhole_gold').replace('_', '-');
+        elStageSkinOverlay.className = `stage-skin-overlay skin-${skinName}`;
+      }
+
+      elGeminiStatusFeedback.style.display = 'block';
+      elGeminiStatusFeedback.textContent = 'Gemini room model, Sims furniture & webcam skin applied to active room!';
+
+      setTimeout(() => {
+        elGeminiStatusFeedback.style.display = 'none';
+      }, 3000);
+
+      const activeChar = CHARACTERS[state.activeCharId];
+      if (activeChar) {
+        appendSystemMessage(`[Gemini AI Studio] Applied room model with ${state.geminiStudio.furnitureAdditions.length} furniture items & ${state.geminiStudio.webcamSkin} skin.`);
+      }
+
+      closeGeminiStudioModal();
+    }
+
+    function simulateGeminiGen() {
+      syncGeminiStudioFromDOM();
+      elGeminiStatusFeedback.style.display = 'block';
+      elGeminiStatusFeedback.textContent = 'Simulating Gemini render pass... Multi-angle 3D spatial model built & locked to Primary View!';
+
+      setTimeout(() => {
+        elGeminiStatusFeedback.textContent = 'Gemini render successful! Click "Apply to Active Room Stage" to display.';
+      }, 1000);
+    }
+
+    function copyGeminiPromptToClipboard() {
+      const promptText = buildGeminiMasterPrompt();
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(promptText).then(() => {
+          elGeminiStatusFeedback.style.display = 'block';
+          elGeminiStatusFeedback.textContent = 'Gemini Master Prompt copied to clipboard!';
+          setTimeout(() => { elGeminiStatusFeedback.style.display = 'none'; }, 2500);
+        }).catch(() => {
+          elGeminiStatusFeedback.style.display = 'block';
+          elGeminiStatusFeedback.textContent = 'Prompt ready in text box (manual copy).';
+        });
+      } else {
+        elGeminiStatusFeedback.style.display = 'block';
+        elGeminiStatusFeedback.textContent = 'Prompt ready in text box (manual copy).';
+      }
+    }
+
+    /* ==========================================================================
+       FRUIT TRANSLATOR & EXTENDED DISPLAY HANDLERS
+       ========================================================================== */
+    const FRUIT_TRANSLATION_MAP = {
+      'o/banana': 'Playful companion gesture and interaction',
+      'o/peach': 'Charming lounge posture and motion',
+      'o/cherry': 'Sweet conversation highlight',
+      'o/eggplant': 'Bold energetic room motion',
+      'o/apple': 'Classic cozy lounge connection',
+      'o/grape': 'Elegant multi-angle room pose'
+    };
+
+    function handleGenerateAndTranslate() {
+      const elFruitCodeInput = document.getElementById('fruit-code-input');
+      const elFruitOutputSelect = document.getElementById('fruit-output-select');
+      const elFruitMediaFile = document.getElementById('fruit-media-file');
+      const elFruitExpand = document.getElementById('fruit-expand-surroundings');
+      const elFruitDelay = document.getElementById('fruit-delay-duration');
+      const elFruitLoop = document.getElementById('fruit-loop-video');
+
+      const elDispCode = document.getElementById('disp-fruit-code');
+      const elDispMeaning = document.getElementById('disp-translated-meaning');
+      const elDispMode = document.getElementById('disp-output-mode');
+      const elDispContext = document.getElementById('disp-surroundings-context');
+      const elDispLoop = document.getElementById('disp-loop-config');
+      const elPreviewImg = document.getElementById('fruit-preview-img');
+      const elFruitSkinOverlay = document.getElementById('fruit-skin-overlay');
+
+      const rawCode = (elFruitCodeInput ? elFruitCodeInput.value.trim() : 'o/banana').toLowerCase();
+      const outputSel = elFruitOutputSelect ? elFruitOutputSelect.value : 'Pictures';
+      const isExpand = elFruitExpand ? elFruitExpand.checked : false;
+      const delaySecs = elFruitDelay ? parseInt(elFruitDelay.value, 10) || 0 : 0;
+      const isLoop = elFruitLoop ? elFruitLoop.checked : true;
+
+      // Update Translation Display
+      if (elDispCode) elDispCode.textContent = rawCode || 'o/banana';
+
+      const translatedMeaning = FRUIT_TRANSLATION_MAP[rawCode] || `Custom fruit signal sequence (${rawCode})`;
+      if (elDispMeaning) elDispMeaning.textContent = translatedMeaning;
+
+      const outputModeLabel = (outputSel === 'Pictures') ? 'image' : (outputSel === 'Video Clip' ? 'video' : 'live_stream');
+      if (elDispMode) elDispMode.textContent = outputModeLabel;
+
+      if (elDispContext) {
+        elDispContext.textContent = isExpand
+          ? 'Outpainted extended background surroundings'
+          : 'Standard focus framing';
+      }
+
+      if (elDispLoop) {
+        elDispLoop.textContent = isLoop
+          ? `Loop video after ${delaySecs}s extended duration`
+          : `Play once with ${delaySecs}s delay`;
+      }
+
+      // Sync skin overlay
+      if (elFruitSkinOverlay && elWebcamSkinSelect) {
+        const skinName = (elWebcamSkinSelect.value || 'keyhole_gold').replace('_', '-');
+        elFruitSkinOverlay.className = `stage-skin-overlay skin-${skinName}`;
+      }
+
+      // File preview if user selected a file
+      if (elFruitMediaFile && elFruitMediaFile.files && elFruitMediaFile.files[0]) {
+        const file = elFruitMediaFile.files[0];
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          if (elPreviewImg) elPreviewImg.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      } else {
+        // Active character fallback preview
+        const activeChar = CHARACTERS[state.activeCharId] || CHARACTERS['bailey'];
+        if (elPreviewImg && activeChar) {
+          elPreviewImg.src = activeChar.livingRoomMedia.fallbackImage;
+        }
+      }
+    }
+
+function setupEventListeners() {
+      elSwitchBtn.addEventListener('click', showSelectionView);
+      elResetBtn.addEventListener('click', resetSessionState);
+      elLogoBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        showSelectionView();
+      });
+
+      elChatSendBtn.addEventListener('click', handleSendMessage);
+      elChatInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') handleSendMessage();
+      });
+
+      elBannerUnlockBtn.addEventListener('click', () => {
+        const char = CHARACTERS[state.activeCharId];
+        openMembershipGateModal("Unlock Bedroom Access", `Verify your Keyhole membership to enter ${char ? char.name : ''}'s private bedroom.`);
+      });
+
+      elModalCloseBtn.addEventListener('click', closeMembershipGateModal);
+      elVerifyMemberBtn.addEventListener('click', handleVerifyMembership);
+
+      // Gemini Studio Listeners
+      elGeminiStudioBtn.addEventListener('click', openGeminiStudioModal);
+      elGeminiModalCloseBtn.addEventListener('click', closeGeminiStudioModal);
+
+      elRuleMultiangleCheck.addEventListener('change', syncGeminiStudioFromDOM);
+      elRulePrimaryviewCheck.addEventListener('change', syncGeminiStudioFromDOM);
+      elGeminiMotionSelect.addEventListener('change', syncGeminiStudioFromDOM);
+      elWebcamSkinSelect.addEventListener('change', syncGeminiStudioFromDOM);
+
+      document.querySelectorAll('.furniture-add-check, .furniture-remove-check').forEach(cb => {
+        cb.addEventListener('change', syncGeminiStudioFromDOM);
+      });
+
+      elBtnCopyPrompt.addEventListener('click', copyGeminiPromptToClipboard);
+      elBtnSimulateGemini.addEventListener('click', simulateGeminiGen);
+      elBtnApplyGeminiStage.addEventListener('click', applyGeminiRoomToStage);
+
+      // Fruit Translator Listener
+      const elBtnGenTranslate = document.getElementById('btn-generate-translate');
+      if (elBtnGenTranslate) {
+        elBtnGenTranslate.addEventListener('click', handleGenerateAndTranslate);
+      }
+    }
+
+    // Initialize on DOM load
+    document.addEventListener('DOMContentLoaded', initApp);
+  </script>
+</body>
+</html>
