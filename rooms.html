@@ -9,7 +9,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,500;6..96,600;6..96,700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="house.css" />
   <title>KEYHOLE</title>
+  <script>
+    if (!localStorage.getItem('keyhole_auth_token_v1')) location.replace('index.html');
+  </script>
   <style>
     :root {
       color-scheme: dark;
@@ -128,88 +132,115 @@
       display: block;
     }
 
-    /* Two Doors Selection View */
+    /* Two doors. Chloe left, Bailey right. Not a catalog. */
+    body.at-doors #gemini-studio-btn,
+    body.at-doors #reset-session-btn,
+    body.at-doors #nav-badge { display: none !important; }
+
     .doors-wrapper {
-      max-width: 1000px;
-      margin: 0 auto;
-      padding: 60px 24px;
+      position: relative;
+      min-height: calc(100vh - 65px);
+      margin: 0;
+      padding: 0;
       text-align: center;
     }
     .doors-heading {
-      font-family: Georgia, serif;
-      font-size: clamp(1.8rem, 4vw, 2.8rem);
-      font-weight: 400;
-      color: var(--ink);
-      margin-bottom: 40px;
-      letter-spacing: -0.01em;
+      position: absolute;
+      top: 16px;
+      left: 0;
+      right: 0;
+      z-index: 3;
+      margin: 0;
+      font-family: "DM Sans", sans-serif;
+      font-size: 0.72rem;
+      font-weight: 500;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      color: var(--muted);
+      pointer-events: none;
     }
     .doors-grid {
       display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 32px;
-      margin-bottom: 40px;
+      grid-template-columns: 1fr 1fr;
+      gap: 1px;
+      background: rgba(196, 165, 116, 0.45);
+      min-height: calc(100vh - 65px);
+      margin: 0;
     }
+    .doors-wrapper.has-sheet .doors-grid { min-height: 58vh; }
     @media (max-width: 700px) {
       .doors-grid { grid-template-columns: 1fr; }
+      .door-card { min-height: 70vh; }
     }
 
     .door-card {
-      background-color: var(--panel-dark);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      overflow: hidden;
+      position: relative;
+      display: block;
+      width: 100%;
+      min-height: calc(100vh - 65px);
+      padding: 0;
+      border: 0;
+      border-radius: 0;
+      background: #000;
+      color: inherit;
       cursor: pointer;
-      transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-      display: flex;
-      flex-direction: column;
+      overflow: hidden;
       text-align: center;
     }
-    .door-card:hover {
-      transform: translateY(-4px);
-      border-color: var(--gold);
-      box-shadow: var(--shadow);
-    }
+    .doors-wrapper.has-sheet .door-card { min-height: 58vh; }
+    .door-card.is-dim { filter: brightness(0.48) saturate(0.8); }
+    .door-card.is-selected { box-shadow: inset 0 0 0 1px var(--room-accent); }
     .door-image-wrap {
-      width: 100%;
-      aspect-ratio: 4/5;
-      position: relative;
-      background-color: #000;
+      position: absolute;
+      inset: 0;
+      background: #000;
       overflow: hidden;
     }
     .door-image {
       width: 100%;
       height: 100%;
       object-fit: cover;
-      transition: transform 0.4s ease;
-    }
-    .door-card:hover .door-image {
-      transform: scale(1.03);
+      object-position: center 22%;
     }
     .door-label {
-      padding: 20px;
-      font-family: Georgia, serif;
-      font-size: 1.5rem;
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      padding: 64px 16px 28px;
+      font-family: "Bodoni Moda", Georgia, serif;
+      font-size: clamp(2rem, 4vw, 3rem);
+      font-weight: 500;
       color: var(--ink);
-      background-color: var(--panel-dark);
-      letter-spacing: 0.05em;
+      background: linear-gradient(transparent, rgba(18, 16, 14, 0.78));
+      letter-spacing: 0.02em;
     }
 
     /* Session Pricing Section (Revealed after selecting a door or when requested) */
     .session-pricing {
-      margin-top: 40px;
-      padding-top: 36px;
+      margin: 0;
+      padding: 32px 20px 48px;
       border-top: 1px solid var(--line);
+      background: var(--panel-dark);
       display: none;
     }
     .session-pricing.visible {
       display: block;
     }
     .session-pricing-title {
-      font-family: Georgia, serif;
-      font-size: clamp(1.4rem, 3vw, 2rem);
-      color: var(--cream);
+      font-family: "Bodoni Moda", Georgia, serif;
+      font-size: clamp(1.6rem, 3vw, 2.2rem);
+      font-weight: 500;
+      color: var(--ink);
       text-align: center;
-      margin: 0 0 24px;
+      margin: 0 0 8px;
+    }
+    .pricing-error {
+      color: var(--error-dusty);
+      min-height: 1.1em;
+      font-size: 0.84rem;
+      text-align: center;
+      margin: 0 0 16px;
     }
     .session-tier-grid {
       display: grid;
@@ -226,7 +257,7 @@
       text-align: center;
     }
     .session-tier.featured {
-      border-color: var(--gold);
+      border-color: var(--room-accent);
     }
     .session-tier-time {
       font-size: .9rem;
@@ -238,7 +269,7 @@
       font-family: Georgia, serif;
       font-size: 1.7rem;
       font-weight: 500;
-      color: var(--cream);
+      color: var(--room-highlight);
       line-height: 1;
       margin-bottom: 10px;
     }
@@ -683,7 +714,7 @@
     }
   </style>
 </head>
-<body class="theme-default">
+<body class="theme-default at-doors">
 
   <!-- Site Header -->
   <header class="site-header">
@@ -691,7 +722,7 @@
     <div class="header-nav">
       <span id="nav-badge" class="badge badge-live">Live</span>
       <span id="account-status" class="badge" style="display:none;"></span>
-      <button id="account-btn" class="btn-small btn-gold-outline">Sign In</button>
+      <button id="account-btn" class="btn-small btn-gold-outline">Sign out</button>
       <button id="gemini-studio-btn" class="btn-small btn-gold-outline">Gemini Studio & Room Editor</button>
       <button id="switch-character-btn" class="btn-small" style="display:none;">Change Room</button>
       <button id="reset-session-btn" class="btn-small">Reset Session</button>
@@ -705,27 +736,27 @@
 
       <div class="doors-grid" id="doors-grid">
         <!-- Door 1: Chloe -->
-        <div class="door-card" data-id="chloe" id="door-chloe">
-          <div class="door-image-wrap">
-            <img class="door-image" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='500' viewBox='0 0 400 500'><rect width='400' height='500' fill='%231C2430'/><circle cx='200' cy='200' r='70' fill='%23D4A574' opacity='0.8'/><rect x='150' y='280' width='100' height='160' fill='%2312100E'/><text x='200' y='470' font-family='serif' font-size='22' fill='%23F3EDE4' text-anchor='middle'>Chloe</text></svg>" alt="Chloe" />
-          </div>
-          <div class="door-label">Chloe</div>
-        </div>
+        <button type="button" class="door-card" data-id="chloe" id="door-chloe">
+          <span class="door-image-wrap">
+            <img class="door-image" src="assets/IMG_3542.jpeg" alt="">
+          </span>
+          <span class="door-label">Chloe</span>
+        </button>
 
-        <!-- Door 2: Bailey -->
-        <div class="door-card" data-id="bailey" id="door-bailey">
-          <div class="door-image-wrap">
-            <img class="door-image" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='500' viewBox='0 0 400 500'><rect width='400' height='500' fill='%233A2E27'/><circle cx='200' cy='200' r='70' fill='%238F5A3C' opacity='0.8'/><rect x='150' y='280' width='100' height='160' fill='%23E6DCCB'/><text x='200' y='470' font-family='serif' font-size='22' fill='%23F3EDE4' text-anchor='middle'>Bailey</text></svg>" alt="Bailey" />
-          </div>
-          <div class="door-label">Bailey</div>
-        </div>
+        <button type="button" class="door-card" data-id="bailey" id="door-bailey">
+          <span class="door-image-wrap">
+            <img class="door-image" src="assets/IMG_3546.jpeg" alt="">
+          </span>
+          <span class="door-label">Bailey</span>
+        </button>
       </div>
 
       <!-- Hidden grid container for full compatibility with tests & background characters -->
       <div class="character-grid" id="character-grid" style="display:none;"></div>
 
       <section class="session-pricing" id="session-pricing-panel" aria-labelledby="session-pricing-title">
-        <h2 class="session-pricing-title" id="session-pricing-title">Available Sessions</h2>
+        <h2 class="session-pricing-title" id="session-pricing-title">Time</h2>
+        <p id="pricing-error" class="pricing-error"></p>
         <div class="session-tier-grid">
           <div class="session-tier featured" data-minutes="10" data-free-preview="true">
             <div class="session-tier-time">Free Preview</div>
@@ -1006,21 +1037,21 @@
         title: 'Dirty-blonde, navy room, city window',
         vibe: 'Dirty-blonde · Navy room · City window',
         bio: 'Dirty-blonde, black tank, navy room, city window.',
-        avatar: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="500" viewBox="0 0 400 500"><rect width="400" height="500" fill="%231C2430"/><circle cx="200" cy="200" r="70" fill="%23D4A574" opacity="0.8"/><text x="200" y="470" font-family="serif" font-size="22" fill="%23F3EDE4" text-anchor="middle">Chloe</text></svg>',
+        avatar: 'assets/IMG_3542.jpeg',
         roomReferences: {
-          primaryWebcamView: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450"><rect width="800" height="450" fill="%231C2430"/><circle cx="400" cy="180" r="80" fill="%23D4A574"/><text x="400" y="420" font-family="serif" font-size="22" fill="%23F3EDE4" text-anchor="middle">Chloe - Navy Room Primary View</text></svg>',
+          primaryWebcamView: 'assets/IMG_3542.jpeg',
           sideAngleRef: '[INTERNAL CONSISTENCY REF ONLY - DO NOT EXPOSE TO CUSTOMER]',
           depthRef: '[INTERNAL CONSISTENCY REF ONLY - DO NOT EXPOSE TO CUSTOMER]'
         },
         livingRoomMedia: {
-          idleVideo: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
+          idleVideo: '',
           reactionVideos: [],
-          fallbackImage: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450"><rect width="800" height="450" fill="%231C2430"/><circle cx="400" cy="180" r="80" fill="%23D4A574"/><text x="400" y="420" font-family="serif" font-size="22" fill="%23F3EDE4" text-anchor="middle">Chloe - Navy Room Primary View</text></svg>'
+          fallbackImage: 'assets/IMG_3542.jpeg'
         },
         bedroomMedia: {
           idleVideo: '',
           reactionVideos: [],
-          fallbackImage: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450"><rect width="800" height="450" fill="%231C2430"/><circle cx="400" cy="180" r="80" fill="%23D4A574"/><text x="400" y="420" font-family="serif" font-size="22" fill="%23F3EDE4" text-anchor="middle">Chloe - Bedroom View</text></svg>'
+          fallbackImage: 'assets/IMG_3542.jpeg'
         },
         dialogue: {
           greeting: "Welcome in. I'm glad you're here.",
@@ -1041,23 +1072,21 @@
         title: 'Dark hair, her room only',
         vibe: 'Dark hair · Her room only',
         bio: 'Dark hair, her room only.',
-        avatar: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="500" viewBox="0 0 400 500"><rect width="400" height="500" fill="%233A2E27"/><circle cx="200" cy="200" r="70" fill="%238F5A3C" opacity="0.8"/><text x="200" y="470" font-family="serif" font-size="22" fill="%23F3EDE4" text-anchor="middle">Bailey</text></svg>',
+        avatar: 'assets/IMG_3546.jpeg',
         roomReferences: {
-          primaryWebcamView: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450"><rect width="800" height="450" fill="%233A2E27"/><circle cx="400" cy="180" r="80" fill="%238F5A3C"/><text x="400" y="420" font-family="serif" font-size="22" fill="%23F3EDE4" text-anchor="middle">Bailey - Primary Room View</text></svg>',
+          primaryWebcamView: 'assets/IMG_3546.jpeg',
           sideAngleRef: '[INTERNAL CONSISTENCY REF ONLY - DO NOT EXPOSE TO CUSTOMER]',
           depthRef: '[INTERNAL CONSISTENCY REF ONLY - DO NOT EXPOSE TO CUSTOMER]'
         },
         livingRoomMedia: {
-          idleVideo: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-          reactionVideos: [
-            'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4'
-          ],
-          fallbackImage: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450"><rect width="800" height="450" fill="%233A2E27"/><circle cx="400" cy="180" r="80" fill="%238F5A3C"/><text x="400" y="420" font-family="serif" font-size="22" fill="%23F3EDE4" text-anchor="middle">Bailey - Primary Room View</text></svg>'
+          idleVideo: '',
+          reactionVideos: [],
+          fallbackImage: 'assets/IMG_3546.jpeg'
         },
         bedroomMedia: {
-          idleVideo: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4',
+          idleVideo: '',
           reactionVideos: [],
-          fallbackImage: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450"><rect width="800" height="450" fill="%233A2E27"/><circle cx="400" cy="180" r="80" fill="%238F5A3C"/><text x="400" y="420" font-family="serif" font-size="22" fill="%23F3EDE4" text-anchor="middle">Bailey - Private Room View</text></svg>'
+          fallbackImage: 'assets/IMG_3546.jpeg'
         },
         dialogue: {
           greeting: "Hey. I'm glad you came in.",
@@ -1131,6 +1160,7 @@
     };
 
     let timerInterval = null;
+    let pendingDoorId = null;
 
     /* PLATE ENGINE */
     const PLATE_SESSION_MINUTES = 15;
@@ -1229,7 +1259,7 @@
       if (cleanedToken.startsWith('KEY-') || cleanedToken === 'VIP' || cleanedToken === 'MEMBER') {
         return { success: true };
       }
-      return { success: false, message: 'Invalid Passcode / Token.' };
+      return { success: false, message: 'That passcode was not recognized.' };
     }
 
     /* ACCOUNT CLIENT */
@@ -1356,6 +1386,7 @@
       loadSessionState();
       renderSelectionGrid();
       setupEventListeners();
+      initTierCheckout();
       await initPlateLibrary();
 
       if (state.view === 'room' && state.activeCharId && CHARACTERS[state.activeCharId]) {
@@ -1369,7 +1400,9 @@
       // Hidden compatibility grid
       if (elCharacterGrid) {
         elCharacterGrid.innerHTML = '';
-        Object.values(CHARACTERS).forEach(char => {
+        ['chloe', 'bailey'].forEach(id => {
+          const char = CHARACTERS[id];
+          if (!char) return;
           const card = document.createElement('div');
           card.className = 'character-card';
           card.dataset.id = char.id;
@@ -1395,14 +1428,37 @@
     }
 
     function selectDoor(charId) {
-      // Reveal pricing after clicking door, then allow entry or enter directly
+      if (!KeyholeAccount.token()) {
+        location.replace('index.html');
+        return;
+      }
+      if (charId !== 'chloe' && charId !== 'bailey') return;
+      const char = CHARACTERS[charId];
+      if (!char) return;
+      pendingDoorId = charId;
+      document.body.className = 'theme-' + charId + ' at-doors';
+      document.getElementById('door-chloe').classList.toggle('is-selected', charId === 'chloe');
+      document.getElementById('door-chloe').classList.toggle('is-dim', charId !== 'chloe');
+      document.getElementById('door-bailey').classList.toggle('is-selected', charId === 'bailey');
+      document.getElementById('door-bailey').classList.toggle('is-dim', charId !== 'bailey');
+      const title = document.getElementById('session-pricing-title');
+      if (title) title.textContent = char.name;
+      const doorsWrap = document.querySelector('.doors-wrapper');
+      if (doorsWrap) doorsWrap.classList.add('has-sheet');
       elSessionPricingPanel.classList.add('visible');
-      enterRoom(charId, true);
+      const err = document.getElementById('pricing-error');
+      if (err) err.textContent = '';
     }
 
     function showSelectionView() {
       state.view = 'selection';
-      document.body.className = 'theme-default';
+      pendingDoorId = null;
+      document.body.className = 'theme-default at-doors';
+      document.getElementById('door-chloe').classList.remove('is-selected', 'is-dim');
+      document.getElementById('door-bailey').classList.remove('is-selected', 'is-dim');
+      const doorsWrap = document.querySelector('.doors-wrapper');
+      if (doorsWrap) doorsWrap.classList.remove('has-sheet');
+      elSessionPricingPanel.classList.remove('visible');
       saveSessionState();
       elSelectionView.classList.add('active');
       elRoomView.classList.remove('active');
@@ -1413,14 +1469,16 @@
     }
 
     function enterRoom(charId, isNewSelection = true) {
-      const char = CHARACTERS[charId] || CHARACTERS['chloe'];
-      if (!char) return;
+      if (!KeyholeAccount.token()) {
+        location.replace('index.html');
+        return;
+      }
+      const char = CHARACTERS[charId];
+      if (!char || (charId !== 'chloe' && charId !== 'bailey')) return;
 
       state.activeCharId = char.id;
       state.view = 'room';
-
-      // Apply character theme
-      document.body.className = `theme-${char.id}`;
+      document.body.className = 'theme-' + char.id;
 
       if (isNewSelection || !plateEngine || plateEngine.character !== char.id) {
         startPlateSession(char.id);
@@ -1843,6 +1901,160 @@
         elAccountStatus.style.display = 'none';
         elAccountBtn.textContent = 'Sign In';
       }
+      renderOncePerAccountTiers(me);
+    }
+
+    function renderOncePerAccountTiers(me) {
+      const preview = document.querySelector('.session-tier[data-free-preview]');
+      if (preview) preview.style.display = (me && me.free_preview_available === false) ? 'none' : '';
+      document.querySelectorAll('.session-tier[data-once]').forEach(tier => {
+        const key = tier.dataset.once + '_available';
+        tier.style.display = (me && me[key] === false) ? 'none' : '';
+      });
+      const enterBtn = document.getElementById('enter-with-minutes');
+      if (enterBtn) {
+        const minutes = me && me.webcam_minutes_left;
+        enterBtn.style.display = (minutes > 0 || (me && me.session_active)) ? 'inline-block' : 'none';
+      }
+    }
+
+    function sayPricingError(text) {
+      const err = document.getElementById('pricing-error');
+      if (err) err.textContent = text || '';
+    }
+
+    async function beginFreePreview(btn) {
+      if (!pendingDoorId) return sayPricingError('Choose a door first.');
+      if (!KeyholeAccount.token()) {
+        location.replace('index.html');
+        return;
+      }
+      btn.disabled = true;
+      const previous = btn.textContent;
+      btn.textContent = 'Starting…';
+      sayPricingError('');
+      try {
+        await KeyholeAccount.claimFreePreview();
+        await KeyholeAccount.refresh();
+        renderAccountStatus();
+        state.previewSecondsLeft = 600;
+        state.isVerifiedMember = false;
+        enterRoom(pendingDoorId, true);
+      } catch (err) {
+        sayPricingError(err.message || 'Could not start the preview.');
+        await KeyholeAccount.refresh().catch(() => {});
+        renderAccountStatus();
+      } finally {
+        btn.disabled = false;
+        btn.textContent = previous;
+      }
+    }
+
+    function enterWithMinutes() {
+      if (!pendingDoorId) return sayPricingError('Choose a door first.');
+      const me = KeyholeAccount.me();
+      if (!me || !(me.webcam_minutes_left > 0 || me.session_active)) {
+        return sayPricingError('Choose a time first.');
+      }
+      state.isVerifiedMember = true;
+      state.previewSecondsLeft = Math.max(60, (me.webcam_minutes_left || 10) * 60);
+      enterRoom(pendingDoorId, true);
+    }
+
+    async function startCryptoCheckout(pkg) {
+      if (!pendingDoorId) return sayPricingError('Choose a door first.');
+      if (!KeyholeAccount.token()) {
+        location.replace('index.html');
+        return;
+      }
+      const btn = document.querySelector('.session-tier[data-package="' + pkg + '"] .tier-crypto-btn');
+      if (btn) { btn.disabled = true; btn.textContent = 'Creating invoice…'; }
+      sayPricingError('');
+      try {
+        const inv = await KeyholeAccount.createCryptoInvoice(pkg);
+        window.open(inv.invoice_url, '_blank', 'noopener');
+      } catch (err) {
+        sayPricingError(err.message || 'Could not create the invoice.');
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = 'Pay with crypto'; }
+      }
+    }
+
+    function renderTierCheckoutButtons(packages) {
+      const byName = {};
+      (packages || []).forEach(p => { byName[p.package] = p; });
+      const previewTier = document.querySelector('.session-tier[data-free-preview]');
+      if (previewTier && !previewTier.querySelector('.tier-preview-btn')) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'session-tier-buy tier-preview-btn';
+        b.textContent = 'Start';
+        b.addEventListener('click', (e) => { e.stopPropagation(); beginFreePreview(b); });
+        previewTier.appendChild(b);
+      }
+      document.querySelectorAll('.session-tier[data-package], .session-tier[data-stripe]').forEach(tier => {
+        const pkg = tier.dataset.package;
+        const info = pkg ? byName[pkg] : null;
+        if (info && info.price > 0) {
+          const priceEl = tier.querySelector('.session-tier-price');
+          if (priceEl) priceEl.textContent = '$' + Number(info.price).toFixed(2);
+          const msgEl = tier.querySelector('.session-tier-messages');
+          if (msgEl && info.text_included) msgEl.textContent = info.text_included + ' messages';
+        }
+        if (info && info.price > 0 && !tier.querySelector('.tier-crypto-btn')) {
+          const crypto = document.createElement('button');
+          crypto.type = 'button';
+          crypto.className = 'session-tier-buy tier-crypto-btn';
+          crypto.textContent = 'Pay with crypto';
+          crypto.addEventListener('click', (e) => { e.stopPropagation(); startCryptoCheckout(pkg); });
+          tier.appendChild(crypto);
+        }
+        const stripe = tier.dataset.stripe;
+        if (stripe && !tier.querySelector('.tier-card-btn')) {
+          const card = document.createElement('a');
+          card.className = 'session-tier-buy tier-card-btn';
+          card.textContent = 'Pay with card';
+          card.target = '_blank';
+          card.rel = 'noopener noreferrer';
+          card.href = stripe;
+          card.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (!pendingDoorId) {
+              e.preventDefault();
+              sayPricingError('Choose a door first.');
+              return;
+            }
+            const me = KeyholeAccount.me();
+            if (!me || !me.user_id) {
+              e.preventDefault();
+              location.replace('index.html');
+              return;
+            }
+            card.href = stripe + (stripe.includes('?') ? '&' : '?') + 'client_reference_id=' + encodeURIComponent(me.user_id) + (me.email ? '&prefilled_email=' + encodeURIComponent(me.email) : '');
+          });
+          tier.appendChild(card);
+        }
+      });
+      if (!document.getElementById('enter-with-minutes')) {
+        const enter = document.createElement('button');
+        enter.type = 'button';
+        enter.id = 'enter-with-minutes';
+        enter.className = 'session-tier-buy';
+        enter.style.display = 'none';
+        enter.style.marginTop = '18px';
+        enter.textContent = 'Enter';
+        enter.addEventListener('click', (e) => { e.stopPropagation(); enterWithMinutes(); });
+        elSessionPricingPanel.appendChild(enter);
+      }
+    }
+
+    function initTierCheckout() {
+      renderTierCheckoutButtons([]);
+      KeyholeAccount.packages().then(renderTierCheckoutButtons).catch(() => {});
+      KeyholeAccount.refresh().catch(() => null).then(() => {
+        renderAccountStatus();
+        if (!KeyholeAccount.token()) location.replace('index.html');
+      });
     }
 
     async function handleAccountSubmit() {

@@ -4,357 +4,257 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#12100E">
+<meta name="color-scheme" content="dark">
 <title>KEYHOLE</title>
+<link rel="stylesheet" href="house.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,500;6..96,600&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script>
+  if (localStorage.getItem('keyhole_auth_token_v1')) location.replace('rooms.html');
+</script>
 <style>
-:root {
-  --charcoal: #12100E;
-  --panel-bg: #1A1714;
-  --warm-white: #F3EDE4;
-  --muted-stone: #A89F94;
-  --cream: #E8DCC8;
-  --gold: #C4A574;
-  --dusty-rose: #B86A5A;
-  --border-line: rgba(196, 165, 116, 0.2);
-}
-
-* { box-sizing: border-box; margin: 0; padding: 0; }
-
-body {
-  min-height: 100vh;
-  background-color: var(--charcoal);
-  color: var(--warm-white);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
-  overflow-x: hidden;
-  position: relative;
-}
-
-/* Dark apartment night background with warm lamp glow & soft city glass */
-.bg-scene {
-  position: fixed;
-  inset: 0;
-  z-index: 1;
-  background:
-    radial-gradient(circle at 75% 35%, rgba(196, 165, 116, 0.12) 0%, transparent 45%),
-    radial-gradient(circle at 20% 80%, rgba(30, 25, 20, 0.8) 0%, transparent 60%),
-    linear-gradient(180deg, rgba(18, 16, 14, 0.7) 0%, rgba(18, 16, 14, 0.95) 100%),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='800' viewBox='0 0 1200 800'%3E%3Crect width='1200' height='800' fill='%2312100E'/%3E%3Cpath d='M0 0h1200v800H0z' fill='%2312100E'/%3E%3Cg opacity='0.25'%3E%3Crect x='800' y='150' width='350' height='550' fill='%231f1a15' rx='4'/%3E%3Crect x='820' y='180' width='60' height='90' fill='%23C4A574' opacity='0.3'/%3E%3Crect x='900' y='180' width='60' height='90' fill='%23A89F94' opacity='0.15'/%3E%3Crect x='980' y='290' width='60' height='90' fill='%23C4A574' opacity='0.25'/%3E%3Crect x='820' y='400' width='60' height='90' fill='%23A89F94' opacity='0.2'/%3E%3Crect x='1060' y='180' width='60' height='90' fill='%23C4A574' opacity='0.2'/%3E%3C/g%3E%3Ccircle cx='300' cy='320' r='180' fill='%23C4A574' opacity='0.08' filter='blur(40px)'/%3E%3C/svg%3E");
-  background-size: cover;
-  background-position: center;
-}
-
-/* Top bar navigation */
-.site-header {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 10;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 32px 40px;
-}
-
-.brand-name {
-  font-size: 0.95rem;
-  letter-spacing: 0.25em;
-  text-transform: uppercase;
-  color: var(--warm-white);
-  font-weight: 600;
-}
-
-.auth-nav-actions {
-  display: flex;
-  align-items: center;
-  gap: 28px;
-}
-
-.btn-quiet {
-  background: none;
-  border: none;
-  color: var(--muted-stone);
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: color 0.2s ease;
-  padding: 0;
-}
-
-.btn-quiet:hover {
-  color: var(--warm-white);
-}
-
-.btn-cream {
-  background-color: var(--cream);
-  color: var(--charcoal);
-  border: none;
-  padding: 10px 22px;
-  border-radius: 4px;
-  font-size: 0.88rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: opacity 0.2s ease, background-color 0.2s ease;
-}
-
-.btn-cream:hover {
-  opacity: 0.92;
-}
-
-.btn-cream:disabled {
-  opacity: 0.6;
-  cursor: wait;
-}
-
-/* Center Hero Copy */
-.hero-stage {
-  position: relative;
-  z-index: 5;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  text-align: center;
-  padding: 0 24px;
-  transition: transform 0.4s ease;
-}
-
-.hero-main-title {
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(2rem, 5vw, 3.4rem);
-  font-weight: 400;
-  color: var(--warm-white);
-  letter-spacing: -0.01em;
-  margin-bottom: 16px;
-  line-height: 1.2;
-}
-
-.hero-sub-title {
-  font-size: clamp(0.95rem, 2vw, 1.1rem);
-  color: var(--muted-stone);
-  font-weight: 400;
-  letter-spacing: 0.02em;
-}
-
-/* Sliding Right Panel */
-.slide-panel-overlay {
-  position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: min(420px, 100vw);
-  background-color: var(--panel-bg);
-  z-index: 20;
-  box-shadow: -10px 0 40px rgba(0, 0, 0, 0.6);
-  transform: translateX(100%);
-  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-  display: flex;
-  flex-direction: column;
-  padding: 48px 36px;
-  border-left: 1px solid var(--border-line);
-}
-
-.slide-panel-overlay.open {
-  transform: translateX(0);
-}
-
-.panel-close-btn {
-  position: absolute;
-  top: 28px;
-  right: 28px;
-  background: none;
-  border: none;
-  color: var(--muted-stone);
-  font-size: 1.4rem;
-  cursor: pointer;
-  line-height: 1;
-}
-
-.panel-close-btn:hover {
-  color: var(--warm-white);
-}
-
-.panel-title {
-  font-family: Georgia, serif;
-  font-size: 1.6rem;
-  font-weight: 400;
-  color: var(--warm-white);
-  margin-bottom: 32px;
-}
-
-.auth-form {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.field-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.field-label {
-  font-size: 0.8rem;
-  color: var(--muted-stone);
-  letter-spacing: 0.04em;
-}
-
-.field-input {
-  width: 100%;
-  padding: 12px 14px;
-  background-color: var(--charcoal);
-  border: 1px solid var(--border-line);
-  border-radius: 4px;
-  color: var(--warm-white);
-  font-size: 0.95rem;
-  transition: border-color 0.2s ease;
-}
-
-.field-input:focus {
-  outline: none;
-  border-color: var(--gold);
-}
-
-.checkbox-group {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 4px;
-}
-
-.checkbox-group input[type="checkbox"] {
-  accent-color: var(--gold);
-  width: 16px;
-  height: 16px;
-  cursor: pointer;
-}
-
-.checkbox-group label {
-  font-size: 0.85rem;
-  color: var(--muted-stone);
-  cursor: pointer;
-}
-
-.panel-submit-btn {
-  margin-top: 8px;
-  width: 100%;
-  padding: 14px;
-}
-
-.toggle-mode-wrap {
-  margin-top: 20px;
-  text-align: center;
-}
-
-.toggle-mode-link {
-  font-size: 0.85rem;
-  color: var(--muted-stone);
-  background: none;
-  border: none;
-  cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-.toggle-mode-link:hover {
-  color: var(--warm-white);
-}
-
-.forgot-pwd-wrap {
-  margin-top: 12px;
-  text-align: center;
-}
-
-.forgot-pwd-link {
-  font-size: 0.75rem;
-  color: var(--muted-stone);
-  text-decoration: none;
-  opacity: 0.7;
-}
-
-.forgot-pwd-link:hover {
-  opacity: 1;
-  text-decoration: underline;
-}
-
-.msg-box {
-  min-height: 1.2em;
-  margin-top: 8px;
-  font-size: 0.85rem;
-  line-height: 1.4;
-}
-
-.msg-box.error {
-  color: var(--dusty-rose);
-}
-
-.msg-box.ok {
-  color: var(--gold);
-}
-
-@media (max-width: 600px) {
-  .site-header {
-    padding: 24px 20px;
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    min-height: 100vh;
+    background: var(--charcoal);
+    color: var(--ink);
+    font-family: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    overflow: hidden;
   }
-  .slide-panel-overlay {
-    padding: 36px 24px;
+  button, input { font: inherit; }
+  .night-still {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center 40%;
+    z-index: 0;
   }
-}
+  .night-shade {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background:
+      linear-gradient(180deg, rgba(18, 16, 14, 0.42) 0%, rgba(18, 16, 14, 0.08) 28%, rgba(18, 16, 14, 0.18) 62%, rgba(18, 16, 14, 0.55) 100%),
+      linear-gradient(90deg, rgba(18, 16, 14, 0.28), transparent 32%, transparent 68%, rgba(18, 16, 14, 0.2));
+  }
+  .house-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 5;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 28px 36px;
+  }
+  .house-name {
+    font-size: 0.72rem;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    font-weight: 500;
+    color: var(--ink);
+  }
+  .house-actions {
+    display: flex;
+    align-items: center;
+    gap: 26px;
+  }
+  .quiet {
+    background: none;
+    border: none;
+    color: var(--stone);
+    font-size: 0.92rem;
+    cursor: pointer;
+    padding: 0;
+  }
+  .quiet:hover { color: var(--ink); }
+  .cream-btn {
+    background: var(--cream);
+    color: var(--charcoal);
+    border: none;
+    border-radius: 2px;
+    padding: 10px 18px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .cream-btn:hover { opacity: 0.92; }
+  .cream-btn:disabled { opacity: 0.6; cursor: wait; }
+  .hero {
+    position: relative;
+    z-index: 2;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 0 28px;
+    transition: padding 0.35s ease;
+  }
+  body.sheet-open .hero { padding-right: 33.333vw; }
+  .hero-line {
+    font-family: "Bodoni Moda", Georgia, serif;
+    font-weight: 500;
+    font-size: clamp(2.1rem, 5vw, 3.6rem);
+    letter-spacing: -0.015em;
+    line-height: 1.15;
+    color: var(--ink);
+  }
+  .hero-note {
+    margin-top: 16px;
+    color: var(--stone);
+    font-size: clamp(0.92rem, 1.6vw, 1.05rem);
+    font-weight: 400;
+  }
+  .sheet {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 33.333vw;
+    min-width: 300px;
+    z-index: 8;
+    background: var(--panel);
+    border-left: 1px solid rgba(196, 165, 116, 0.28);
+    box-shadow: -18px 0 50px rgba(0, 0, 0, 0.45);
+    transform: translateX(100%);
+    transition: transform 0.38s cubic-bezier(0.16, 1, 0.3, 1);
+    padding: 56px 32px 32px;
+    overflow: auto;
+  }
+  .sheet.open { transform: translateX(0); }
+  .sheet-close {
+    position: absolute;
+    top: 22px;
+    right: 22px;
+    background: none;
+    border: none;
+    color: var(--stone);
+    font-size: 1.4rem;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .sheet-close:hover { color: var(--ink); }
+  .sheet h2 {
+    font-family: "Bodoni Moda", Georgia, serif;
+    font-weight: 500;
+    font-size: 1.7rem;
+    margin-bottom: 28px;
+  }
+  form { display: flex; flex-direction: column; gap: 16px; }
+  label {
+    display: block;
+    font-size: 0.75rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--stone);
+    margin-bottom: 6px;
+  }
+  input[type="email"],
+  input[type="password"],
+  input[type="text"] {
+    width: 100%;
+    background: var(--charcoal);
+    color: var(--ink);
+    border: 1px solid rgba(196, 165, 116, 0.22);
+    border-radius: 2px;
+    padding: 12px 12px;
+    outline: none;
+  }
+  input:focus { border-color: var(--gold); }
+  .age {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--stone);
+    font-size: 0.88rem;
+  }
+  .age input { accent-color: var(--gold); width: 16px; height: 16px; }
+  .sheet .cream-btn { width: 100%; padding: 13px; }
+  .forgot {
+    display: block;
+    text-align: center;
+    margin-top: -4px;
+    font-size: 0.72rem;
+    color: var(--stone);
+    opacity: 0.8;
+    text-decoration: none;
+  }
+  .forgot:hover { color: var(--ink); }
+  .switch {
+    margin-top: 18px;
+    text-align: center;
+  }
+  .switch button {
+    background: none;
+    border: none;
+    color: var(--stone);
+    font-size: 0.84rem;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .switch button:hover { color: var(--ink); }
+  .msg { min-height: 1.2em; font-size: 0.84rem; line-height: 1.4; }
+  .msg.error { color: var(--rose); }
+  .msg.ok { color: var(--gold); }
+  @media (max-width: 760px) {
+    .house-bar { padding: 20px 18px; }
+    .sheet { width: 100%; min-width: 0; max-width: none; }
+    body.sheet-open .hero { padding-right: 28px; }
+  }
 </style>
 </head>
 <body>
+<img class="night-still" src="assets/IMG_3547.jpeg" alt="">
+<div class="night-shade"></div>
 
-<div class="bg-scene"></div>
-
-<header class="site-header">
-  <div class="brand-name">KEYHOLE</div>
-  <div class="auth-nav-actions">
-    <button class="btn-quiet" id="nav-signin-btn">Sign in</button>
-    <button class="btn-cream" id="nav-signup-btn">Create account</button>
+<header class="house-bar">
+  <div class="house-name">Keyhole</div>
+  <div class="house-actions">
+    <button type="button" class="quiet" id="nav-signin-btn">Sign in</button>
+    <button type="button" class="cream-btn" id="nav-signup-btn">Create account</button>
   </div>
 </header>
 
-<main class="hero-stage">
-  <h1 class="hero-main-title">She’s here when you are.</h1>
-  <p class="hero-sub-title">Private sessions. Two rooms. Sign in to enter.</p>
+<main class="hero">
+  <h1 class="hero-line">She’s here when you are.</h1>
+  <p class="hero-note">Private sessions. Two rooms. Sign in to enter.</p>
 </main>
 
-<aside class="slide-panel-overlay" id="auth-panel" aria-label="Sign in or Create Account">
-  <button class="panel-close-btn" id="panel-close-btn" aria-label="Close panel">&times;</button>
-  <h2 class="panel-title" id="panel-title">Sign in</h2>
-
-  <form id="auth-form" class="auth-form" novalidate>
-    <div class="field-group" id="name-group" style="display: none;">
-      <label class="field-label" for="display_name">Name</label>
-      <input class="field-input" id="display_name" name="display_name" type="text" autocomplete="nickname" placeholder="What should she call you?">
+<aside class="sheet" id="auth-panel" aria-label="Sign in or create account" aria-hidden="true">
+  <button type="button" class="sheet-close" id="panel-close-btn" aria-label="Close">&times;</button>
+  <h2 id="panel-title">Sign in</h2>
+  <form id="auth-form" novalidate>
+    <div id="name-group" style="display:none">
+      <label for="display_name">Name</label>
+      <input id="display_name" name="display_name" type="text" autocomplete="nickname">
     </div>
-
-    <div class="field-group">
-      <label class="field-label" for="email">Email</label>
-      <input class="field-input" id="email" name="email" type="email" autocomplete="email" required placeholder="you@example.com">
+    <div>
+      <label for="email">Email</label>
+      <input id="email" name="email" type="email" autocomplete="email" required>
     </div>
-
-    <div class="field-group">
-      <label class="field-label" for="password">Password</label>
-      <input class="field-input" id="password" name="password" type="password" autocomplete="current-password" required placeholder="Password">
+    <div>
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required>
     </div>
-
-    <div class="checkbox-group" id="age-group" style="display: none;">
+    <div class="age" id="age-group" style="display:none">
       <input type="checkbox" id="age_gate" name="age_gate">
-      <label for="age_gate">I am 18 or older</label>
+      <label for="age_gate" style="margin:0;letter-spacing:0;text-transform:none;font-size:0.88rem">I am 18 or older</label>
     </div>
-
-    <button type="submit" class="btn-cream panel-submit-btn" id="submit-btn">Sign in</button>
-
-    <div class="forgot-pwd-wrap" id="forgot-wrap">
-      <a href="#" id="forgot-link" class="forgot-pwd-link">Forgot password</a>
-    </div>
-
-    <div id="msg" class="msg-box" role="status"></div>
+    <button type="submit" class="cream-btn" id="submit-btn">Sign in</button>
+    <a href="#" id="forgot-link" class="forgot">Forgot password</a>
+    <div id="msg" class="msg" role="status"></div>
   </form>
-
-  <div class="toggle-mode-wrap">
-    <button class="toggle-mode-link" id="toggle-link">New here? Create account</button>
+  <div class="switch">
+    <button type="button" id="toggle-link">New here? Create account</button>
   </div>
 </aside>
 
@@ -362,7 +262,6 @@ body {
 (() => {
   const TOKEN_KEY = 'keyhole_auth_token_v1';
   const NEXT = 'rooms.html';
-
   if (localStorage.getItem(TOKEN_KEY)) {
     location.replace(NEXT);
     return;
@@ -373,7 +272,6 @@ body {
   const panel = document.getElementById('auth-panel');
   const closeBtn = document.getElementById('panel-close-btn');
   const panelTitle = document.getElementById('panel-title');
-
   const form = document.getElementById('auth-form');
   const nameGroup = document.getElementById('name-group');
   const ageGroup = document.getElementById('age-group');
@@ -385,19 +283,18 @@ body {
   const toggleLink = document.getElementById('toggle-link');
   const forgotLink = document.getElementById('forgot-link');
   const msg = document.getElementById('msg');
-
-  let mode = 'login'; // 'login' | 'signup'
+  let mode = 'login';
 
   function say(text, kind) {
     msg.textContent = text || '';
-    msg.className = 'msg-box' + (kind ? ' ' + kind : '');
+    msg.className = 'msg' + (kind ? ' ' + kind : '');
   }
 
   function setMode(m) {
     mode = m;
     const signup = m === 'signup';
     panelTitle.textContent = signup ? 'Create account' : 'Sign in';
-    nameGroup.style.display = signup ? 'flex' : 'none';
+    nameGroup.style.display = signup ? 'block' : 'none';
     ageGroup.style.display = signup ? 'flex' : 'none';
     password.autocomplete = signup ? 'new-password' : 'current-password';
     submitBtn.textContent = signup ? 'Create account' : 'Sign in';
@@ -408,11 +305,15 @@ body {
   function openPanel(m) {
     setMode(m);
     panel.classList.add('open');
-    setTimeout(() => email.focus(), 100);
+    panel.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('sheet-open');
+    setTimeout(() => email.focus(), 80);
   }
 
   function closePanel() {
     panel.classList.remove('open');
+    panel.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('sheet-open');
   }
 
   async function api(path, body) {
@@ -424,9 +325,11 @@ body {
     let data = {};
     try { data = await res.json(); } catch (_) {}
     if (!res.ok) {
-      const e = new Error(data.detail || `Request failed (${res.status})`);
-      e.status = res.status;
-      throw e;
+      const detail = data.detail;
+      const text = typeof detail === 'string' ? detail : (Array.isArray(detail) ? (detail[0] && detail[0].msg) : '') || ('Request failed (' + res.status + ')');
+      const err = new Error(text);
+      err.status = res.status;
+      throw err;
     }
     return data;
   }
@@ -434,18 +337,17 @@ body {
   navSignin.addEventListener('click', () => openPanel('login'));
   navSignup.addEventListener('click', () => openPanel('signup'));
   closeBtn.addEventListener('click', closePanel);
-
-  toggleLink.addEventListener('click', (e) => {
-    e.preventDefault();
-    setMode(mode === 'signup' ? 'login' : 'signup');
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closePanel();
   });
+  toggleLink.addEventListener('click', () => setMode(mode === 'signup' ? 'login' : 'signup'));
 
   forgotLink.addEventListener('click', async (e) => {
     e.preventDefault();
     if (!email.value.trim()) return say('Enter your email first.', 'error');
     try {
       await api('/auth/resend-verification', { email: email.value.trim() });
-      say(`Verification / reset link sent to ${email.value.trim()}.`, 'ok');
+      say('Check ' + email.value.trim() + ' for a link.', 'ok');
     } catch (err) {
       say(err.message, 'error');
     }
@@ -453,16 +355,12 @@ body {
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const em = email.value.trim(), pw = password.value;
+    const em = email.value.trim();
+    const pw = password.value;
     if (!em || !pw) return say('Email and password are required.', 'error');
-
-    if (mode === 'signup' && !ageGate.checked) {
-      return say('You must confirm you are 18 or older.', 'error');
-    }
-
+    if (mode === 'signup' && !ageGate.checked) return say('You must confirm you are 18 or older.', 'error');
     submitBtn.disabled = true;
     say('');
-
     try {
       if (mode === 'signup') {
         const res = await api('/auth/signup', {
@@ -472,7 +370,7 @@ body {
         });
         if (res.needs_verification) {
           setMode('login');
-          say(`Check ${em} for a verification link, then sign in.`, 'ok');
+          say('Check ' + em + ' for a verification link, then sign in.', 'ok');
           return;
         }
       }
