@@ -1348,10 +1348,18 @@
       if (typeof KeyholePlateEngine === 'undefined') return;
       let manifest = null;
       try {
-        const res = await fetch('assets/plates/manifest.json', { cache: 'no-store' });
+        const res = await fetch('/keyhole/plates', { cache: 'no-store' });
         if (res.ok) manifest = await res.json();
       } catch (e) {
-        console.warn('Plate manifest unavailable, using character defaults:', e);
+        console.warn('Server plates unavailable, trying shipped manifest:', e);
+      }
+      if (!manifest) {
+        try {
+          const res = await fetch('assets/plates/manifest.json', { cache: 'no-store' });
+          if (res.ok) manifest = await res.json();
+        } catch (e) {
+          console.warn('Plate manifest unavailable, using character defaults:', e);
+        }
       }
       plateLibrary = new KeyholePlateEngine.PlateLibrary({
         manifest: manifest || fallbackPlateManifest(),
@@ -1684,13 +1692,18 @@
       renderChatMessages();
     }
 
+    function isImagePlate(url) {
+      return /\.(jpe?g|png|webp|gif|avif)(\?|$)/i.test(String(url || ''));
+    }
+
     function setupStageMedia(mediaGroup) {
       if (!mediaGroup) return;
 
       if (plateEngine && plateEngine.library.beatEnabled(plateEngine.character, 'idle')) {
         plateEngine.next('idle').then(res => {
           if (res.action === 'plate' || res.action === 'generated') {
-            showStageIdle({ idleVideo: res.url, fallbackImage: mediaGroup.fallbackImage });
+            if (isImagePlate(res.url)) showStageIdle({ fallbackImage: res.url });
+            else showStageIdle({ idleVideo: res.url, fallbackImage: mediaGroup.fallbackImage });
           } else {
             showStageIdle(mediaGroup);
           }
@@ -1749,6 +1762,11 @@
     }
 
     function playStageCut(clipUrl, mediaGroup) {
+      if (isImagePlate(clipUrl)) {
+        showStageIdle({ fallbackImage: clipUrl });
+        setTimeout(() => setupStageMedia(mediaGroup), 6000);
+        return;
+      }
       elStageVideo.src = clipUrl;
       elStageVideo.style.display = 'block';
       elStageFallbackImg.style.display = 'none';
