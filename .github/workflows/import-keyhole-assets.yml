@@ -1,0 +1,35 @@
+name: Import Keyhole assets from Sorority-house
+
+on:
+  push:
+    paths:
+      - ".github/workflows/import-keyhole-assets.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch Sorority-house
+        run: git clone --depth 1 https://github.com/mtthewwestfall/Sorority-house.git /tmp/sorority
+      - name: Copy Keyhole webcam assets
+        run: |
+          mkdir -p assets sorority-keyhole/assets
+          cp -f /tmp/sorority/assets/webcam/IMG_* assets/ 2>/dev/null || true
+          rm -rf sorority-keyhole/assets/webcam-source
+          cp -R /tmp/sorority/assets/webcam sorority-keyhole/assets/webcam-source
+      - name: Commit imported assets
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets sorority-keyhole/assets
+          if git diff --cached --quiet; then
+            echo "No asset changes"
+          else
+            git commit -m "Copy remaining Keyhole webcam assets from Sorority-house"
+            git push
+          fi
