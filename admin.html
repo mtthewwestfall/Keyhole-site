@@ -607,6 +607,28 @@
           <p class="card-subtitle">Configure Gemini generation enforcing 3D physical consistency & locked primary view.</p>
 
           <div class="form-group">
+            <label class="form-label" for="gen-beat">Plate Beat (saved into her folder)</label>
+            <select id="gen-beat" class="form-select">
+              <option value="idle" selected>Idle</option>
+              <option value="tease">Tease</option>
+              <option value="give">Give</option>
+              <option value="stop">Stop</option>
+              <option value="presence">Presence</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="gen-skin-asset">Skin (reference portrait of the active companion)</label>
+            <select id="gen-skin-asset" class="form-select"><option value="">Newest uploaded skin</option></select>
+            <span style="font-size:0.75rem; color:var(--muted); display:block; margin-top:4px;">Upload her portrait in Media Assets with tag <code>skin</code>; it is fed into every image and webcam clip so the output is her.</span>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="gen-scene-prompt">Scene / action for this beat</label>
+            <input type="text" id="gen-scene-prompt" class="form-input" placeholder="e.g. sitting on the velvet bed, glancing at the camera, slow smile" />
+          </div>
+
+          <div class="form-group">
             <label class="chip-item">
               <input type="checkbox" id="gen-rule-multiangle" checked />
               <span>Multi-Angle 3D Physical Room Consistency</span>
@@ -674,8 +696,8 @@
             <span style="font-size:0.75rem; color:var(--muted); display:block; margin-top:4px;">No API key hardcoded. Key will be prompt-configured when ready.</span>
           </div>
 
-          <button id="btn-sec-gen-set-key" class="btn btn-teal" style="width:100%; margin-bottom:10px;">Set / Prompt API Key</button>
-          <button id="btn-sec-gen-generate" class="btn" style="width:100%;">Generate with Secondary Engine</button>
+          <button id="btn-sec-gen-set-key" class="btn btn-teal" style="width:100%; margin-bottom:10px;">Set / Prompt API Key (optional — server key is used if blank)</button>
+          <button id="btn-sec-gen-generate" class="btn" style="width:100%;">Generate Image with Sogni</button>
           <div id="sec-gen-status" class="feedback-msg feedback-success">Secondary Generator ready!</div>
         </div>
 
@@ -687,10 +709,17 @@
 
           <div style="display:flex; gap:10px; margin-top:14px; flex-wrap:wrap;">
             <button id="btn-copy-gen-prompt" class="btn btn-secondary">Copy Prompt</button>
-            <button id="btn-simulate-gen" class="btn btn-teal">Simulate Gen</button>
-            <button id="btn-apply-gen-stage" class="btn" style="flex:1;">Apply to Active Stage</button>
+            <button id="btn-gen-image" class="btn btn-teal">Generate Image (Gemini)</button>
+            <button id="btn-gen-webcam" class="btn" style="flex:1;">Generate Webcam Clip (Veo) → save as plate</button>
+            <button id="btn-apply-gen-stage" class="btn btn-secondary">Apply to Active Stage</button>
           </div>
           <div id="gen-feedback" class="feedback-msg feedback-success">Prompt updated!</div>
+          <div id="gen-result" style="display:none; margin-top:14px;">
+            <div class="form-label">Last generated output</div>
+            <img id="gen-result-img" alt="generated" style="display:none; max-width:100%; border-radius:8px; border:1px solid var(--gold);" />
+            <video id="gen-result-video" controls loop playsinline style="display:none; max-width:100%; border-radius:8px; border:1px solid var(--gold);"></video>
+            <div id="gen-result-meta" style="font-size:0.78rem; color:var(--muted); margin-top:6px;"></div>
+          </div>
         </div>
       </div>
     </section>
@@ -811,8 +840,14 @@
             </label>
           </div>
 
+          <div class="form-group">
+            <label class="form-label" for="media-file-input">Or upload a file from this device (skins: tag <code>skin</code>; plates: tag the beat)</label>
+            <input type="file" id="media-file-input" class="form-input" accept="video/*,image/*" />
+          </div>
+
           <div style="display:flex; gap:10px; margin-top:14px;">
-            <button id="btn-import-url" class="btn btn-teal" style="flex:1;">Import URL</button>
+            <button id="btn-upload-file" class="btn" style="flex:1;">Upload File</button>
+            <button id="btn-import-url" class="btn btn-secondary" style="flex:1;">Import URL (fallback)</button>
           </div>
           <div id="media-feedback" class="feedback-msg feedback-success">Media asset added!</div>
         </div>
@@ -911,10 +946,10 @@
   <div id="dual-secret-modal" class="modal-backdrop">
     <div class="modal-card">
       <h2 class="modal-title">Admin Dual Secret Authorization</h2>
-      <p class="modal-desc">Enter primary and secondary secret keys to disarm matrix shield and access keyhole webcam administration.</p>
+      <p class="modal-desc">Enter the backend ADMIN_SECRET (Key 1) and your second key to access keyhole webcam administration. Key 1 is verified against the backend.</p>
 
       <div class="form-group">
-        <label class="form-label" for="key-westfall-input">Primary Key (Westfall Secret)</label>
+        <label class="form-label" for="key-westfall-input">Primary Key (backend ADMIN_SECRET)</label>
         <input type="password" id="key-westfall-input" class="form-input" value="" placeholder="Enter Key 1" />
       </div>
 
@@ -935,27 +970,47 @@
        KEYHOLE ADMIN CORE & STATE MANAGER
        ========================================================================== */
 
-    // Dual secret verifier hook
-    function verifyAdminDualSecrets(key1, key2) {
+    /* BACKEND API (same-origin /admin, /media, /keyhole — proxied by nginx to the Sorority-house backend) */
+    const ADMIN_SECRET_KEY = 'keyhole_admin_secret_v1';
+    function adminSecret() { return sessionStorage.getItem(ADMIN_SECRET_KEY) || ''; }
+    async function api(path, opts = {}) {
+      const headers = Object.assign({ 'X-Admin-Secret': adminSecret() }, opts.headers || {});
+      let body = opts.body;
+      if (body && !(body instanceof FormData)) { headers['Content-Type'] = 'application/json'; body = JSON.stringify(body); }
+      const res = await fetch(path, { method: opts.method || (body ? 'POST' : 'GET'), headers, body, cache: 'no-store' });
+      let data = null;
+      try { data = await res.json(); } catch (e) { data = null; }
+      if (!res.ok) {
+        const detail = data && (data.detail || data.error);
+        throw new Error(typeof detail === 'string' ? detail : `${res.status} ${res.statusText}`);
+      }
+      return data;
+    }
+
+    // Dual secret verifier: Key 1 is the backend ADMIN_SECRET (checked by the backend), Key 2 is the local second factor.
+    async function verifyAdminDualSecrets(key1, key2) {
       const k1 = (key1 || '').trim();
       const k2 = (key2 || '').trim();
-      if (k1.length > 0 && k2.length > 0) {
-        return { success: true };
-      }
-      return { success: false, message: 'Invalid dual secret passcodes. Both Key 1 and Key 2 are required.' };
+      if (!k1 || !k2) return { success: false, message: 'Both Key 1 and Key 2 are required.' };
+      const res = await fetch('/admin/keyhole/shows', { headers: { 'X-Admin-Secret': k1 }, cache: 'no-store' });
+      if (res.status === 403) return { success: false, message: 'Key 1 rejected by the backend (ADMIN_SECRET mismatch).' };
+      if (res.status === 503) return { success: false, message: 'Backend has no ADMIN_SECRET set — set it on Railway first.' };
+      if (!res.ok) return { success: false, message: `Backend unreachable (${res.status}).` };
+      sessionStorage.setItem(ADMIN_SECRET_KEY, k1);
+      return { success: true };
     }
 
     const ADMIN_CHARACTERS = {
       bailey: {
         name: 'Bailey',
-        livingRoomUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-        bedroomUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4',
+        livingRoomUrl: '',
+        bedroomUrl: '',
         fallbackImg: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360"><rect width="640" height="360" fill="%23102b35"/><text x="320" y="180" font-family="sans-serif" font-size="18" fill="%23d9ad58" text-anchor="middle">Bailey Primary View</text></svg>'
       },
       chloe: {
         name: 'Chloe',
-        livingRoomUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
-        bedroomUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4',
+        livingRoomUrl: '',
+        bedroomUrl: '',
         fallbackImg: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360"><rect width="640" height="360" fill="%231f2421"/><text x="320" y="180" font-family="sans-serif" font-size="18" fill="%2358c5ba" text-anchor="middle">Chloe Primary Studio View</text></svg>'
       },
       harper: {
@@ -984,22 +1039,9 @@
       }
     };
 
-    let showsData = [
-      {
-        id: 'demo_priv_1',
-        show_type: 'private',
-        customer: 'alex.rivera@example.com',
-        character: 'Chloe',
-        status: 'READY',
-        price: '$19.99',
-        preview_approved: false
-      }
-    ];
-
-    let mediaAssetsData = [
-      { id: 1, character_id: 'bailey', title: 'Bailey Living Room Idle', media_type: 'video', url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4', tags: ['idle', 'living_room'], is_default: true },
-      { id: 2, character_id: 'chloe', title: 'Chloe Studio Reel', media_type: 'video', url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4', tags: ['idle', 'studio'], is_default: true }
-    ];
+    // Loaded from the backend (GET /admin/keyhole/shows, GET /admin/media); never seeded locally.
+    let showsData = [];
+    let mediaAssetsData = [];
 
     let adminState = {
       authenticated: false,
@@ -1033,10 +1075,50 @@
       checkAuthentication();
       await initPlateEngine();
       renderStageMonitor();
-      renderShowsTable();
-      renderMediaTable();
       renderPlatePanel();
       updateGeminiPrompt();
+      if (adminState.authenticated) await loadBackendState();
+    }
+
+    async function loadBackendState() {
+      await Promise.all([loadShows(), loadMedia()]);
+      await reloadServerPlates();
+      renderStageMonitor();
+    }
+
+    async function loadShows() {
+      try {
+        const d = await api('/admin/keyhole/shows');
+        showsData = d.shows || [];
+      } catch (e) {
+        showsData = [];
+        console.warn('shows unavailable:', e.message);
+      }
+      renderShowsTable();
+    }
+
+    async function loadMedia() {
+      try {
+        const d = await api('/admin/media');
+        mediaAssetsData = d.assets || [];
+      } catch (e) {
+        mediaAssetsData = [];
+        console.warn('media unavailable:', e.message);
+      }
+      renderMediaTable();
+      renderSkinOptions();
+    }
+
+    // Server plates: enabled media_assets tagged with a beat, grouped per character (GET /keyhole/plates).
+    async function reloadServerPlates() {
+      if (!plateLibrary) return;
+      try {
+        const d = await api('/keyhole/plates');
+        plateLibrary.loadManifest(d);
+        renderPlatePanel();
+      } catch (e) {
+        console.warn('server plates unavailable:', e.message);
+      }
     }
 
     /* PLATE ENGINE (plate-first playback; see plate-engine.js) */
@@ -1154,8 +1236,7 @@
     }
 
     function checkAuthentication() {
-      const auth = sessionStorage.getItem('keyhole_admin_auth');
-      if (auth === 'true') {
+      if (adminSecret()) {
         adminState.authenticated = true;
         elModal.classList.remove('active');
       } else {
@@ -1164,13 +1245,20 @@
       }
     }
 
-    function handleDualVerification() {
-      const res = verifyAdminDualSecrets(elKeyWestfall.value, elKeySaintkiller.value);
+    async function handleDualVerification() {
+      elBtnVerifyDual.disabled = true;
+      let res;
+      try {
+        res = await verifyAdminDualSecrets(elKeyWestfall.value, elKeySaintkiller.value);
+      } catch (e) {
+        res = { success: false, message: `Backend unreachable: ${e.message}` };
+      }
+      elBtnVerifyDual.disabled = false;
       if (res.success) {
         adminState.authenticated = true;
-        sessionStorage.setItem('keyhole_admin_auth', 'true');
         elPasscodeError.style.display = 'none';
         elModal.classList.remove('active');
+        await loadBackendState();
       } else {
         elPasscodeError.textContent = res.message;
         elPasscodeError.style.display = 'block';
@@ -1211,6 +1299,7 @@
         playStagePlate('idle');
         return;
       }
+      elDispMediaUrl.value = '[No idle plate — beat OFF]';
 
       if (url) {
         elStageVideo.src = url;
@@ -1271,49 +1360,53 @@
       return `<span style="color:var(--muted); font-size:0.78rem;">${show.status}</span>`;
     }
 
-    function startShow(id) {
+    function replaceShow(show) {
+      const i = showsData.findIndex(s => s.id === show.id);
+      if (i >= 0) showsData[i] = show; else showsData.push(show);
+      renderShowsTable();
+    }
+
+    async function startShow(id) {
       const show = showsData.find(s => s.id === id);
       if (!show) return;
       const charId = plateCharIdFromName(show.character);
       if (plateLibrary && charId && KeyholePlateEngine.REQUIRED_CHARACTERS.includes(charId)) {
+        await reloadServerPlates();
         const r = plateLibrary.readiness(charId);
         if (!r.ready) {
           show.status = 'BLOCKED_NO_PLATES';
-          show.block_reason = `${show.character} is missing plate files for: ${r.missing.join(', ')}. Add them to assets/plates/${charId}/<beat>/ before going live.`;
+          show.block_reason = `${show.character} is missing plate files for: ${r.missing.join(', ')}. Generate or upload a clip tagged with each beat before going live.`;
           renderShowsTable();
           alert(show.block_reason);
           return;
         }
       }
-      show.status = 'LIVE';
+      try {
+        const d = await api(`/admin/keyhole/shows/${encodeURIComponent(id)}/start`, { method: 'POST' });
+        replaceShow(d.show);
+      } catch (e) { alert(`Start failed: ${e.message}`); return; }
       if (charId) { adminState.activeCharId = charId; elStageCharSelect.value = charId; startPlateSession(charId); renderStageMonitor(); }
-      renderShowsTable();
     }
 
-    function endShow(id) {
-      const show = showsData.find(s => s.id === id);
-      if (show) {
-        show.status = 'PREVIEW_READY';
-        show.preview_approved = false;
-        renderShowsTable();
-      }
+    async function endShow(id) {
+      try {
+        const d = await api(`/admin/keyhole/shows/${encodeURIComponent(id)}/end`, { method: 'POST' });
+        replaceShow(d.show);
+      } catch (e) { alert(`End failed: ${e.message}`); }
     }
 
-    function approvePreview(id, approved) {
-      const show = showsData.find(s => s.id === id);
-      if (show) {
-        show.preview_approved = approved;
-        if (!approved) show.status = 'ENDED';
-        renderShowsTable();
-      }
+    async function approvePreview(id, approved) {
+      try {
+        const d = await api(`/admin/keyhole/shows/${encodeURIComponent(id)}/preview-choice`, { body: { use_as_preview: !!approved } });
+        replaceShow(d.show);
+      } catch (e) { alert(`Preview choice failed: ${e.message}`); }
     }
 
-    function publishPreview(id) {
-      const show = showsData.find(s => s.id === id);
-      if (show) {
-        show.status = 'PUBLISHED';
-        renderShowsTable();
-      }
+    async function publishPreview(id) {
+      try {
+        const d = await api(`/admin/keyhole/shows/${encodeURIComponent(id)}/publish-preview`, { method: 'POST' });
+        replaceShow(d.show);
+      } catch (e) { alert(`Publish failed: ${e.message}`); }
     }
 
     /* GEMINI PROMPT GENERATOR */
@@ -1383,31 +1476,161 @@
       const tbody = document.getElementById('media-table-body');
       tbody.innerHTML = '';
 
+      if (!mediaAssetsData.length) {
+        tbody.innerHTML = '<tr><td colspan="8" style="color:var(--muted);">No media in the library yet. Upload a skin (tag <code>skin</code>) and generate or upload plates tagged with a beat.</td></tr>';
+        return;
+      }
       mediaAssetsData.forEach(asset => {
+        const tags = Array.isArray(asset.tags) ? asset.tags : [];
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td>${asset.id}</td>
-          <td><strong>${asset.character_id}</strong></td>
-          <td>${asset.title}</td>
-          <td><span class="admin-badge">${asset.media_type}</span></td>
-          <td style="max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${asset.url}</td>
-          <td>${asset.tags.join(', ')}</td>
-          <td>${asset.is_default ? '⭐ Default' : '—'}</td>
-          <td><button class="btn btn-danger" onclick="deleteAsset(${asset.id})" style="padding:4px 8px; font-size:0.72rem;">Delete</button></td>
+          <td><strong>${esc(asset.character_id)}</strong></td>
+          <td>${esc(asset.title)}</td>
+          <td><span class="admin-badge">${esc(asset.media_type)}</span></td>
+          <td style="max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"><a href="${esc(asset.url)}" target="_blank" rel="noopener" style="color:var(--teal);">${esc(asset.url)}</a></td>
+          <td>${esc(tags.join(', '))}</td>
+          <td>${asset.is_default ? '⭐ Default' : (asset.is_enabled === false ? 'disabled' : '—')}</td>
+          <td><button class="btn btn-danger" onclick="deleteAsset(${Number(asset.id)})" style="padding:4px 8px; font-size:0.72rem;">Delete</button></td>
         `;
         tbody.appendChild(tr);
       });
     }
 
-    function deleteAsset(id) {
-      mediaAssetsData = mediaAssetsData.filter(a => a.id !== id);
-      renderMediaTable();
+    function esc(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    async function deleteAsset(id) {
+      if (!confirm(`Delete media asset #${id}? Any plate beat it fed goes OFF.`)) return;
+      try {
+        await api(`/admin/media/${id}`, { method: 'DELETE' });
+      } catch (e) { alert(`Delete failed: ${e.message}`); return; }
+      await loadMedia();
+      await reloadServerPlates();
+    }
+
+    function skinAssets(charId) {
+      return mediaAssetsData.filter(a => a.character_id === charId && a.media_type === 'image' && a.is_enabled !== false &&
+        (Array.isArray(a.tags) ? a.tags : []).some(t => t === 'skin' || t === 'reference'));
+    }
+
+    function renderSkinOptions() {
+      const sel = document.getElementById('gen-skin-asset');
+      const skins = skinAssets(adminState.activeCharId);
+      sel.innerHTML = skins.length
+        ? skins.map(a => `<option value="${Number(a.id)}">#${Number(a.id)} ${esc(a.title || 'skin')}</option>`).join('')
+        : '<option value="">No skin uploaded for this companion — generation runs without her face</option>';
+    }
+
+    /* GENERATORS (backend: Gemini image, Sogni image, Veo webcam clip — every output is saved as her tagged plate) */
+    function genFeedback(msg, ok) {
+      const fb = document.getElementById('gen-feedback');
+      fb.style.display = 'block';
+      fb.className = 'feedback-msg ' + (ok ? 'feedback-success' : 'feedback-error');
+      fb.textContent = msg;
+    }
+
+    function showGeneratedAsset(asset, meta) {
+      const wrap = document.getElementById('gen-result');
+      const img = document.getElementById('gen-result-img');
+      const vid = document.getElementById('gen-result-video');
+      wrap.style.display = 'block';
+      if (asset.media_type === 'video') {
+        img.style.display = 'none'; vid.style.display = 'block'; vid.src = asset.url; vid.play().catch(() => {});
+      } else {
+        vid.style.display = 'none'; img.style.display = 'block'; img.src = asset.url;
+      }
+      document.getElementById('gen-result-meta').textContent = `#${asset.id} ${asset.character_id} · ${(asset.tags || []).join(', ')} · ${meta || ''}`;
+    }
+
+    function generatorInputs() {
+      const skin = document.getElementById('gen-skin-asset').value;
+      return {
+        character: adminState.activeCharId,
+        beat: document.getElementById('gen-beat').value,
+        reference_asset_id: skin ? Number(skin) : null,
+        use_reference: true,
+        scene: document.getElementById('gen-scene-prompt').value.trim()
+      };
+    }
+
+    async function runImageGenerator(engine) {
+      const g = generatorInputs();
+      if (!KeyholePlateEngine.REQUIRED_CHARACTERS.includes(g.character)) { genFeedback('Generators are wired for Bailey and Chloe only.', false); return; }
+      const prompt = engine === 'secondary'
+        ? `${ADMIN_CHARACTERS[g.character].name}. ${document.getElementById('sec-gen-prompt').value.trim()} ${g.scene}`.trim()
+        : `${buildMasterPrompt()}\n[SCENE]: ${g.scene || 'natural webcam moment'}`;
+      const status = engine === 'secondary' ? document.getElementById('sec-gen-status') : null;
+      if (status) { status.style.display = 'block'; status.className = 'feedback-msg feedback-success'; status.textContent = 'Generating with Sogni…'; }
+      genFeedback(`Generating ${g.beat} image for ${ADMIN_CHARACTERS[g.character].name} (${engine === 'secondary' ? 'Sogni' : 'Gemini'})…`, true);
+      try {
+        const d = await api('/admin/generator/image', { body: {
+          prompt, character: g.character, beat: g.beat, engine,
+          reference_asset_id: g.reference_asset_id, use_reference: g.use_reference,
+          api_key: engine === 'secondary' ? (document.getElementById('sec-gen-api-key').value || null) : null,
+          title: `${ADMIN_CHARACTERS[g.character].name} ${g.beat} (${engine})`
+        } });
+        showGeneratedAsset(d.asset, d.engine || engine);
+        genFeedback(`Saved #${d.asset.id} as ${ADMIN_CHARACTERS[g.character].name} ${g.beat} still.`, true);
+        if (status) status.textContent = `Sogni image saved as asset #${d.asset.id}.`;
+        await loadMedia();
+      } catch (e) {
+        genFeedback(`Image generation failed: ${e.message}`, false);
+        if (status) { status.className = 'feedback-msg feedback-error'; status.textContent = e.message; }
+      }
+    }
+
+    let webcamPoll = null;
+    async function runWebcamGenerator() {
+      const g = generatorInputs();
+      if (!KeyholePlateEngine.REQUIRED_CHARACTERS.includes(g.character)) { genFeedback('Webcam generator is wired for Bailey and Chloe only.', false); return; }
+      if (webcamPoll) { genFeedback('A webcam clip is already rendering — wait for it to finish.', false); return; }
+      const btn = document.getElementById('btn-gen-webcam');
+      btn.disabled = true;
+      genFeedback(`Starting Veo webcam clip: ${ADMIN_CHARACTERS[g.character].name} / ${g.beat}…`, true);
+      try {
+        const start = await api('/admin/generator/webcam', { body: {
+          prompt: `${buildMasterPrompt()}\n[SCENE]: ${g.scene || 'natural webcam moment, subtle motion'}`,
+          character: g.character, beat: g.beat,
+          reference_asset_id: g.reference_asset_id, use_reference: g.use_reference,
+          duration_seconds: 8, aspect_ratio: '16:9',
+          title: `${ADMIN_CHARACTERS[g.character].name} ${g.beat} webcam`
+        } });
+        const jobId = start.job_id;
+        const t0 = Date.now();
+        webcamPoll = setInterval(async () => {
+          try {
+            const st = (await api(`/admin/generator/webcam/${encodeURIComponent(jobId)}`)).job || {};
+            const secs = Math.round((Date.now() - t0) / 1000);
+            if (st.status === 'done' && st.asset) {
+              clearInterval(webcamPoll); webcamPoll = null; btn.disabled = false;
+              showGeneratedAsset(st.asset, `Veo ${secs}s`);
+              genFeedback(`Webcam clip saved as ${ADMIN_CHARACTERS[g.character].name} ${g.beat} plate (#${st.asset.id}). It is a plate from now on.`, true);
+              await loadMedia();
+              await reloadServerPlates();
+              renderStageMonitor();
+            } else if (st.status === 'error') {
+              clearInterval(webcamPoll); webcamPoll = null; btn.disabled = false;
+              genFeedback(`Webcam generation failed: ${st.error || 'unknown error'}`, false);
+            } else {
+              genFeedback(`Rendering webcam clip… ${secs}s (Veo usually takes 1–3 min)`, true);
+            }
+          } catch (e) {
+            clearInterval(webcamPoll); webcamPoll = null; btn.disabled = false;
+            genFeedback(`Webcam job lost: ${e.message}`, false);
+          }
+        }, 5000);
+      } catch (e) {
+        btn.disabled = false;
+        genFeedback(`Webcam generation failed: ${e.message}`, false);
+      }
     }
 
     function setupEventListeners() {
       elBtnVerifyDual.addEventListener('click', handleDualVerification);
       elBtnReauth.addEventListener('click', () => {
-        sessionStorage.removeItem('keyhole_admin_auth');
+        sessionStorage.removeItem(ADMIN_SECRET_KEY);
         checkAuthentication();
       });
 
@@ -1415,6 +1638,7 @@
         adminState.activeCharId = e.target.value;
         startPlateSession(adminState.activeCharId);
         renderStageMonitor();
+        renderSkinOptions();
         updateGeminiPrompt();
       });
 
@@ -1439,36 +1663,23 @@
         updateGeminiPrompt();
       });
 
-      document.getElementById('btn-demo-simulate').addEventListener('click', () => {
-        const newShow = {
-          id: `priv_${Date.now()}`,
-          show_type: 'private',
-          customer: 'user.test@example.com',
-          character: 'Chloe',
-          status: 'READY',
-          price: '$19.99',
-          preview_approved: false
-        };
-        showsData.push(newShow);
-        renderShowsTable();
+      document.getElementById('btn-demo-simulate').addEventListener('click', async () => {
+        try {
+          const d = await api('/admin/keyhole/shows/demo-simulate', { body: { action: 'private_request' } });
+          if (d.show) replaceShow(d.show); else await loadShows();
+        } catch (e) { alert(`Demo request failed: ${e.message}`); }
       });
 
-      document.getElementById('btn-create-pub-show').addEventListener('click', () => {
-        const char = document.getElementById('pub-show-char').value;
-        const time = document.getElementById('pub-show-time').value;
-        const price = document.getElementById('pub-show-price').value;
-
-        showsData.push({
-          id: `pub_${Date.now()}`,
-          show_type: 'public',
-          customer: '',
-          character: char,
-          status: 'SCHEDULED',
-          scheduled_at: time,
-          price: price,
-          preview_approved: false
-        });
-        renderShowsTable();
+      document.getElementById('btn-create-pub-show').addEventListener('click', async () => {
+        try {
+          const d = await api('/admin/keyhole/shows/create-public', { body: {
+            character: document.getElementById('pub-show-char').value,
+            scheduled_at: document.getElementById('pub-show-time').value,
+            price: document.getElementById('pub-show-price').value,
+            details: document.getElementById('pub-show-details').value
+          } });
+          replaceShow(d.show);
+        } catch (e) { alert(`Create show failed: ${e.message}`); }
       });
 
       // Generator Listeners
@@ -1513,21 +1724,9 @@
         }
       });
 
-      document.getElementById('btn-sec-gen-generate').addEventListener('click', () => {
-        const key = document.getElementById('sec-gen-api-key').value;
-        const statusMsg = document.getElementById('sec-gen-status');
-        statusMsg.style.display = 'block';
-        if (!key) {
-          statusMsg.textContent = 'Secondary Generator requires API Key. Click "Set / Prompt API Key" when ready.';
-          statusMsg.className = 'feedback-msg';
-          statusMsg.style.color = 'var(--gold-bright)';
-          statusMsg.style.background = 'rgba(217, 173, 88, 0.15)';
-        } else {
-          statusMsg.textContent = 'Executing on-demand generation with Secondary Engine...';
-          statusMsg.className = 'feedback-msg feedback-success';
-        }
-        setTimeout(() => statusMsg.style.display = 'none', 3000);
-      });
+      document.getElementById('btn-sec-gen-generate').addEventListener('click', () => runImageGenerator('secondary'));
+      document.getElementById('btn-gen-image').addEventListener('click', () => runImageGenerator('primary'));
+      document.getElementById('btn-gen-webcam').addEventListener('click', runWebcamGenerator);
 
       document.getElementById('gen-rule-multiangle').addEventListener('change', updateGeminiPrompt);
       document.getElementById('gen-rule-primaryview').addEventListener('change', updateGeminiPrompt);
@@ -1557,36 +1756,62 @@
 
       document.getElementById('btn-translate-generate').addEventListener('click', handleFruitTranslation);
 
-      document.getElementById('btn-import-url').addEventListener('click', () => {
-        const charId = document.getElementById('media-char-select').value;
-        const title = document.getElementById('media-title-input').value || 'Imported Clip';
-        const type = document.getElementById('media-type-select').value;
-        const url = document.getElementById('media-url-input').value || 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4';
-        const tags = document.getElementById('media-tags-input').value.split(',').map(t => t.trim());
-        const isDefault = document.getElementById('media-is-default-check').checked;
-
-        mediaAssetsData.push({
-          id: mediaAssetsData.length + 1,
-          character_id: charId,
-          title: title,
-          media_type: type,
-          url: url,
-          tags: tags,
-          is_default: isDefault
-        });
-        renderMediaTable();
+      function mediaForm() {
+        return {
+          charId: document.getElementById('media-char-select').value,
+          title: document.getElementById('media-title-input').value.trim(),
+          type: document.getElementById('media-type-select').value,
+          url: document.getElementById('media-url-input').value.trim(),
+          tags: document.getElementById('media-tags-input').value.split(',').map(t => t.trim()).filter(Boolean),
+          isDefault: document.getElementById('media-is-default-check').checked
+        };
+      }
+      function mediaFeedback(msg, ok) {
         const fb = document.getElementById('media-feedback');
-        fb.textContent = 'Media asset added!';
-        if (plateLibrary && type === 'video') {
-          const beats = tags.filter(t => KeyholePlateEngine.BEATS.includes(t));
-          beats.forEach(beat => plateLibrary.save(charId, beat, { url, variant: title }));
-          if (beats.length) {
-            fb.textContent = `Media asset added and saved to plate folder(s): ${beats.join(', ')}`;
-            renderPlatePanel();
-          }
-        }
+        fb.className = 'feedback-msg ' + (ok ? 'feedback-success' : 'feedback-error');
+        fb.textContent = msg;
         fb.style.display = 'block';
-        setTimeout(() => fb.style.display = 'none', 2000);
+      }
+      async function afterMediaChange(asset, verb) {
+        const beats = (asset.tags || []).filter(t => KeyholePlateEngine.BEATS.includes(t));
+        mediaFeedback(beats.length
+          ? `${verb} #${asset.id} and saved to ${asset.character_id}'s plate folder(s): ${beats.join(', ')}`
+          : `${verb} #${asset.id}${(asset.tags || []).includes('skin') ? ' as a skin' : ''}.`, true);
+        await loadMedia();
+        await reloadServerPlates();
+      }
+
+      document.getElementById('btn-upload-file').addEventListener('click', async () => {
+        const f = mediaForm();
+        const file = document.getElementById('media-file-input').files[0];
+        if (!file) { mediaFeedback('Choose a file first.', false); return; }
+        const fd = new FormData();
+        fd.append('character_id', f.charId);
+        fd.append('file', file, file.name);
+        fd.append('title', f.title || file.name);
+        fd.append('media_type', file.type.startsWith('image/') ? 'image' : (file.type.startsWith('video/') ? 'video' : f.type));
+        fd.append('tags', JSON.stringify(f.tags));
+        fd.append('is_default', f.isDefault ? 'true' : 'false');
+        mediaFeedback(`Uploading ${file.name}…`, true);
+        try {
+          const d = await api('/admin/media/upload', { body: fd });
+          await afterMediaChange(d.asset || d, 'Uploaded');
+          document.getElementById('media-file-input').value = '';
+        } catch (e) { mediaFeedback(`Upload failed: ${e.message}`, false); }
+      });
+
+      // Fallback only: pull a clip from a URL (use free/licensed sources). Generation is the default path.
+      document.getElementById('btn-import-url').addEventListener('click', async () => {
+        const f = mediaForm();
+        if (!f.url) { mediaFeedback('Enter a media URL to import.', false); return; }
+        mediaFeedback('Importing from URL…', true);
+        try {
+          const d = await api('/admin/media/import-url', { body: {
+            character_id: f.charId, url: f.url, title: f.title || 'Imported Clip', media_type: f.type,
+            tags: f.tags, is_default: f.isDefault, download_remote: true
+          } });
+          await afterMediaChange(d.asset || d, 'Imported');
+        } catch (e) { mediaFeedback(`Import failed: ${e.message}`, false); }
       });
     }
 

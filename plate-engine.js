@@ -114,6 +114,12 @@
     this.saved = readJSON(this.storage, LIBRARY_KEY, {});
   }
 
+  /** Replace the shipped folders with a manifest fetched later (e.g. the server's /keyhole/plates). */
+  PlateLibrary.prototype.loadManifest = function (manifest) {
+    this.shipped = normalizeManifest(manifest || {});
+    return this;
+  };
+
   PlateLibrary.prototype.folder = function (charId) {
     const folder = emptyFolder();
     const shipped = this.shipped[charId] || emptyFolder();
