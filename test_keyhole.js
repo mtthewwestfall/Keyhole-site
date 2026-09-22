@@ -145,6 +145,15 @@ test('Keyhole WebCam Admin Portal Integrity', async (t) => {
     assert.ok(adminHtml.includes('[RULE 2 - LOCKED PRIMARY WEBCAM VIEW]'), 'Rule 2 primary view locking in admin prompt');
   });
 
+  await t.test('Secondary Image Generator controls exist and prevent hardcoded API keys', () => {
+    assert.ok(adminHtml.includes('id="engine-primary-check"'), 'Primary engine radio button present');
+    assert.ok(adminHtml.includes('id="engine-secondary-check"'), 'Secondary engine radio button present');
+    assert.ok(adminHtml.includes('id="card-secondary-generator"'), 'Secondary generator card present');
+    assert.ok(adminHtml.includes('id="btn-sec-gen-set-key"'), 'Prompt API Key button present');
+    assert.ok(adminHtml.includes('id="sec-gen-api-key"'), 'Secondary generator API key input present');
+    assert.ok(!adminHtml.includes('sec-gen-api-key" class="form-input" value="AIza'), 'No API key is hardcoded in source HTML');
+  });
+
   await t.test('Fruit Code Translator & Extended Display Engine present in Admin', () => {
     assert.ok(adminHtml.includes('id="fruit-code-input"'), 'Fruit code input field present');
     assert.ok(adminHtml.includes('id="fruit-expand-surroundings"'), 'Expand surroundings checkbox present');

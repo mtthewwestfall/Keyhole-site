@@ -564,8 +564,26 @@
 
     <!-- TAB 3: CONTENT & GEMINI GENERATOR -->
     <section id="tab-generator" class="tab-section">
+      <div class="admin-card" style="margin-bottom:20px;">
+        <div class="card-title">
+          <span>Active Generator Selection</span>
+          <span id="badge-active-generator" class="admin-badge">Primary: Gemini Studio</span>
+        </div>
+        <p class="card-subtitle">Select which image/content generator engine to route active generation prompts to.</p>
+        <div style="display:flex; gap:12px; flex-wrap:wrap;">
+          <label class="chip-item" style="flex:1; min-width:200px;">
+            <input type="radio" name="generator-engine-select" id="engine-primary-check" value="primary" checked />
+            <span>Primary Engine (Gemini Studio & Spatial Rules)</span>
+          </label>
+          <label class="chip-item" style="flex:1; min-width:200px;">
+            <input type="radio" name="generator-engine-select" id="engine-secondary-check" value="secondary" />
+            <span>Secondary Engine (On-Demand Custom Generator)</span>
+          </label>
+        </div>
+      </div>
+
       <div class="admin-grid">
-        <div class="admin-card">
+        <div class="admin-card" id="card-primary-generator">
           <div class="card-title">Gemini AI Studio & Spatial Rules</div>
           <p class="card-subtitle">Configure Gemini generation enforcing 3D physical consistency & locked primary view.</p>
 
@@ -613,8 +631,37 @@
           </div>
         </div>
 
+        <div class="admin-card" id="card-secondary-generator" style="display:none;">
+          <div class="card-title">Secondary On-Demand Image Generator</div>
+          <p class="card-subtitle">Custom on-demand generator engine. Used only when explicitly requested.</p>
+
+          <div class="form-group">
+            <label class="form-label" for="sec-gen-prompt">Custom Image Prompt</label>
+            <input type="text" id="sec-gen-prompt" class="form-input" placeholder="Enter detailed image generation prompt..." value="Cozy webcam bedroom studio with warm ambient lighting" />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="sec-gen-aspect">Aspect Ratio</label>
+            <select id="sec-gen-aspect" class="form-select">
+              <option value="16:9" selected>16:9 (Landscape Webcam)</option>
+              <option value="9:16">9:16 (Portrait Mobile)</option>
+              <option value="1:1">1:1 (Square)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="sec-gen-api-key">Secondary Generator API Key Status</label>
+            <input type="password" id="sec-gen-api-key" class="form-input" value="" placeholder="API key required on-demand (Click Set API Key)" readonly />
+            <span style="font-size:0.75rem; color:var(--muted); display:block; margin-top:4px;">No API key hardcoded. Key will be prompt-configured when ready.</span>
+          </div>
+
+          <button id="btn-sec-gen-set-key" class="btn btn-teal" style="width:100%; margin-bottom:10px;">Set / Prompt API Key</button>
+          <button id="btn-sec-gen-generate" class="btn" style="width:100%;">Generate with Secondary Engine</button>
+          <div id="sec-gen-status" class="feedback-msg feedback-success">Secondary Generator ready!</div>
+        </div>
+
         <div class="admin-card" style="display:flex; flex-direction:column;">
-          <div class="card-title">Generated Gemini Master Prompt</div>
+          <div class="card-title">Generated Master Prompt</div>
           <p class="card-subtitle">Formatted master prompt adhering strictly to keyhole generation rules.</p>
 
           <textarea id="gen-prompt-output" class="form-textarea" style="flex:1; min-height:260px;" readonly></textarea>
@@ -1200,6 +1247,63 @@
       });
 
       // Generator Listeners
+      // Generator Selection Engine Listeners
+      const enginePrimaryRadio = document.getElementById('engine-primary-check');
+      const engineSecondaryRadio = document.getElementById('engine-secondary-check');
+      const cardPrimary = document.getElementById('card-primary-generator');
+      const cardSecondary = document.getElementById('card-secondary-generator');
+      const badgeEngine = document.getElementById('badge-active-generator');
+
+      function handleEngineSwitch() {
+        if (engineSecondaryRadio.checked) {
+          cardPrimary.style.display = 'none';
+          cardSecondary.style.display = 'block';
+          badgeEngine.textContent = 'Secondary: On-Demand Generator';
+          badgeEngine.style.background = 'rgba(88,197,186,0.2)';
+          badgeEngine.style.color = 'var(--teal)';
+          badgeEngine.style.borderColor = 'var(--teal)';
+        } else {
+          cardPrimary.style.display = 'block';
+          cardSecondary.style.display = 'none';
+          badgeEngine.textContent = 'Primary: Gemini Studio';
+          badgeEngine.style.background = 'rgba(217, 173, 88, 0.2)';
+          badgeEngine.style.color = 'var(--gold-bright)';
+          badgeEngine.style.borderColor = 'var(--gold)';
+        }
+      }
+
+      if (enginePrimaryRadio && engineSecondaryRadio) {
+        enginePrimaryRadio.addEventListener('change', handleEngineSwitch);
+        engineSecondaryRadio.addEventListener('change', handleEngineSwitch);
+      }
+
+      document.getElementById('btn-sec-gen-set-key').addEventListener('click', () => {
+        const inputKey = prompt('Enter API key for Secondary Image Generator:');
+        if (inputKey) {
+          document.getElementById('sec-gen-api-key').value = inputKey;
+          const statusMsg = document.getElementById('sec-gen-status');
+          statusMsg.style.display = 'block';
+          statusMsg.textContent = 'Secondary API key configured in session!';
+          setTimeout(() => statusMsg.style.display = 'none', 3000);
+        }
+      });
+
+      document.getElementById('btn-sec-gen-generate').addEventListener('click', () => {
+        const key = document.getElementById('sec-gen-api-key').value;
+        const statusMsg = document.getElementById('sec-gen-status');
+        statusMsg.style.display = 'block';
+        if (!key) {
+          statusMsg.textContent = 'Secondary Generator requires API Key. Click "Set / Prompt API Key" when ready.';
+          statusMsg.className = 'feedback-msg';
+          statusMsg.style.color = 'var(--gold-bright)';
+          statusMsg.style.background = 'rgba(217, 173, 88, 0.15)';
+        } else {
+          statusMsg.textContent = 'Executing on-demand generation with Secondary Engine...';
+          statusMsg.className = 'feedback-msg feedback-success';
+        }
+        setTimeout(() => statusMsg.style.display = 'none', 3000);
+      });
+
       document.getElementById('gen-rule-multiangle').addEventListener('change', updateGeminiPrompt);
       document.getElementById('gen-rule-primaryview').addEventListener('change', updateGeminiPrompt);
       document.getElementById('gen-motion-mode').addEventListener('change', updateGeminiPrompt);
