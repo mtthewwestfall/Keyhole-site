@@ -13,6 +13,7 @@
   <script>
     try {
       if (!localStorage.getItem('keyhole_auth_token_v1')) location.replace('index.html');
+      else document.documentElement.classList.add('signed-in');
     } catch (e) {}
   </script>
   <style>
@@ -109,6 +110,10 @@
       border-color: var(--gold);
       color: var(--gold);
     }
+    #account-status { display: none; }
+    html.signed-in #account-status { display: inline-flex; }
+    html.signed-in #account-btn .when-out,
+    html:not(.signed-in) #account-btn .when-in { display: none; }
     .btn-small {
       background: transparent;
       color: var(--ink);
@@ -702,8 +707,8 @@
     <a href="#" class="brand-logo" id="logo-btn">KEYHOLE</a>
     <div class="header-nav">
       <span id="nav-badge" class="badge badge-live">Live</span>
-      <span id="account-status" class="badge" style="display:none;"></span>
-      <button id="account-btn" class="btn-small btn-gold-outline">Sign In</button>
+      <span id="account-status" class="badge">Signed in</span>
+      <button id="account-btn" class="btn-small btn-gold-outline"><span class="when-out">Sign in</span><span class="when-in">Sign out</span></button>
       <button id="gemini-studio-btn" class="btn-small btn-gold-outline">Gemini Studio & Room Editor</button>
       <button id="switch-character-btn" class="btn-small" style="display:none;">Change Room</button>
       <button id="reset-session-btn" class="btn-small">Reset Session</button>
@@ -1013,6 +1018,7 @@
     <div style="margin-top:4px; opacity:0.7;" id="footer-char-note">All characters are fictional AI-generated personalities.</div>
   </footer>
 
+  <script src="auth.js"></script>
   <script src="plate-engine.js"></script>
   <script>
     /* ==========================================================================
@@ -1222,6 +1228,7 @@
     }
 
     function resetSessionState() {
+      const kept = (window.KeyholeAuth && KeyholeAuth.token()) || localStorage.getItem('keyhole_auth_token_v1') || '';
       localStorage.removeItem('keyhole_session_v1');
       state = {
         view: 'selection',
@@ -1233,15 +1240,23 @@
         hasInvitedToBedroom: false,
         chatLogs: {}
       };
+      if (kept) localStorage.setItem('keyhole_auth_token_v1', kept);
       if (timerInterval) clearInterval(timerInterval);
+      renderAccountStatus();
       showSelectionView();
     }
 
     async function verifyMembershipEntitlement(token) {
-      if (KeyholeAccount.token()) {
+      if (KeyholeAuth.token()) {
         try {
-          const me = await KeyholeAccount.refresh();
-          if (me && (me.webcam_minutes_left > 0 || me.session_active)) return { success: true };
+          const profile = await KeyholeAuth.me();
+          const user = profile && profile.user;
+          if (user) KeyholeAccount.remember(user);
+          if (user && (user.webcam_minutes_left > 0 || user.session_active)) return { success: true };
+          if (profile && profile.flaky && KeyholeAuth.token()) return { success: true };
+          if (KeyholeAuth.token()) {
+            return { success: false, message: 'Choose a session to open the private room.' };
+          }
         } catch (_) {}
       }
       await new Promise(resolve => setTimeout(resolve, 600));
@@ -1252,49 +1267,34 @@
       return { success: false, message: 'Invalid Passcode / Token.' };
     }
 
-    /* ACCOUNT CLIENT */
+    /* ACCOUNT CLIENT — token lives in auth.js (keyhole_auth_token_v1). */
     const KeyholeAccount = (() => {
-      const TOKEN_KEY = 'keyhole_auth_token_v1';
+      const TOKEN_KEY = KeyholeAuth.TOKEN_KEY;
       let me = null;
-      const token = () => localStorage.getItem(TOKEN_KEY) || '';
-      const headers = () => {
-        const h = { 'Content-Type': 'application/json' };
-        const t = token();
-        if (t) h['Authorization'] = 'Bearer ' + t;
-        return h;
-      };
+      const token = () => KeyholeAuth.token();
+      function remember(user) { me = user || null; return me; }
 
       async function api(path, body) {
-        const res = await fetch(path, {
-          method: body === undefined ? 'GET' : 'POST',
-          headers: headers(),
-          body: body === undefined ? undefined : JSON.stringify(body)
-        });
-        let data = {};
-        try { data = await res.json(); } catch (_) {}
-        if (!res.ok) {
-          const err = new Error(typeof data.detail === 'string' ? data.detail : (res.status === 401 ? 'Please sign in again.' : 'Request failed (' + res.status + ')'));
-          err.status = res.status;
+        const out = await KeyholeAuth.request(path, body === undefined ? { method: 'GET' } : { method: 'POST', body: body });
+        if (!out.res.ok) {
+          const err = new Error(typeof out.data.detail === 'string' ? out.data.detail : (out.res.status === 401 ? 'Please sign in again.' : 'Request failed (' + out.res.status + ')'));
+          err.status = out.res.status;
           throw err;
         }
-        return data;
+        return out.data;
       }
 
       async function refresh() {
-        if (!token()) { me = null; return null; }
-        try {
-          me = await api('/keyhole/me');
-        } catch (err) {
-          if (err.status === 401) { localStorage.removeItem(TOKEN_KEY); me = null; }
-          else throw err;
-        }
+        const profile = await KeyholeAuth.me();
+        if (profile && profile.user) me = profile.user;
+        else if (profile && profile.cleared) me = null;
         return me;
       }
 
       async function login(email, password) {
-        const data = await api('/auth/login', { email, password });
-        localStorage.setItem(TOKEN_KEY, data.token);
-        return refresh();
+        await KeyholeAuth.login(email, password);
+        await refresh();
+        return me;
       }
 
       async function signup(email, password, display_name) {
@@ -1306,8 +1306,9 @@
       }
 
       function logout() {
-        localStorage.removeItem(TOKEN_KEY);
+        KeyholeAuth.clearToken();
         me = null;
+        document.documentElement.classList.remove('signed-in');
       }
 
       async function packages() {
@@ -1323,7 +1324,7 @@
         return api('/keyhole/preview/claim', {});
       }
 
-      return { token, me: () => me, refresh, login, signup, resendVerification, logout, packages, createCryptoInvoice, claimFreePreview };
+      return { TOKEN_KEY, token, me: () => me, remember, refresh, login, signup, resendVerification, logout, packages, createCryptoInvoice, claimFreePreview };
     })();
 
     /* UI ELEMENTS */
@@ -1373,10 +1374,17 @@
     const elVerifyMemberBtn = document.getElementById('verify-member-btn');
 
     async function initApp() {
+      renderAccountStatus();
       loadSessionState();
       renderSelectionGrid();
       setupEventListeners();
       await initPlateLibrary();
+      try { await KeyholeAccount.refresh(); } catch (_) {}
+      renderAccountStatus();
+      if (!KeyholeAuth.token()) {
+        location.replace('index.html');
+        return;
+      }
 
       if (state.view === 'room' && state.activeCharId && CHARACTERS[state.activeCharId]) {
         enterRoom(state.activeCharId, false);
@@ -1739,7 +1747,33 @@
       saveSessionState();
       renderChatMessages();
 
-      openMembershipGateModal("Unlock Private Room", `Enter your Keyhole passcode to enter ${char.name}'s room.`);
+      openPrivateRoom();
+    }
+
+    function openPrivateRoom() {
+      unlockPrivateRoom();
+    }
+
+    async function unlockPrivateRoom() {
+      if (!KeyholeAuth.token()) {
+        openAccountModal('login');
+        return;
+      }
+      const res = await verifyMembershipEntitlement('');
+      renderAccountStatus();
+      if (!KeyholeAuth.token()) {
+        openAccountModal('login');
+        return;
+      }
+      if (!res.success) {
+        appendSystemMessage(res.message || 'Choose a session to open the private room.');
+        return;
+      }
+      state.isVerifiedMember = true;
+      state.roomMode = 'bedroom';
+      saveSessionState();
+      appendSystemMessage(`Passcode verified! You are now in ${CHARACTERS[state.activeCharId].name}'s private room.`);
+      renderRoomView();
     }
 
     function handleDeclineInvitation() {
@@ -1874,14 +1908,16 @@
     function closeAccountModal() { elAccountModal.classList.remove('active'); }
 
     function renderAccountStatus() {
+      const signedIn = !!(window.KeyholeAuth && KeyholeAuth.token());
       const me = KeyholeAccount.me();
-      if (me) {
-        elAccountStatus.textContent = `${me.email || 'Signed in'} · ${me.webcam_minutes_left} min`;
-        elAccountStatus.style.display = '';
-        elAccountBtn.textContent = 'Sign Out';
+      document.documentElement.classList.toggle('signed-in', signedIn);
+      if (signedIn) {
+        const who = (me && me.email) ? me.email : 'Signed in';
+        elAccountStatus.textContent = (me && me.webcam_minutes_left != null)
+          ? (who + ' · ' + me.webcam_minutes_left + ' min')
+          : who;
       } else {
-        elAccountStatus.style.display = 'none';
-        elAccountBtn.textContent = 'Sign In';
+        elAccountStatus.textContent = '';
       }
     }
 
@@ -1912,8 +1948,13 @@
 
     function setupEventListeners() {
       elAccountBtn.addEventListener('click', () => {
-        if (KeyholeAccount.token()) { KeyholeAccount.logout(); renderAccountStatus(); location.replace('index.html'); }
-        else openAccountModal('login');
+        if (KeyholeAuth.token()) {
+          KeyholeAccount.logout();
+          renderAccountStatus();
+          location.replace('index.html');
+        } else {
+          openAccountModal('login');
+        }
       });
       document.getElementById('account-close-btn').addEventListener('click', closeAccountModal);
       elAccountSubmit.addEventListener('click', handleAccountSubmit);
@@ -1921,8 +1962,18 @@
       elAccountToggle.addEventListener('click', (e) => { e.preventDefault(); setAccountMode(accountMode === 'login' ? 'signup' : 'login'); });
 
       elSessionPricingPanel.addEventListener('click', (e) => {
+        const payLink = e.target.closest('a.session-tier-buy');
+        if (payLink && !KeyholeAuth.token()) {
+          e.preventDefault();
+          openAccountModal('login');
+          return;
+        }
         const enterBtn = e.target.closest('[data-enter]');
         if (!enterBtn || !pendingDoorId) return;
+        if (!KeyholeAuth.token()) {
+          openAccountModal('login');
+          return;
+        }
         const tier = enterBtn.closest('.session-tier');
         pendingMinutes = Number(tier && tier.dataset.minutes) || 10;
         enterRoom(pendingDoorId, true);
@@ -1941,8 +1992,7 @@
       });
 
       elBannerUnlockBtn.addEventListener('click', () => {
-        const char = CHARACTERS[state.activeCharId];
-        openMembershipGateModal("Unlock Private Room", `Verify passcode to enter ${char ? char.name : ''}'s room.`);
+        unlockPrivateRoom();
       });
 
       elModalCloseBtn.addEventListener('click', closeMembershipGateModal);

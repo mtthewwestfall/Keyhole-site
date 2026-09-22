@@ -372,9 +372,10 @@ body {
   </div>
 </aside>
 
+<script src="auth.js"></script>
 <script>
 (() => {
-  const TOKEN_KEY = 'keyhole_auth_token_v1';
+  const TOKEN_KEY = KeyholeAuth.TOKEN_KEY;
   const NEXT = 'rooms.html';
 
   if (localStorage.getItem(TOKEN_KEY)) {
@@ -490,13 +491,16 @@ body {
           return;
         }
       }
-      const data = await api('/auth/login', { email: em, password: pw });
-      localStorage.setItem(TOKEN_KEY, data.token);
+      await KeyholeAuth.login(em, pw);
+      if (localStorage.getItem(TOKEN_KEY) !== KeyholeAuth.token() || !KeyholeAuth.token()) {
+        throw new Error('Could not save your session.');
+      }
       location.replace(NEXT);
+      return;
     } catch (err) {
       say(err.message || 'Could not sign in.', 'error');
     } finally {
-      submitBtn.disabled = false;
+      if (!KeyholeAuth.token()) submitBtn.disabled = false;
     }
   });
 })();
