@@ -428,7 +428,7 @@
       <button class="nav-btn" data-tab="tab-fruit">Fruit Translator</button>
       <button class="nav-btn" data-tab="tab-media">Media Asset Library</button>
       <button class="nav-btn" data-tab="tab-plates">Plate Engine</button>
-      <button id="btn-reauthenticate" class="nav-btn btn-secondary" style="padding:6px 12px; font-size:0.78rem;">Dual Secrets</button>
+      <button id="btn-reauthenticate" class="nav-btn btn-secondary" style="padding:6px 12px; font-size:0.78rem;">Admin Password</button>
     </nav>
   </header>
 
@@ -945,20 +945,15 @@
   <!-- DUAL SECRET PASSCODE MODAL -->
   <div id="dual-secret-modal" class="modal-backdrop">
     <div class="modal-card">
-      <h2 class="modal-title">Admin Dual Secret Authorization</h2>
-      <p class="modal-desc">Enter the backend ADMIN_SECRET (Key 1) and your second key to access keyhole webcam administration. Key 1 is verified against the backend.</p>
+      <h2 class="modal-title">Admin Authorization</h2>
+      <p class="modal-desc">Enter the admin password (the backend ADMIN_SECRET). It is verified against the backend.</p>
 
       <div class="form-group">
-        <label class="form-label" for="key-westfall-input">Primary Key (backend ADMIN_SECRET)</label>
-        <input type="password" id="key-westfall-input" class="form-input" value="" placeholder="Enter Key 1" />
+        <label class="form-label" for="key-westfall-input">Admin Password</label>
+        <input type="password" id="key-westfall-input" class="form-input" value="" placeholder="Enter admin password" />
       </div>
 
-      <div class="form-group">
-        <label class="form-label" for="key-saintkiller-input">Secondary Key (Saintkiller Secret)</label>
-        <input type="password" id="key-saintkiller-input" class="form-input" value="" placeholder="Enter Key 2" />
-      </div>
-
-      <div id="modal-passcode-error" class="modal-error">Invalid dual secret passcodes. Access denied.</div>
+      <div id="modal-passcode-error" class="modal-error">Invalid admin password. Access denied.</div>
 
       <button id="btn-verify-dual-secrets" class="btn" style="width:100%; margin-top:10px;">Disarm Shield & Authorize</button>
     </div>
@@ -987,13 +982,12 @@
       return data;
     }
 
-    // Dual secret verifier: Key 1 is the backend ADMIN_SECRET (checked by the backend), Key 2 is the local second factor.
-    async function verifyAdminDualSecrets(key1, key2) {
+    // Single admin password = the backend ADMIN_SECRET, checked by the backend.
+    async function verifyAdminSecret(key1) {
       const k1 = (key1 || '').trim();
-      const k2 = (key2 || '').trim();
-      if (!k1 || !k2) return { success: false, message: 'Both Key 1 and Key 2 are required.' };
+      if (!k1) return { success: false, message: 'Admin password is required.' };
       const res = await fetch('/admin/keyhole/shows', { headers: { 'X-Admin-Secret': k1 }, cache: 'no-store' });
-      if (res.status === 403) return { success: false, message: 'Key 1 rejected by the backend (ADMIN_SECRET mismatch).' };
+      if (res.status === 403) return { success: false, message: 'Password rejected by the backend (ADMIN_SECRET mismatch).' };
       if (res.status === 503) return { success: false, message: 'Backend has no ADMIN_SECRET set — set it on Railway first.' };
       if (!res.ok) return { success: false, message: `Backend unreachable (${res.status}).` };
       sessionStorage.setItem(ADMIN_SECRET_KEY, k1);
@@ -1053,7 +1047,6 @@
     /* DOM ELEMS */
     const elModal = document.getElementById('dual-secret-modal');
     const elKeyWestfall = document.getElementById('key-westfall-input');
-    const elKeySaintkiller = document.getElementById('key-saintkiller-input');
     const elBtnVerifyDual = document.getElementById('btn-verify-dual-secrets');
     const elPasscodeError = document.getElementById('modal-passcode-error');
     const elBtnReauth = document.getElementById('btn-reauthenticate');
@@ -1249,7 +1242,7 @@
       elBtnVerifyDual.disabled = true;
       let res;
       try {
-        res = await verifyAdminDualSecrets(elKeyWestfall.value, elKeySaintkiller.value);
+        res = await verifyAdminSecret(elKeyWestfall.value);
       } catch (e) {
         res = { success: false, message: `Backend unreachable: ${e.message}` };
       }
