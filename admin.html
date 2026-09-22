@@ -399,6 +399,13 @@
       color: var(--green);
       border: 1px solid rgba(76, 217, 100, 0.3);
     }
+    .feedback-error {
+      background: rgba(229, 83, 83, 0.15);
+      color: #ff6b6b;
+      border: 1px solid rgba(229, 83, 83, 0.35);
+    }
+    .beat-on { color: var(--green); font-weight: 600; }
+    .beat-off { color: #ff6b6b; font-weight: 600; }
   </style>
 </head>
 <body>
@@ -420,6 +427,7 @@
       <button class="nav-btn" data-tab="tab-generator">Content & Gemini Generator</button>
       <button class="nav-btn" data-tab="tab-fruit">Fruit Translator</button>
       <button class="nav-btn" data-tab="tab-media">Media Asset Library</button>
+      <button class="nav-btn" data-tab="tab-plates">Plate Engine</button>
       <button id="btn-reauthenticate" class="nav-btn btn-secondary" style="padding:6px 12px; font-size:0.78rem;">Dual Secrets</button>
     </nav>
   </header>
@@ -493,6 +501,17 @@
           <div class="form-group">
             <label class="form-label">Primary Webcam View URL</label>
             <input type="text" id="disp-active-media-url" class="form-input" value="" readonly />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="stage-beat-select">Stage Beat (plate-first)</label>
+            <select id="stage-beat-select" class="form-select">
+              <option value="tease" selected>Tease</option>
+              <option value="give">Give</option>
+              <option value="stop">Stop</option>
+              <option value="presence">Presence</option>
+              <option value="idle">Idle</option>
+            </select>
           </div>
 
           <button id="btn-trigger-reaction" class="btn btn-secondary" style="width:100%;">Trigger Stage Clip Reaction</button>
@@ -825,6 +844,67 @@
       </div>
     </section>
 
+    <!-- TAB 6: PLATE ENGINE -->
+    <section id="tab-plates" class="tab-section">
+      <div class="admin-grid">
+        <div class="admin-card" style="grid-column: span 2;">
+          <div class="card-title">
+            <span>Plate Folders &amp; Show Readiness</span>
+            <span id="plate-ready-badge" class="admin-badge">checking…</span>
+          </div>
+          <p class="card-subtitle">Chloe and Bailey need a file in every beat folder before a paid show can start. A beat with no file is OFF — the engine will not invent it live. Folder: <code>assets/plates/&lt;character&gt;/&lt;beat&gt;/</code> + <code>manifest.json</code>.</p>
+          <div class="admin-table-wrap">
+            <table class="admin-table">
+              <thead>
+                <tr><th>Companion</th><th>Idle</th><th>Tease</th><th>Give</th><th>Stop</th><th>Presence</th><th>Show Ready</th></tr>
+              </thead>
+              <tbody id="plate-readiness-body"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="admin-card">
+          <div class="card-title">Engine Rules (locked)</div>
+          <p class="card-subtitle">Default action = play a plate. Generate only if that plate does not exist; the result is saved into the folder and is a plate next time.</p>
+          <div class="admin-table-wrap">
+            <table class="admin-table">
+              <thead><tr><th>Session</th><th>Max new cuts</th></tr></thead>
+              <tbody id="plate-caps-body"></tbody>
+            </table>
+          </div>
+          <p class="card-subtitle" style="margin-top:10px;">Same file never plays twice in a row. Same give never plays twice within 2 minutes. At the cap: plates only.</p>
+        </div>
+
+        <div class="admin-card">
+          <div class="card-title">Plate vs Generator (cost check)</div>
+          <p class="card-subtitle">Target: 90%+ plates. Cost check is judged after 20 real sessions.</p>
+          <div class="form-group"><label class="form-label">Sessions logged</label><input id="plate-stat-sessions" class="form-input" readonly /></div>
+          <div class="form-group"><label class="form-label">Plate plays / Generated cuts</label><input id="plate-stat-plays" class="form-input" readonly /></div>
+          <div class="form-group"><label class="form-label">Plate share / Generator minutes</label><input id="plate-stat-ratio" class="form-input" readonly /></div>
+          <div class="form-group"><label class="form-label">Cost check</label><input id="plate-stat-cost" class="form-input" readonly /></div>
+        </div>
+
+        <div class="admin-card" style="grid-column: span 2;">
+          <div class="card-title">
+            <span>Play Log &amp; Shuffle Check</span>
+            <span id="plate-shuffle-badge" class="admin-badge">—</span>
+          </div>
+          <p class="card-subtitle">Every decision is logged. Any file played 3× inside one minute means the shuffle is broken.</p>
+          <div style="display:flex; gap:10px; margin-bottom:10px;">
+            <button id="btn-plate-refresh" class="btn btn-teal">Refresh</button>
+            <button id="btn-plate-clear-log" class="btn btn-secondary">Clear Log</button>
+          </div>
+          <div id="plate-shuffle-violations" class="feedback-msg feedback-error"></div>
+          <div class="admin-table-wrap">
+            <table class="admin-table">
+              <thead><tr><th>Time</th><th>Session</th><th>Companion</th><th>Beat</th><th>Action</th><th>File</th><th>Reason</th><th>Cuts used</th></tr></thead>
+              <tbody id="plate-log-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
   </main>
 
   <!-- DUAL SECRET PASSCODE MODAL -->
@@ -849,6 +929,7 @@
     </div>
   </div>
 
+  <script src="plate-engine.js"></script>
   <script>
     /* ==========================================================================
        KEYHOLE ADMIN CORE & STATE MANAGER
@@ -946,14 +1027,130 @@
     const elDispRoomMode = document.getElementById('disp-active-room-mode');
     const elDispMediaUrl = document.getElementById('disp-active-media-url');
 
-    function initAdmin() {
+    async function initAdmin() {
       setupTabNavigation();
       setupEventListeners();
       checkAuthentication();
+      await initPlateEngine();
       renderStageMonitor();
       renderShowsTable();
       renderMediaTable();
+      renderPlatePanel();
       updateGeminiPrompt();
+    }
+
+    /* PLATE ENGINE (plate-first playback; see plate-engine.js) */
+    const PLATE_SESSION_MINUTES = 15;
+    let plateLibrary = null;
+    let plateLog = null;
+    let plateEngine = null;
+
+    async function initPlateEngine() {
+      if (typeof KeyholePlateEngine === 'undefined') return;
+      let manifest = { characters: {} };
+      try {
+        const res = await fetch('assets/plates/manifest.json', { cache: 'no-store' });
+        if (res.ok) manifest = await res.json();
+      } catch (e) {
+        console.warn('Plate manifest unavailable:', e);
+      }
+      plateLibrary = new KeyholePlateEngine.PlateLibrary({ manifest, storage: window.localStorage });
+      plateLog = new KeyholePlateEngine.PlayLog({ storage: window.localStorage });
+      startPlateSession(adminState.activeCharId);
+    }
+
+    function startPlateSession(charId) {
+      if (!plateLibrary) return;
+      plateEngine = new KeyholePlateEngine.PlateEngine({
+        character: charId,
+        sessionMinutes: PLATE_SESSION_MINUTES,
+        library: plateLibrary,
+        log: plateLog
+      });
+    }
+
+    function plateCharIdFromName(name) {
+      const id = String(name || '').trim().toLowerCase();
+      return ADMIN_CHARACTERS[id] ? id : null;
+    }
+
+    function renderPlatePanel() {
+      if (!plateLibrary) return;
+      const beats = KeyholePlateEngine.BEATS;
+
+      const readyBody = document.getElementById('plate-readiness-body');
+      readyBody.innerHTML = '';
+      const showReady = plateLibrary.showReady();
+      Object.keys(ADMIN_CHARACTERS).forEach(charId => {
+        const r = plateLibrary.readiness(charId);
+        const required = KeyholePlateEngine.REQUIRED_CHARACTERS.includes(charId);
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td><strong>${ADMIN_CHARACTERS[charId].name}</strong>${required ? '' : ' <span style="color:var(--muted); font-size:0.75rem;">(optional)</span>'}</td>` +
+          beats.map(b => `<td class="${r.beats[b].enabled ? 'beat-on' : 'beat-off'}">${r.beats[b].enabled ? 'ON · ' + r.beats[b].files : 'OFF'}</td>`).join('') +
+          `<td>${r.ready ? '<span class="beat-on">READY</span>' : '<span class="beat-off">missing: ' + r.missing.join(', ') + '</span>'}</td>`;
+        readyBody.appendChild(tr);
+      });
+      const badge = document.getElementById('plate-ready-badge');
+      badge.textContent = showReady.ready ? 'Chloe & Bailey SHOW READY' : 'NOT SHOW READY';
+      badge.style.color = showReady.ready ? 'var(--green)' : '#ff6b6b';
+      badge.style.borderColor = showReady.ready ? 'rgba(76,217,100,0.4)' : 'rgba(229,83,83,0.4)';
+
+      const capsBody = document.getElementById('plate-caps-body');
+      capsBody.innerHTML = [15, 30, 45, 60, 75].map(m => `<tr><td>${m} min</td><td>${KeyholePlateEngine.capForMinutes(m)}</td></tr>`).join('');
+
+      const stats = plateLog.stats();
+      document.getElementById('plate-stat-sessions').value = `${stats.sessions} (cost check ${stats.costCheckDue ? 'due' : 'after ' + KeyholePlateEngine.COST_CHECK_SESSIONS})`;
+      document.getElementById('plate-stat-plays').value = `${stats.platePlays} plates / ${stats.generatedPlays} generated (${stats.withheld} withheld, ${stats.off} off)`;
+      document.getElementById('plate-stat-ratio').value = `${stats.platePercent}% plates / ${stats.generatorMinutes} generator min`;
+      document.getElementById('plate-stat-cost').value = stats.costCheckPass === null
+        ? 'Not yet judged'
+        : (stats.costCheckPass ? 'PASS — 90%+ plates' : 'FAIL — you are running a live renderer, not a webcam');
+
+      const shuffle = plateLog.shuffleReport();
+      const shuffleBadge = document.getElementById('plate-shuffle-badge');
+      shuffleBadge.textContent = shuffle.ok ? `Shuffle OK (${shuffle.playsChecked} plays)` : 'SHUFFLE BROKEN';
+      shuffleBadge.style.color = shuffle.ok ? 'var(--green)' : '#ff6b6b';
+      const viol = document.getElementById('plate-shuffle-violations');
+      if (shuffle.ok) {
+        viol.style.display = 'none';
+      } else {
+        viol.style.display = 'block';
+        viol.textContent = shuffle.violations.map(v => `${v.url} played ${v.count}× within one minute`).join(' · ');
+      }
+
+      const logBody = document.getElementById('plate-log-body');
+      logBody.innerHTML = '';
+      plateLog.recent(100).forEach(e => {
+        const tr = document.createElement('tr');
+        const file = e.url ? e.url.split('/').pop() : '—';
+        tr.innerHTML = `<td>${new Date(e.t).toLocaleTimeString()}</td><td style="font-size:0.72rem;">${e.sessionId || ''}</td><td>${e.character || ''}</td><td>${e.beat || ''}</td><td>${e.action}</td><td title="${e.url || ''}">${file}</td><td>${e.reason || ''}</td><td>${e.generatedCount}/${e.cap}</td>`;
+        logBody.appendChild(tr);
+      });
+    }
+
+    function playStagePlate(beat) {
+      if (!plateEngine) return Promise.resolve(null);
+      return plateEngine.next(beat).then(res => {
+        const fb = document.getElementById('stage-feedback');
+        fb.style.display = 'block';
+        if (res.action === 'plate' || res.action === 'generated') {
+          elDispMediaUrl.value = res.url;
+          elStageVideo.src = res.url;
+          elStageVideo.loop = beat === 'idle';
+          elStageVideo.style.display = 'block';
+          elStageImg.style.display = 'none';
+          elStageVideo.play().catch(() => {});
+          if (beat !== 'idle') elStageVideo.onended = () => renderStageMonitor();
+          fb.className = 'feedback-msg feedback-success';
+          fb.textContent = `${beat}: ${res.action} — ${res.url.split('/').pop()} (cuts ${plateEngine.generatedCount}/${plateEngine.cap})`;
+        } else {
+          fb.className = 'feedback-msg feedback-error';
+          fb.textContent = `${beat}: ${res.action} — ${res.reason}`;
+        }
+        setTimeout(() => fb.style.display = 'none', 3500);
+        renderPlatePanel();
+        return res;
+      });
     }
 
     function checkAuthentication() {
@@ -1008,6 +1205,13 @@
       // Update Skin
       elStageSkin.className = `stage-skin-overlay skin-${adminState.overlaySkin.replace('_', '-')}`;
 
+      if (plateEngine && plateEngine.character !== adminState.activeCharId) startPlateSession(adminState.activeCharId);
+      if (plateEngine && plateEngine.library.beatEnabled(adminState.activeCharId, 'idle')) {
+        elStageVideo.onended = null;
+        playStagePlate('idle');
+        return;
+      }
+
       if (url) {
         elStageVideo.src = url;
         elStageVideo.style.display = 'block';
@@ -1048,7 +1252,7 @@
     }
 
     function renderShowActions(show) {
-      if (show.status === 'READY' || show.status === 'SCHEDULED') {
+      if (show.status === 'READY' || show.status === 'SCHEDULED' || show.status === 'BLOCKED_NO_PLATES') {
         return `<button class="btn btn-secondary" onclick="startShow('${show.id}')" style="padding:4px 8px; font-size:0.75rem;">Start Show</button>`;
       }
       if (show.status === 'LIVE') {
@@ -1069,10 +1273,21 @@
 
     function startShow(id) {
       const show = showsData.find(s => s.id === id);
-      if (show) {
-        show.status = 'LIVE';
-        renderShowsTable();
+      if (!show) return;
+      const charId = plateCharIdFromName(show.character);
+      if (plateLibrary && charId && KeyholePlateEngine.REQUIRED_CHARACTERS.includes(charId)) {
+        const r = plateLibrary.readiness(charId);
+        if (!r.ready) {
+          show.status = 'BLOCKED_NO_PLATES';
+          show.block_reason = `${show.character} is missing plate files for: ${r.missing.join(', ')}. Add them to assets/plates/${charId}/<beat>/ before going live.`;
+          renderShowsTable();
+          alert(show.block_reason);
+          return;
+        }
       }
+      show.status = 'LIVE';
+      if (charId) { adminState.activeCharId = charId; elStageCharSelect.value = charId; startPlateSession(charId); renderStageMonitor(); }
+      renderShowsTable();
     }
 
     function endShow(id) {
@@ -1198,8 +1413,18 @@
 
       elStageCharSelect.addEventListener('change', (e) => {
         adminState.activeCharId = e.target.value;
+        startPlateSession(adminState.activeCharId);
         renderStageMonitor();
         updateGeminiPrompt();
+      });
+
+      document.getElementById('btn-trigger-reaction').addEventListener('click', () => {
+        playStagePlate(document.getElementById('stage-beat-select').value);
+      });
+
+      document.getElementById('btn-plate-refresh').addEventListener('click', renderPlatePanel);
+      document.getElementById('btn-plate-clear-log').addEventListener('click', () => {
+        if (plateLog) { plateLog.clear(); renderPlatePanel(); }
       });
 
       elStageRoomSelect.addEventListener('change', (e) => {
@@ -1351,6 +1576,15 @@
         });
         renderMediaTable();
         const fb = document.getElementById('media-feedback');
+        fb.textContent = 'Media asset added!';
+        if (plateLibrary && type === 'video') {
+          const beats = tags.filter(t => KeyholePlateEngine.BEATS.includes(t));
+          beats.forEach(beat => plateLibrary.save(charId, beat, { url, variant: title }));
+          if (beats.length) {
+            fb.textContent = `Media asset added and saved to plate folder(s): ${beats.join(', ')}`;
+            renderPlatePanel();
+          }
+        }
         fb.style.display = 'block';
         setTimeout(() => fb.style.display = 'none', 2000);
       });

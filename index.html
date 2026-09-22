@@ -1029,6 +1029,7 @@
     <div style="margin-top:4px; opacity:0.7;" id="footer-char-note">All characters are fictional AI-generated personalities.</div>
   </footer>
 
+  <script src="plate-engine.js"></script>
   <script>
     /* ==========================================================================
        KEYHOLE APP CORE & DATA ARCHITECTURE
@@ -1279,6 +1280,49 @@
 
     let timerInterval = null;
 
+    /* ==========================================================================
+       PLATE ENGINE — plate-first stage playback (see plate-engine.js)
+       ========================================================================== */
+    const PLATE_SESSION_MINUTES = 15;
+    let plateLibrary = null;
+    let plateEngine = null;
+
+    function fallbackPlateManifest() {
+      const characters = {};
+      Object.keys(CHARACTERS).forEach(id => {
+        const c = CHARACTERS[id];
+        const idle = [c.livingRoomMedia.idleVideo, c.bedroomMedia.idleVideo].filter(Boolean);
+        const tease = (c.livingRoomMedia.reactionVideos || []).concat(c.bedroomMedia.reactionVideos || []);
+        characters[id] = { idle, tease, give: [], stop: [], presence: [] };
+      });
+      return { characters };
+    }
+
+    async function initPlateLibrary() {
+      if (typeof KeyholePlateEngine === 'undefined') return;
+      let manifest = null;
+      try {
+        const res = await fetch('assets/plates/manifest.json', { cache: 'no-store' });
+        if (res.ok) manifest = await res.json();
+      } catch (e) {
+        console.warn('Plate manifest unavailable, using character defaults:', e);
+      }
+      plateLibrary = new KeyholePlateEngine.PlateLibrary({
+        manifest: manifest || fallbackPlateManifest(),
+        storage: window.localStorage
+      });
+    }
+
+    function startPlateSession(charId) {
+      if (!plateLibrary) return;
+      plateEngine = new KeyholePlateEngine.PlateEngine({
+        character: charId,
+        sessionMinutes: PLATE_SESSION_MINUTES,
+        library: plateLibrary,
+        log: new KeyholePlateEngine.PlayLog({ storage: window.localStorage })
+      });
+    }
+
     function loadSessionState() {
       try {
         const saved = localStorage.getItem('keyhole_session_v1');
@@ -1391,10 +1435,11 @@
     const elStageSkinOverlay = document.getElementById('stage-skin-overlay');
     const elVerifyMemberBtn = document.getElementById('verify-member-btn');
 
-    function initApp() {
+    async function initApp() {
       loadSessionState();
       renderSelectionGrid();
       setupEventListeners();
+      await initPlateLibrary();
 
       if (state.view === 'room' && state.activeCharId && CHARACTERS[state.activeCharId]) {
         enterRoom(state.activeCharId, false);
@@ -1445,6 +1490,10 @@
 
       state.activeCharId = charId;
       state.view = 'room';
+
+      if (isNewSelection || !plateEngine || plateEngine.character !== charId) {
+        startPlateSession(charId);
+      }
 
       if (isNewSelection) {
         state.roomMode = 'living_room';
@@ -1506,7 +1555,22 @@
     function setupStageMedia(mediaGroup) {
       if (!mediaGroup) return;
 
+      if (plateEngine && plateEngine.library.beatEnabled(plateEngine.character, 'idle')) {
+        plateEngine.next('idle').then(res => {
+          if (res.action === 'plate' || res.action === 'generated') {
+            showStageIdle({ idleVideo: res.url, fallbackImage: mediaGroup.fallbackImage });
+          } else {
+            showStageIdle(mediaGroup);
+          }
+        });
+        return;
+      }
+      showStageIdle(mediaGroup);
+    }
+
+    function showStageIdle(mediaGroup) {
       // Primary customer-facing webcam stage (never exposes internal consistency reference angles)
+      elStageVideo.loop = true;
       if (mediaGroup.idleVideo) {
         elStageVideo.src = mediaGroup.idleVideo;
         elStageVideo.style.display = 'block';
@@ -1534,17 +1598,35 @@
       if (!char) return;
 
       const mediaGroup = (state.roomMode === 'bedroom') ? char.bedroomMedia : char.livingRoomMedia;
-      if (mediaGroup && mediaGroup.reactionVideos && mediaGroup.reactionVideos.length > 0) {
-        const clipUrl = mediaGroup.reactionVideos[0];
-        elStageVideo.src = clipUrl;
-        elStageVideo.loop = false;
-        elStageVideo.play().catch(() => {});
 
-        // Return to idle loop on video end
-        elStageVideo.onended = () => {
-          setupStageMedia(mediaGroup);
-        };
+      if (plateEngine) {
+        // Bedroom asks for a give; the engine withholds on cooldown/repeat and we fall back to a tease plate.
+        const beat = state.roomMode === 'bedroom' ? 'give' : 'tease';
+        plateEngine.next(beat).then(res => {
+          if (res.action === 'plate' || res.action === 'generated') return res;
+          return beat === 'give' ? plateEngine.next('tease') : res;
+        }).then(res => {
+          if (res.action === 'plate' || res.action === 'generated') playStageCut(res.url, mediaGroup);
+        });
+        return;
       }
+
+      if (mediaGroup && mediaGroup.reactionVideos && mediaGroup.reactionVideos.length > 0) {
+        playStageCut(mediaGroup.reactionVideos[0], mediaGroup);
+      }
+    }
+
+    function playStageCut(clipUrl, mediaGroup) {
+      elStageVideo.src = clipUrl;
+      elStageVideo.style.display = 'block';
+      elStageFallbackImg.style.display = 'none';
+      elStageVideo.loop = false;
+      elStageVideo.play().catch(() => {});
+
+      // Return to idle loop on video end
+      elStageVideo.onended = () => {
+        setupStageMedia(mediaGroup);
+      };
     }
 
     function startPreviewTimer() {

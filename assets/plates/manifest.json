@@ -1,0 +1,26 @@
+{
+  "_readme": "Plate folders. One list per character per beat. Drop the file in assets/plates/<character>/<beat>/ and add its URL here. A beat with an empty list is OFF; the engine will not invent it live. Entries may be a URL string or {\"url\", \"variant\", \"durationSec\"}.",
+  "characters": {
+    "bailey": {
+      "idle": [
+        "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+        "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4"
+      ],
+      "tease": [
+        "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4"
+      ],
+      "give": [],
+      "stop": [],
+      "presence": []
+    },
+    "chloe": {
+      "idle": [
+        "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4"
+      ],
+      "tease": [],
+      "give": [],
+      "stop": [],
+      "presence": []
+    }
+  }
+}
