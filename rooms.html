@@ -293,6 +293,18 @@
       font-size: .8rem;
       color: var(--muted);
     }
+    .session-tier-buy {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 7px 12px;
+      border: 1px solid var(--gold);
+      border-radius: 8px;
+      color: var(--gold-bright);
+      font-size: .78rem;
+      font-weight: 700;
+      text-decoration: none;
+    }
+    .session-tier-buy:hover { background: rgba(217,173,88,.12); }
     @media (max-width: 680px) {
       .session-tier-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
@@ -744,6 +756,8 @@
     </a>
     <div class="header-nav">
       <span id="nav-badge" class="badge badge-live">Live</span>
+      <span id="account-status" class="badge" style="display:none;"></span>
+      <button id="account-btn" class="btn-small btn-gold-outline">Sign In</button>
       <button id="gemini-studio-btn" class="btn-small btn-gold-outline">Gemini Studio & Room Editor</button>
       <button id="switch-character-btn" class="btn-small" style="display:none;">Change Room</button>
       <button id="reset-session-btn" class="btn-small">Reset Session</button>
@@ -766,39 +780,39 @@
           <div class="session-tier featured" data-minutes="10" data-free-preview="true">
             <div class="session-tier-time">Free Preview</div>
             <div class="session-tier-price">FREE</div>
-            <div class="session-tier-messages">10 minutes</div>
+            <div class="session-tier-messages">10 minutes · one per account</div>
           </div>
-          <div class="session-tier" data-minutes="10" data-price="4.99">
+          <div class="session-tier" data-minutes="10" data-package="intro" data-once="intro" data-stripe="https://buy.stripe.com/9B69AM0Ur38HchN0ZrdjO0a">
             <div class="session-tier-time">10 minutes</div>
-            <div class="session-tier-price">$4.99</div>
-            <div class="session-tier-messages">100 messages</div>
+            <div class="session-tier-price">$5.99</div>
+            <div class="session-tier-messages">100 messages · one per account</div>
           </div>
-          <div class="session-tier" data-minutes="15">
+          <div class="session-tier" data-minutes="15" data-package="quick" data-stripe="https://buy.stripe.com/00w14gav1bFddlR6jLdjO09">
             <div class="session-tier-time">15 minutes</div>
             <div class="session-tier-price">$7.99</div>
             <div class="session-tier-messages">100 messages</div>
           </div>
-          <div class="session-tier" data-minutes="30">
+          <div class="session-tier" data-minutes="30" data-package="standard" data-stripe="https://buy.stripe.com/bJeeV67iPdNl2Hd8rTdjO08">
             <div class="session-tier-time">30 minutes</div>
             <div class="session-tier-price">$11.99</div>
             <div class="session-tier-messages">100 messages</div>
           </div>
-          <div class="session-tier" data-minutes="45">
+          <div class="session-tier" data-minutes="45" data-package="extended">
             <div class="session-tier-time">45 minutes</div>
             <div class="session-tier-price">$14.99</div>
             <div class="session-tier-messages">100 messages</div>
           </div>
-          <div class="session-tier" data-minutes="55">
+          <div class="session-tier" data-minutes="55" data-package="long" data-stripe="https://buy.stripe.com/4gM9AM46DbFda9F23vdjO03">
             <div class="session-tier-time">55 minutes</div>
             <div class="session-tier-price">$17.99</div>
             <div class="session-tier-messages">100 messages</div>
           </div>
-          <div class="session-tier featured" data-minutes="60">
+          <div class="session-tier featured" data-minutes="60" data-package="premium" data-stripe="https://buy.stripe.com/9B600c0UrcJh4Pl0ZrdjO07">
             <div class="session-tier-time">60 minutes</div>
             <div class="session-tier-price">$19.99</div>
             <div class="session-tier-messages">100 messages</div>
           </div>
-          <div class="session-tier" data-minutes="75">
+          <div class="session-tier" data-minutes="75" data-package="marathon" data-stripe="https://buy.stripe.com/5kQ5kw0UrfVtepVaA1djO04">
             <div class="session-tier-time">75 minutes</div>
             <div class="session-tier-price">$23.99</div>
             <div class="session-tier-messages">100 messages</div>
@@ -854,6 +868,38 @@
       </div>
     </div>
   </section>
+
+  <!-- CUSTOMER ACCOUNT MODAL -->
+  <div id="account-modal" class="modal-backdrop">
+    <div class="modal-card">
+      <button id="account-close-btn" class="modal-close">&times;</button>
+      <h2 class="modal-title" id="account-title">Sign In to Keyhole</h2>
+      <p class="modal-desc" id="account-desc">Sign in so your minutes land on your account the moment a payment clears.</p>
+
+      <div class="gate-input-group">
+        <label class="gate-label" for="account-email">Email</label>
+        <input type="email" id="account-email" class="gate-input" placeholder="you@example.com" autocomplete="email" />
+      </div>
+      <div class="gate-input-group">
+        <label class="gate-label" for="account-password">Password</label>
+        <input type="password" id="account-password" class="gate-input" placeholder="At least 8 characters" autocomplete="current-password" />
+      </div>
+      <div class="gate-input-group" id="account-name-group" style="display:none;">
+        <label class="gate-label" for="account-name">Display name</label>
+        <input type="text" id="account-name" class="gate-input" placeholder="What she should call you" autocomplete="nickname" />
+      </div>
+
+      <div id="account-error" class="modal-error"></div>
+      <div id="account-notice" class="modal-desc" style="display:none;"></div>
+
+      <button id="account-submit-btn" class="btn-verify">Sign In</button>
+      <p class="modal-desc" style="margin-top:14px;">
+        <a href="#" id="account-toggle-link" style="color:var(--gold);">New here? Create an account</a>
+        &nbsp;&middot;&nbsp;
+        <a href="#" id="account-resend-link" style="color:var(--gold);">Resend verification email</a>
+      </p>
+    </div>
+  </div>
 
   <!-- MEMBERSHIP GATE MODAL -->
   <div id="membership-modal" class="modal-backdrop">
@@ -1029,6 +1075,7 @@
     <div style="margin-top:4px; opacity:0.7;" id="footer-char-note">All characters are fictional AI-generated personalities.</div>
   </footer>
 
+  <script src="plate-engine.js"></script>
   <script>
     /* ==========================================================================
        KEYHOLE APP CORE & DATA ARCHITECTURE
@@ -1279,6 +1326,49 @@
 
     let timerInterval = null;
 
+    /* ==========================================================================
+       PLATE ENGINE — plate-first stage playback (see plate-engine.js)
+       ========================================================================== */
+    const PLATE_SESSION_MINUTES = 15;
+    let plateLibrary = null;
+    let plateEngine = null;
+
+    function fallbackPlateManifest() {
+      const characters = {};
+      Object.keys(CHARACTERS).forEach(id => {
+        const c = CHARACTERS[id];
+        const idle = [c.livingRoomMedia.idleVideo, c.bedroomMedia.idleVideo].filter(Boolean);
+        const tease = (c.livingRoomMedia.reactionVideos || []).concat(c.bedroomMedia.reactionVideos || []);
+        characters[id] = { idle, tease, give: [], stop: [], presence: [] };
+      });
+      return { characters };
+    }
+
+    async function initPlateLibrary() {
+      if (typeof KeyholePlateEngine === 'undefined') return;
+      let manifest = null;
+      try {
+        const res = await fetch('assets/plates/manifest.json', { cache: 'no-store' });
+        if (res.ok) manifest = await res.json();
+      } catch (e) {
+        console.warn('Plate manifest unavailable, using character defaults:', e);
+      }
+      plateLibrary = new KeyholePlateEngine.PlateLibrary({
+        manifest: manifest || fallbackPlateManifest(),
+        storage: window.localStorage
+      });
+    }
+
+    function startPlateSession(charId) {
+      if (!plateLibrary) return;
+      plateEngine = new KeyholePlateEngine.PlateEngine({
+        character: charId,
+        sessionMinutes: PLATE_SESSION_MINUTES,
+        library: plateLibrary,
+        log: new KeyholePlateEngine.PlayLog({ storage: window.localStorage })
+      });
+    }
+
     function loadSessionState() {
       try {
         const saved = localStorage.getItem('keyhole_session_v1');
@@ -1325,6 +1415,14 @@
      * @returns {Promise<{success: boolean, message?: string}>}
      */
     async function verifyMembershipEntitlement(token) {
+      // A signed-in customer with paid minutes on the account is entitled outright.
+      if (KeyholeAccount.token()) {
+        try {
+          const me = await KeyholeAccount.refresh();
+          if (me && (me.webcam_minutes_left > 0 || me.session_active)) return { success: true };
+        } catch (_) { /* fall through to the passcode path */ }
+      }
+
       // Simulate backend network roundtrip to entitlement service
       await new Promise(resolve => setTimeout(resolve, 600));
 
@@ -1340,6 +1438,84 @@
         message: 'Invalid Membership Token. Use "KEY-VIP-ROOM" for testing.'
       };
     }
+
+    /* ==========================================================================
+       CUSTOMER ACCOUNT + CHECKOUT (same-origin /auth and /keyhole, proxied to the backend)
+       ========================================================================== */
+
+    const KeyholeAccount = (() => {
+      const TOKEN_KEY = 'keyhole_auth_token_v1';
+      let me = null;
+
+      const token = () => localStorage.getItem(TOKEN_KEY) || '';
+      const headers = () => {
+        const h = { 'Content-Type': 'application/json' };
+        const t = token();
+        if (t) h['Authorization'] = 'Bearer ' + t;
+        return h;
+      };
+
+      async function api(path, body) {
+        const res = await fetch(path, {
+          method: body === undefined ? 'GET' : 'POST',
+          headers: headers(),
+          body: body === undefined ? undefined : JSON.stringify(body)
+        });
+        let data = {};
+        try { data = await res.json(); } catch (_) { /* non-JSON error body */ }
+        if (!res.ok) {
+          const err = new Error(typeof data.detail === 'string' ? data.detail : (res.status === 401 ? 'Please sign in again.' : 'Request failed (' + res.status + ')'));
+          err.status = res.status;
+          throw err;
+        }
+        return data;
+      }
+
+      async function refresh() {
+        if (!token()) { me = null; return null; }
+        try {
+          me = await api('/keyhole/me');
+        } catch (err) {
+          if (err.status === 401) { localStorage.removeItem(TOKEN_KEY); me = null; }
+          else throw err;
+        }
+        return me;
+      }
+
+      async function login(email, password) {
+        const data = await api('/auth/login', { email, password });
+        localStorage.setItem(TOKEN_KEY, data.token);
+        return refresh();
+      }
+
+      async function signup(email, password, display_name) {
+        return api('/auth/signup', { email, password, display_name });
+      }
+
+      async function resendVerification(email) {
+        return api('/auth/resend-verification', { email });
+      }
+
+      function logout() {
+        localStorage.removeItem(TOKEN_KEY);
+        me = null;
+      }
+
+      async function packages() {
+        const data = await api('/keyhole/packages');
+        return data.packages || [];
+      }
+
+      async function createCryptoInvoice(pkg) {
+        return api('/keyhole/nowpayments/invoice', { package: pkg });
+      }
+
+      async function claimFreePreview() {
+        return api('/keyhole/preview/claim', {});
+      }
+
+      return { token, me: () => me, refresh, login, signup, resendVerification, logout, packages, createCryptoInvoice, claimFreePreview };
+    })();
 
     /* ==========================================================================
        UI RENDERING & DOM HANDLERS
@@ -1391,10 +1567,11 @@
     const elStageSkinOverlay = document.getElementById('stage-skin-overlay');
     const elVerifyMemberBtn = document.getElementById('verify-member-btn');
 
-    function initApp() {
+    async function initApp() {
       loadSessionState();
       renderSelectionGrid();
       setupEventListeners();
+      await initPlateLibrary();
 
       if (state.view === 'room' && state.activeCharId && CHARACTERS[state.activeCharId]) {
         enterRoom(state.activeCharId, false);
@@ -1445,6 +1622,10 @@
 
       state.activeCharId = charId;
       state.view = 'room';
+
+      if (isNewSelection || !plateEngine || plateEngine.character !== charId) {
+        startPlateSession(charId);
+      }
 
       if (isNewSelection) {
         state.roomMode = 'living_room';
@@ -1506,7 +1687,22 @@
     function setupStageMedia(mediaGroup) {
       if (!mediaGroup) return;
 
+      if (plateEngine && plateEngine.library.beatEnabled(plateEngine.character, 'idle')) {
+        plateEngine.next('idle').then(res => {
+          if (res.action === 'plate' || res.action === 'generated') {
+            showStageIdle({ idleVideo: res.url, fallbackImage: mediaGroup.fallbackImage });
+          } else {
+            showStageIdle(mediaGroup);
+          }
+        });
+        return;
+      }
+      showStageIdle(mediaGroup);
+    }
+
+    function showStageIdle(mediaGroup) {
       // Primary customer-facing webcam stage (never exposes internal consistency reference angles)
+      elStageVideo.loop = true;
       if (mediaGroup.idleVideo) {
         elStageVideo.src = mediaGroup.idleVideo;
         elStageVideo.style.display = 'block';
@@ -1534,17 +1730,35 @@
       if (!char) return;
 
       const mediaGroup = (state.roomMode === 'bedroom') ? char.bedroomMedia : char.livingRoomMedia;
-      if (mediaGroup && mediaGroup.reactionVideos && mediaGroup.reactionVideos.length > 0) {
-        const clipUrl = mediaGroup.reactionVideos[0];
-        elStageVideo.src = clipUrl;
-        elStageVideo.loop = false;
-        elStageVideo.play().catch(() => {});
 
-        // Return to idle loop on video end
-        elStageVideo.onended = () => {
-          setupStageMedia(mediaGroup);
-        };
+      if (plateEngine) {
+        // Bedroom asks for a give; the engine withholds on cooldown/repeat and we fall back to a tease plate.
+        const beat = state.roomMode === 'bedroom' ? 'give' : 'tease';
+        plateEngine.next(beat).then(res => {
+          if (res.action === 'plate' || res.action === 'generated') return res;
+          return beat === 'give' ? plateEngine.next('tease') : res;
+        }).then(res => {
+          if (res.action === 'plate' || res.action === 'generated') playStageCut(res.url, mediaGroup);
+        });
+        return;
       }
+
+      if (mediaGroup && mediaGroup.reactionVideos && mediaGroup.reactionVideos.length > 0) {
+        playStageCut(mediaGroup.reactionVideos[0], mediaGroup);
+      }
+    }
+
+    function playStageCut(clipUrl, mediaGroup) {
+      elStageVideo.src = clipUrl;
+      elStageVideo.style.display = 'block';
+      elStageFallbackImg.style.display = 'none';
+      elStageVideo.loop = false;
+      elStageVideo.play().catch(() => {});
+
+      // Return to idle loop on video end
+      elStageVideo.onended = () => {
+        setupStageMedia(mediaGroup);
+      };
     }
 
     function startPreviewTimer() {
@@ -1989,7 +2203,252 @@
       }
     }
 
+    /* ==========================================================================
+       CUSTOMER ACCOUNT UI + TIER CHECKOUT BUTTONS
+       ========================================================================== */
+    const elAccountBtn = document.getElementById('account-btn');
+    const elAccountStatus = document.getElementById('account-status');
+    const elAccountModal = document.getElementById('account-modal');
+    const elAccountEmail = document.getElementById('account-email');
+    const elAccountPassword = document.getElementById('account-password');
+    const elAccountName = document.getElementById('account-name');
+    const elAccountNameGroup = document.getElementById('account-name-group');
+    const elAccountError = document.getElementById('account-error');
+    const elAccountNotice = document.getElementById('account-notice');
+    const elAccountSubmit = document.getElementById('account-submit-btn');
+    const elAccountToggle = document.getElementById('account-toggle-link');
+    const elAccountTitle = document.getElementById('account-title');
+    let accountMode = 'login';
+
+    function showAccountError(msg) {
+      elAccountError.textContent = msg;
+      elAccountError.style.display = msg ? 'block' : 'none';
+    }
+    function showAccountNotice(msg) {
+      elAccountNotice.textContent = msg;
+      elAccountNotice.style.display = msg ? 'block' : 'none';
+    }
+
+    function setAccountMode(mode) {
+      accountMode = mode;
+      const signup = mode === 'signup';
+      elAccountNameGroup.style.display = signup ? '' : 'none';
+      elAccountTitle.textContent = signup ? 'Create Your Keyhole Account' : 'Sign In to Keyhole';
+      elAccountSubmit.textContent = signup ? 'Create Account' : 'Sign In';
+      elAccountToggle.textContent = signup ? 'Already have an account? Sign in' : 'New here? Create an account';
+      elAccountPassword.autocomplete = signup ? 'new-password' : 'current-password';
+      showAccountError('');
+      showAccountNotice('');
+    }
+
+    function openAccountModal(mode) {
+      setAccountMode(mode || 'login');
+      elAccountModal.classList.add('active');
+      elAccountEmail.focus();
+    }
+    function closeAccountModal() { elAccountModal.classList.remove('active'); }
+
+    function renderAccountStatus() {
+      const me = KeyholeAccount.me();
+      if (me) {
+        elAccountStatus.textContent = `${me.email || 'Signed in'} · ${me.webcam_minutes_left} min`;
+        elAccountStatus.style.display = '';
+        elAccountBtn.textContent = 'Sign Out';
+      } else {
+        elAccountStatus.style.display = 'none';
+        elAccountBtn.textContent = 'Sign In';
+      }
+      renderOncePerAccountTiers(me);
+    }
+
+    // Free preview and the 10-minute starter are one per account: hide them once used.
+    function renderOncePerAccountTiers(me) {
+      const preview = document.querySelector('.session-tier[data-free-preview]');
+      if (preview) preview.style.display = (me && me.free_preview_available === false) ? 'none' : '';
+      document.querySelectorAll('.session-tier[data-once]').forEach(tier => {
+        const key = tier.dataset.once + '_available';
+        tier.style.display = (me && me[key] === false) ? 'none' : '';
+      });
+    }
+
+    async function claimFreePreview(btn) {
+      if (!KeyholeAccount.token()) {
+        openAccountModal('signup');
+        showAccountNotice('Create your account to start the free 10-minute preview.');
+        return;
+      }
+      btn.disabled = true; btn.textContent = 'Starting...';
+      try {
+        await KeyholeAccount.claimFreePreview();
+        await KeyholeAccount.refresh();
+        renderAccountStatus();
+        appendSystemMessageIfInRoom('Your free 10-minute preview is on your account.');
+      } catch (err) {
+        if (err.status === 401) { openAccountModal('login'); showAccountNotice('Please sign in again.'); }
+        else { alert(err.message || 'Could not start the free preview.'); await KeyholeAccount.refresh().catch(() => {}); renderAccountStatus(); }
+      } finally {
+        btn.disabled = false; btn.textContent = 'Start free preview';
+      }
+    }
+
+    async function handleAccountSubmit() {
+      const email = elAccountEmail.value.trim();
+      const password = elAccountPassword.value;
+      showAccountError('');
+      if (!email || !password) return showAccountError('Email and password are required.');
+      elAccountSubmit.disabled = true;
+      try {
+        if (accountMode === 'signup') {
+          const res = await KeyholeAccount.signup(email, password, elAccountName.value.trim() || email.split('@')[0]);
+          if (res.needs_verification) {
+            setAccountMode('login');
+            showAccountNotice(`Check ${email} for a verification link, then sign in.`);
+            return;
+          }
+        }
+        await KeyholeAccount.login(email, password);
+        renderAccountStatus();
+        closeAccountModal();
+        appendSystemMessageIfInRoom('Signed in. Paid minutes now land on your account automatically.');
+        if (pendingCheckoutPackage) {
+          const pkg = pendingCheckoutPackage;
+          pendingCheckoutPackage = null;
+          startCryptoCheckout(pkg);
+        }
+      } catch (err) {
+        showAccountError(err.message || 'Could not sign in.');
+      } finally {
+        elAccountSubmit.disabled = false;
+      }
+    }
+
+    function appendSystemMessageIfInRoom(text) {
+      if (state.activeCharId && elRoomView.classList.contains('active')) appendSystemMessage(text);
+    }
+
+    let pendingCheckoutPackage = null;
+
+    async function startCryptoCheckout(pkg) {
+      if (!KeyholeAccount.token()) {
+        pendingCheckoutPackage = pkg;
+        openAccountModal('login');
+        showAccountNotice('Sign in first so the minutes land on your account when the payment clears.');
+        return;
+      }
+      const btn = document.querySelector(`.session-tier[data-package="${pkg}"] .tier-crypto-btn`);
+      if (btn) { btn.disabled = true; btn.textContent = 'Creating invoice...'; }
+      try {
+        const inv = await KeyholeAccount.createCryptoInvoice(pkg);
+        window.open(inv.invoice_url, '_blank', 'noopener');
+      } catch (err) {
+        if (err.status === 401) { pendingCheckoutPackage = pkg; openAccountModal('login'); showAccountNotice('Please sign in again.'); }
+        else alert(err.message || 'Could not create the invoice.');
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = 'Pay with crypto'; }
+      }
+    }
+
+    function renderTierCheckoutButtons(packages) {
+      const byName = {};
+      (packages || []).forEach(p => { byName[p.package] = p; });
+      const previewTier = document.querySelector('.session-tier[data-free-preview]');
+      if (previewTier && !previewTier.querySelector('.tier-preview-btn')) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'session-tier-buy tier-preview-btn';
+        b.textContent = 'Start free preview';
+        b.addEventListener('click', (e) => { e.stopPropagation(); claimFreePreview(b); });
+        previewTier.appendChild(b);
+      }
+      document.querySelectorAll('.session-tier[data-package], .session-tier[data-stripe]').forEach(tier => {
+        const pkg = tier.dataset.package;
+        const info = pkg ? byName[pkg] : null;
+        if (info && info.price > 0) {
+          const priceEl = tier.querySelector('.session-tier-price');
+          if (priceEl) priceEl.textContent = '$' + info.price.toFixed(2);
+          const msgEl = tier.querySelector('.session-tier-messages');
+          if (msgEl && info.text_included) msgEl.textContent = `${info.text_included} messages`;
+        }
+        // Crypto needs a backend-priced package (the invoice is created server-side).
+        if (info && info.price > 0 && !tier.querySelector('.tier-crypto-btn')) {
+          const crypto = document.createElement('button');
+          crypto.type = 'button';
+          crypto.className = 'session-tier-buy tier-crypto-btn';
+          crypto.textContent = 'Pay with crypto';
+          crypto.addEventListener('click', (e) => { e.stopPropagation(); startCryptoCheckout(pkg); });
+          tier.appendChild(crypto);
+        }
+        // Stripe Payment Link straight from the tier markup (data-stripe).
+        const stripe = tier.dataset.stripe;
+        if (stripe && !tier.querySelector('.tier-card-btn')) {
+          const card = document.createElement('a');
+          card.className = 'session-tier-buy tier-card-btn';
+          card.textContent = 'Pay with card';
+          card.target = '_blank';
+          card.rel = 'noopener noreferrer';
+          card.href = stripe;
+          card.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const me = KeyholeAccount.me();
+            if (!me || !me.user_id) {
+              // Sign in first: client_reference_id is how the Stripe webhook finds this account.
+              e.preventDefault();
+              openAccountModal('login');
+              showAccountNotice('Sign in first so the minutes land on your account when the payment clears.');
+              return;
+            }
+            card.href = stripe + (stripe.includes('?') ? '&' : '?') + 'client_reference_id=' + encodeURIComponent(me.user_id) + (me.email ? '&prefilled_email=' + encodeURIComponent(me.email) : '');
+          });
+          tier.appendChild(card);
+        }
+      });
+    }
+
+    async function initAccountAndCheckout() {
+      elAccountBtn.addEventListener('click', () => {
+        if (KeyholeAccount.token()) { KeyholeAccount.logout(); renderAccountStatus(); location.replace('index.html'); }
+        else openAccountModal('login');
+      });
+      document.getElementById('account-close-btn').addEventListener('click', closeAccountModal);
+      elAccountSubmit.addEventListener('click', handleAccountSubmit);
+      elAccountPassword.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleAccountSubmit(); });
+      elAccountToggle.addEventListener('click', (e) => { e.preventDefault(); setAccountMode(accountMode === 'login' ? 'signup' : 'login'); });
+      document.getElementById('account-resend-link').addEventListener('click', async (e) => {
+        e.preventDefault();
+        const email = elAccountEmail.value.trim();
+        if (!email) return showAccountError('Enter your email first.');
+        try { await KeyholeAccount.resendVerification(email); showAccountNotice(`Verification email sent to ${email}.`); }
+        catch (err) { showAccountError(err.message); }
+      });
+
+      renderTierCheckoutButtons([]);
+      KeyholeAccount.packages().then(renderTierCheckoutButtons).catch(() => {});
+      KeyholeAccount.refresh().catch(() => null).then(() => {
+        renderAccountStatus();
+        if (!KeyholeAccount.token()) location.replace('index.html');  // token expired
+      });
+      if (!KeyholeAccount.token()) {
+        // Sign-up lives on the cover page; the rooms + session tiers are the page after it.
+        location.replace('index.html');
+        return;
+      }
+
+      const paid = new URLSearchParams(location.search).get('paid');
+      if (paid && KeyholeAccount.token()) {
+        // Back from the payment page: the IPN grants once the payment is confirmed on-chain.
+        let tries = 0;
+        const poll = setInterval(async () => {
+          tries += 1;
+          const before = (KeyholeAccount.me() || {}).webcam_minutes_left || 0;
+          const me = await KeyholeAccount.refresh().catch(() => null);
+          renderAccountStatus();
+          if ((me && me.webcam_minutes_left > before) || tries >= 60) clearInterval(poll);
+        }, 10000);
+      }
+    }
+
 function setupEventListeners() {
+      initAccountAndCheckout();
       elSwitchBtn.addEventListener('click', showSelectionView);
       elResetBtn.addEventListener('click', resetSessionState);
       elLogoBtn.addEventListener('click', (e) => {

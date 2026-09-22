@@ -1,0 +1,7 @@
+{
+  "_readme": "Static plate folders (shipped files). One list per character per beat. Drop the file in assets/plates/<character>/<beat>/ and add its URL here. In production the admin page replaces this with the server manifest at /keyhole/plates (media_assets tagged with a beat). A beat with an empty list is OFF; the engine will not invent it live. Entries may be a URL string or {\"url\", \"variant\", \"durationSec\"}.",
+  "characters": {
+    "bailey": { "idle": [], "tease": [], "give": [], "stop": [], "presence": [] },
+    "chloe":  { "idle": [], "tease": [], "give": [], "stop": [], "presence": [] }
+  }
+}
