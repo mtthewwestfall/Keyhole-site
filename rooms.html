@@ -812,7 +812,7 @@
             <div class="session-tier-price">$19.99</div>
             <div class="session-tier-messages">100 messages</div>
           </div>
-          <div class="session-tier" data-minutes="75">
+          <div class="session-tier" data-minutes="75" data-stripe="https://buy.stripe.com/28E9AMcD96kT6Xt4bDdjO02">
             <div class="session-tier-time">75 minutes</div>
             <div class="session-tier-price">$23.99</div>
             <div class="session-tier-messages">100 messages</div>
@@ -1442,15 +1442,6 @@
     /* ==========================================================================
        CUSTOMER ACCOUNT + CHECKOUT (same-origin /auth and /keyhole, proxied to the backend)
        ========================================================================== */
-
-    // Stripe Payment Link per package; a tier gets a "Pay with card" button only when its link is set.
-    const STRIPE_PAYMENT_LINKS = {
-      quick: '',
-      standard: '',
-      extended: '',
-      premium: '',
-      text_only: ''
-    };
 
     const KeyholeAccount = (() => {
       const TOKEN_KEY = 'keyhole_auth_token_v1';
@@ -2325,24 +2316,27 @@
     function renderTierCheckoutButtons(packages) {
       const byName = {};
       (packages || []).forEach(p => { byName[p.package] = p; });
-      document.querySelectorAll('.session-tier[data-package]').forEach(tier => {
+      document.querySelectorAll('.session-tier[data-package], .session-tier[data-stripe]').forEach(tier => {
         const pkg = tier.dataset.package;
-        const info = byName[pkg];
+        const info = pkg ? byName[pkg] : null;
         if (info && info.price > 0) {
           const priceEl = tier.querySelector('.session-tier-price');
           if (priceEl) priceEl.textContent = '$' + info.price.toFixed(2);
           const msgEl = tier.querySelector('.session-tier-messages');
           if (msgEl && info.text_included) msgEl.textContent = `${info.text_included} messages`;
         }
-        if (tier.querySelector('.tier-crypto-btn')) return;
-        const crypto = document.createElement('button');
-        crypto.type = 'button';
-        crypto.className = 'session-tier-buy tier-crypto-btn';
-        crypto.textContent = 'Pay with crypto';
-        crypto.addEventListener('click', (e) => { e.stopPropagation(); startCryptoCheckout(pkg); });
-        tier.appendChild(crypto);
-        const stripe = STRIPE_PAYMENT_LINKS[pkg];
-        if (stripe) {
+        // Crypto needs a backend-priced package (the invoice is created server-side).
+        if (info && info.price > 0 && !tier.querySelector('.tier-crypto-btn')) {
+          const crypto = document.createElement('button');
+          crypto.type = 'button';
+          crypto.className = 'session-tier-buy tier-crypto-btn';
+          crypto.textContent = 'Pay with crypto';
+          crypto.addEventListener('click', (e) => { e.stopPropagation(); startCryptoCheckout(pkg); });
+          tier.appendChild(crypto);
+        }
+        // Stripe Payment Link straight from the tier markup (data-stripe).
+        const stripe = tier.dataset.stripe;
+        if (stripe && !tier.querySelector('.tier-card-btn')) {
           const card = document.createElement('a');
           card.className = 'session-tier-buy tier-card-btn';
           card.textContent = 'Pay with card';
