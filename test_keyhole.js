@@ -144,7 +144,7 @@ test('Keyhole Application HTML & Architecture Integrity', async (t) => {
 
   await t.test('Webcam frame skins remain defined for the customer stage', () => {
     assert.ok(indexHtml.includes('skin-neon-cyber'), 'Neon Cyber webcam skin CSS defined');
-    assert.ok(indexHtml.includes('skin-keyhole-gold'), 'Classic Keyhole Gold HUD webcam skin CSS defined');
+    assert.ok(indexHtml.includes('skin-chloe-girl'), 'Chloe — girl over people webcam skin CSS defined');
     assert.ok(indexHtml.includes('skin-glass-vignette'), 'Minimalist Glass Vignette webcam skin CSS defined');
     assert.ok(indexHtml.includes('skin-streamer-vip'), 'Streamer VIP webcam skin CSS defined');
   });

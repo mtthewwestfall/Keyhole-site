@@ -280,22 +280,19 @@
       transition: all 0.3s ease;
       z-index: 10;
     }
-    .skin-neon-cyber {
-      border: 4px solid #58c5ba;
-      box-shadow: inset 0 0 20px rgba(88, 197, 186, 0.5), 0 0 15px rgba(88, 197, 186, 0.6);
+    /* Girl overlays: put Chloe/Bailey over people — not HUD chrome borders */
+    .skin-chloe-girl {
+      background: url('assets/chloe-room.png') center bottom / contain no-repeat;
+      background-color: transparent;
     }
-    .skin-keyhole-gold {
-      border: 4px solid #d9ad58;
-      box-shadow: inset 0 0 25px rgba(217, 173, 88, 0.4), 0 0 20px rgba(217, 173, 88, 0.5);
+    .skin-bailey-girl {
+      background: url('assets/bailey-profile.png') center bottom / contain no-repeat;
+      background-color: transparent;
     }
-    .skin-glass-vignette {
-      background: radial-gradient(circle, transparent 50%, rgba(2, 12, 17, 0.85) 100%);
-      border: 1px solid rgba(255, 255, 255, 0.25);
-    }
-    .skin-streamer-vip {
-      border: 3px dashed #f0c879;
-      outline: 2px solid #e55353;
-      box-shadow: inset 0 0 30px rgba(229, 83, 83, 0.3);
+    .skin-none {
+      background: none;
+      border: none;
+      box-shadow: none;
     }
 
     /* Table Styles */
@@ -517,7 +514,7 @@
           <div class="stage-monitor" id="admin-stage-monitor">
             <video id="admin-stage-video" class="stage-media" autoplay loop muted playsinline style="display:none;"></video>
             <img id="admin-stage-img" class="stage-media" src="" alt="Webcam Feed" />
-            <div id="admin-stage-skin" class="stage-skin-overlay skin-keyhole-gold"></div>
+            <div id="admin-stage-skin" class="stage-skin-overlay skin-chloe-girl"></div>
             <div class="stage-watermark">KEYHOLE LIVE FEED</div>
           </div>
 
@@ -543,12 +540,11 @@
             </div>
 
             <div style="flex:1; min-width:160px;">
-              <label class="form-label" for="stage-skin-select">Webcam Overlay Skin</label>
+              <label class="form-label" for="stage-skin-select">Girl overlay (over people)</label>
               <select id="stage-skin-select" class="form-select">
-                <option value="keyhole_gold" selected>Classic Keyhole Gold HUD</option>
-                <option value="neon_cyber">Neon Cyber Frame</option>
-                <option value="glass_vignette">Minimalist Glass Vignette</option>
-                <option value="streamer_vip">Streamer VIP HUD</option>
+                <option value="chloe_girl" selected>Chloe — girl over people</option>
+                <option value="bailey_girl">Bailey — girl over people</option>
+                <option value="none">No girl overlay</option>
               </select>
             </div>
           </div>
@@ -1064,12 +1060,11 @@
           </div>
 
           <div class="studio-section">
-            <div class="studio-sec-title">Webcam Overlay Skins</div>
+            <div class="studio-sec-title">Girl overlays (Chloe / Bailey over people)</div>
             <select id="webcam-skin-select" class="form-select">
-              <option value="keyhole_gold">Classic Keyhole Gold HUD</option>
-              <option value="neon_cyber">Neon Cyber Frame</option>
-              <option value="glass_vignette">Minimalist Glass Vignette</option>
-              <option value="streamer_vip">Streamer VIP HUD</option>
+              <option value="chloe_girl" selected>Chloe — girl over people</option>
+              <option value="bailey_girl">Bailey — girl over people</option>
+              <option value="none">No girl overlay</option>
             </select>
           </div>
         </div>
@@ -1123,7 +1118,7 @@
               <div><strong style="color:var(--muted);">Video Loop Config:</strong> <span id="studio-disp-loop-config">Standard playback</span></div>
               <div style="margin-top:10px; width:100%; aspect-ratio:16/9; background:var(--paper-2); border:1px solid var(--line); border-radius:6px; overflow:hidden; position:relative;">
                 <img id="studio-fruit-preview-img" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='225' viewBox='0 0 400 225'><rect width='400' height='225' fill='%23071720'/><text x='200' y='115' font-family='sans-serif' font-size='14' fill='%23d9ad58' text-anchor='middle'>TRANSLATION DISPLAY READY</text></svg>" style="width:100%; height:100%; object-fit:cover;" alt="Translation Display" />
-                <div id="studio-fruit-skin-overlay" class="stage-skin-overlay skin-keyhole-gold"></div>
+                <div id="studio-fruit-skin-overlay" class="stage-skin-overlay skin-chloe-girl"></div>
               </div>
             </div>
           </div>
@@ -1231,7 +1226,7 @@
       authenticated: false,
       activeCharId: 'bailey',
       roomMode: 'living_room',
-      overlaySkin: 'keyhole_gold'
+      overlaySkin: 'chloe_girl'
     };
 
     /* DOM ELEMS */
@@ -1620,7 +1615,8 @@
 
       prompt += `[OUTPUT SPECS]:\n`;
       prompt += `- Format: ${motion === 'live_webcam' ? 'Live Dynamic Webcam Video Clip' : 'Static High-Res Render'}\n`;
-      prompt += `- Webcam Overlay Skin: ${adminState.overlaySkin}\n`;
+      prompt += `- Girl Overlay (over people): ${adminState.overlaySkin}\n`;
+      prompt += `- Composite the selected girl (Chloe or Bailey) ON TOP OF people in the scene — face/body of the girl replaces or covers people. This is NOT a HUD border or frame around the webcam.\n`;
 
       return prompt;
     }
@@ -1705,7 +1701,8 @@
       prompt += `- Furniture Removals / Clean Items: ${removes.length ? removes.join(', ') : 'None specified'}\n\n`;
       prompt += `[WEBCAM OVERLAY & RENDER OUTPUT]:\n`;
       prompt += `- Motion Format: ${motion && motion.value === 'static_render' ? 'Static High-Res Reference Render' : 'Live Webcam Stream (Dynamic Motion Video)'}\n`;
-      prompt += `- Webcam Overlay Skin: ${skin ? skin.value : adminState.overlaySkin}\n`;
+      prompt += `- Girl Overlay (over people): ${skin ? skin.value : adminState.overlaySkin}\n`;
+      prompt += `- Put the selected girl (Chloe or Bailey likeness) OVER people in frame — not a gold/neon HUD border around the webcam.\n`;
       return prompt;
     }
 
@@ -1718,7 +1715,7 @@
       const skinSelect = document.getElementById('webcam-skin-select');
       const overlay = document.getElementById('studio-fruit-skin-overlay');
       if (!skinSelect || !overlay) return;
-      overlay.className = `stage-skin-overlay skin-${(skinSelect.value || 'keyhole_gold').replace('_', '-')}`;
+      overlay.className = `stage-skin-overlay skin-${(skinSelect.value || 'chloe_girl').replace('_', '-')}`;
     }
 
     function mirrorStudioRulesToGenerator() {
@@ -1744,7 +1741,7 @@
     function openGeminiStudioModal() {
       if (!requireAdminOffice()) return;
       const skinSelect = document.getElementById('webcam-skin-select');
-      if (skinSelect) skinSelect.value = adminState.overlaySkin || 'keyhole_gold';
+      if (skinSelect) skinSelect.value = adminState.overlaySkin || 'chloe_girl';
       syncStudioSkinPreview();
       updateGeminiStudioPromptUI();
       document.getElementById('gemini-studio-modal').classList.add('active');
@@ -1758,7 +1755,7 @@
     function applyGeminiRoomToStage() {
       if (!requireAdminOffice()) return;
       const skinSelect = document.getElementById('webcam-skin-select');
-      adminState.overlaySkin = (skinSelect && skinSelect.value) || 'keyhole_gold';
+      adminState.overlaySkin = (skinSelect && skinSelect.value) || 'chloe_girl';
       if (elStageSkinSelect) elStageSkinSelect.value = adminState.overlaySkin;
       mirrorStudioRulesToGenerator();
       syncStudioSkinPreview();
