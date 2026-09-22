@@ -10,6 +10,11 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,500;6..96,600;6..96,700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <title>KEYHOLE</title>
+  <script>
+    try {
+      if (!localStorage.getItem('keyhole_auth_token_v1')) location.replace('index.html');
+    } catch (e) {}
+  </script>
   <style>
     :root {
       color-scheme: dark;
@@ -185,6 +190,12 @@
     .door-card:hover .door-image {
       transform: scale(1.03);
     }
+    .door-card.is-selected {
+      border-color: var(--room-accent);
+      box-shadow: var(--shadow);
+    }
+    #door-chloe .door-image { object-position: 34% 28%; }
+    #door-bailey .door-image { object-position: 36% 45%; }
     .door-label {
       padding: 20px;
       font-family: Georgia, serif;
@@ -200,6 +211,7 @@
       padding-top: 36px;
       border-top: 1px solid var(--line);
       display: none;
+      scroll-margin-top: 84px;
     }
     .session-pricing.visible {
       display: block;
@@ -226,7 +238,7 @@
       text-align: center;
     }
     .session-tier.featured {
-      border-color: var(--gold);
+      border-color: var(--room-accent);
     }
     .session-tier-time {
       font-size: .9rem;
@@ -707,7 +719,7 @@
         <!-- Door 1: Chloe -->
         <div class="door-card" data-id="chloe" id="door-chloe">
           <div class="door-image-wrap">
-            <img class="door-image" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='500' viewBox='0 0 400 500'><rect width='400' height='500' fill='%231C2430'/><circle cx='200' cy='200' r='70' fill='%23D4A574' opacity='0.8'/><rect x='150' y='280' width='100' height='160' fill='%2312100E'/><text x='200' y='470' font-family='serif' font-size='22' fill='%23F3EDE4' text-anchor='middle'>Chloe</text></svg>" alt="Chloe" />
+            <img class="door-image" src="assets/IMG_3544.jpeg" alt="Chloe" />
           </div>
           <div class="door-label">Chloe</div>
         </div>
@@ -715,7 +727,7 @@
         <!-- Door 2: Bailey -->
         <div class="door-card" data-id="bailey" id="door-bailey">
           <div class="door-image-wrap">
-            <img class="door-image" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='500' viewBox='0 0 400 500'><rect width='400' height='500' fill='%233A2E27'/><circle cx='200' cy='200' r='70' fill='%238F5A3C' opacity='0.8'/><rect x='150' y='280' width='100' height='160' fill='%23E6DCCB'/><text x='200' y='470' font-family='serif' font-size='22' fill='%23F3EDE4' text-anchor='middle'>Bailey</text></svg>" alt="Bailey" />
+            <img class="door-image" src="assets/IMG_3363.jpeg" alt="Bailey" />
           </div>
           <div class="door-label">Bailey</div>
         </div>
@@ -725,47 +737,55 @@
       <div class="character-grid" id="character-grid" style="display:none;"></div>
 
       <section class="session-pricing" id="session-pricing-panel" aria-labelledby="session-pricing-title">
-        <h2 class="session-pricing-title" id="session-pricing-title">Available Sessions</h2>
+        <h2 class="session-pricing-title" id="session-pricing-title">Choose a time</h2>
         <div class="session-tier-grid">
           <div class="session-tier featured" data-minutes="10" data-free-preview="true">
             <div class="session-tier-time">Free Preview</div>
             <div class="session-tier-price">FREE</div>
             <div class="session-tier-messages">10 minutes · one per account</div>
+            <button type="button" class="session-tier-buy" data-enter="true">Enter</button>
           </div>
           <div class="session-tier" data-minutes="10" data-package="intro" data-once="intro" data-stripe="https://buy.stripe.com/9B69AM0Ur38HchN0ZrdjO0a">
             <div class="session-tier-time">10 minutes</div>
             <div class="session-tier-price">$5.99</div>
             <div class="session-tier-messages">100 messages · one per account</div>
+            <a class="session-tier-buy" href="https://buy.stripe.com/9B69AM0Ur38HchN0ZrdjO0a">Continue</a>
           </div>
           <div class="session-tier" data-minutes="15" data-package="quick" data-stripe="https://buy.stripe.com/00w14gav1bFddlR6jLdjO09">
             <div class="session-tier-time">15 minutes</div>
             <div class="session-tier-price">$7.99</div>
             <div class="session-tier-messages">100 messages</div>
+            <a class="session-tier-buy" href="https://buy.stripe.com/00w14gav1bFddlR6jLdjO09">Continue</a>
           </div>
           <div class="session-tier" data-minutes="30" data-package="standard" data-stripe="https://buy.stripe.com/bJeeV67iPdNl2Hd8rTdjO08">
             <div class="session-tier-time">30 minutes</div>
             <div class="session-tier-price">$11.99</div>
             <div class="session-tier-messages">100 messages</div>
+            <a class="session-tier-buy" href="https://buy.stripe.com/bJeeV67iPdNl2Hd8rTdjO08">Continue</a>
           </div>
           <div class="session-tier" data-minutes="45" data-package="extended">
             <div class="session-tier-time">45 minutes</div>
             <div class="session-tier-price">$14.99</div>
             <div class="session-tier-messages">100 messages</div>
+            <button type="button" class="session-tier-buy" data-enter="true">Enter</button>
           </div>
           <div class="session-tier" data-minutes="55" data-package="long" data-stripe="https://buy.stripe.com/4gM9AM46DbFda9F23vdjO03">
             <div class="session-tier-time">55 minutes</div>
             <div class="session-tier-price">$17.99</div>
             <div class="session-tier-messages">100 messages</div>
+            <a class="session-tier-buy" href="https://buy.stripe.com/4gM9AM46DbFda9F23vdjO03">Continue</a>
           </div>
           <div class="session-tier featured" data-minutes="60" data-package="premium" data-stripe="https://buy.stripe.com/9B600c0UrcJh4Pl0ZrdjO07">
             <div class="session-tier-time">60 minutes</div>
             <div class="session-tier-price">$19.99</div>
             <div class="session-tier-messages">100 messages</div>
+            <a class="session-tier-buy" href="https://buy.stripe.com/9B600c0UrcJh4Pl0ZrdjO07">Continue</a>
           </div>
           <div class="session-tier" data-minutes="75" data-package="marathon" data-stripe="https://buy.stripe.com/5kQ5kw0UrfVtepVaA1djO04">
             <div class="session-tier-time">75 minutes</div>
             <div class="session-tier-price">$23.99</div>
             <div class="session-tier-messages">100 messages</div>
+            <a class="session-tier-buy" href="https://buy.stripe.com/5kQ5kw0UrfVtepVaA1djO04">Continue</a>
           </div>
         </div>
       </section>
@@ -1006,21 +1026,21 @@
         title: 'Dirty-blonde, navy room, city window',
         vibe: 'Dirty-blonde · Navy room · City window',
         bio: 'Dirty-blonde, black tank, navy room, city window.',
-        avatar: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="500" viewBox="0 0 400 500"><rect width="400" height="500" fill="%231C2430"/><circle cx="200" cy="200" r="70" fill="%23D4A574" opacity="0.8"/><text x="200" y="470" font-family="serif" font-size="22" fill="%23F3EDE4" text-anchor="middle">Chloe</text></svg>',
+        avatar: 'assets/IMG_3544.jpeg',
         roomReferences: {
-          primaryWebcamView: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450"><rect width="800" height="450" fill="%231C2430"/><circle cx="400" cy="180" r="80" fill="%23D4A574"/><text x="400" y="420" font-family="serif" font-size="22" fill="%23F3EDE4" text-anchor="middle">Chloe - Navy Room Primary View</text></svg>',
+          primaryWebcamView: 'assets/IMG_3544.jpeg',
           sideAngleRef: '[INTERNAL CONSISTENCY REF ONLY - DO NOT EXPOSE TO CUSTOMER]',
           depthRef: '[INTERNAL CONSISTENCY REF ONLY - DO NOT EXPOSE TO CUSTOMER]'
         },
         livingRoomMedia: {
-          idleVideo: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
+          idleVideo: '',
           reactionVideos: [],
-          fallbackImage: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450"><rect width="800" height="450" fill="%231C2430"/><circle cx="400" cy="180" r="80" fill="%23D4A574"/><text x="400" y="420" font-family="serif" font-size="22" fill="%23F3EDE4" text-anchor="middle">Chloe - Navy Room Primary View</text></svg>'
+          fallbackImage: 'assets/IMG_3542.jpeg'
         },
         bedroomMedia: {
           idleVideo: '',
           reactionVideos: [],
-          fallbackImage: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450"><rect width="800" height="450" fill="%231C2430"/><circle cx="400" cy="180" r="80" fill="%23D4A574"/><text x="400" y="420" font-family="serif" font-size="22" fill="%23F3EDE4" text-anchor="middle">Chloe - Bedroom View</text></svg>'
+          fallbackImage: 'assets/IMG_3548.jpeg'
         },
         dialogue: {
           greeting: "Welcome in. I'm glad you're here.",
@@ -1041,23 +1061,21 @@
         title: 'Dark hair, her room only',
         vibe: 'Dark hair · Her room only',
         bio: 'Dark hair, her room only.',
-        avatar: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="500" viewBox="0 0 400 500"><rect width="400" height="500" fill="%233A2E27"/><circle cx="200" cy="200" r="70" fill="%238F5A3C" opacity="0.8"/><text x="200" y="470" font-family="serif" font-size="22" fill="%23F3EDE4" text-anchor="middle">Bailey</text></svg>',
+        avatar: 'assets/IMG_3363.jpeg',
         roomReferences: {
-          primaryWebcamView: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450"><rect width="800" height="450" fill="%233A2E27"/><circle cx="400" cy="180" r="80" fill="%238F5A3C"/><text x="400" y="420" font-family="serif" font-size="22" fill="%23F3EDE4" text-anchor="middle">Bailey - Primary Room View</text></svg>',
+          primaryWebcamView: 'assets/IMG_3363.jpeg',
           sideAngleRef: '[INTERNAL CONSISTENCY REF ONLY - DO NOT EXPOSE TO CUSTOMER]',
           depthRef: '[INTERNAL CONSISTENCY REF ONLY - DO NOT EXPOSE TO CUSTOMER]'
         },
         livingRoomMedia: {
-          idleVideo: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-          reactionVideos: [
-            'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4'
-          ],
-          fallbackImage: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450"><rect width="800" height="450" fill="%233A2E27"/><circle cx="400" cy="180" r="80" fill="%238F5A3C"/><text x="400" y="420" font-family="serif" font-size="22" fill="%23F3EDE4" text-anchor="middle">Bailey - Primary Room View</text></svg>'
+          idleVideo: '',
+          reactionVideos: [],
+          fallbackImage: 'assets/IMG_3363.jpeg'
         },
         bedroomMedia: {
-          idleVideo: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4',
+          idleVideo: '',
           reactionVideos: [],
-          fallbackImage: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450"><rect width="800" height="450" fill="%233A2E27"/><circle cx="400" cy="180" r="80" fill="%238F5A3C"/><text x="400" y="420" font-family="serif" font-size="22" fill="%23F3EDE4" text-anchor="middle">Bailey - Private Room View</text></svg>'
+          fallbackImage: 'assets/IMG_3364.jpeg'
         },
         dialogue: {
           greeting: "Hey. I'm glad you came in.",
@@ -1131,6 +1149,8 @@
     };
 
     let timerInterval = null;
+    let pendingDoorId = null;
+    let pendingMinutes = 10;
 
     /* PLATE ENGINE */
     const PLATE_SESSION_MINUTES = 15;
@@ -1395,14 +1415,26 @@
     }
 
     function selectDoor(charId) {
-      // Reveal pricing after clicking door, then allow entry or enter directly
+      pendingDoorId = charId;
+      document.body.className = 'theme-' + charId;
+      document.querySelectorAll('.door-card').forEach(card => {
+        card.classList.toggle('is-selected', card.dataset.id === charId);
+      });
+      const title = document.getElementById('session-pricing-title');
+      const char = CHARACTERS[charId];
+      if (title && char) title.textContent = char.name;
       elSessionPricingPanel.classList.add('visible');
-      enterRoom(charId, true);
+      elSessionPricingPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 
     function showSelectionView() {
       state.view = 'selection';
+      pendingDoorId = null;
       document.body.className = 'theme-default';
+      document.querySelectorAll('.door-card').forEach(card => card.classList.remove('is-selected'));
+      if (elSessionPricingPanel) elSessionPricingPanel.classList.remove('visible');
+      const title = document.getElementById('session-pricing-title');
+      if (title) title.textContent = 'Choose a time';
       saveSessionState();
       elSelectionView.classList.add('active');
       elRoomView.classList.remove('active');
@@ -1428,7 +1460,7 @@
 
       if (isNewSelection) {
         state.roomMode = 'living_room';
-        state.previewSecondsLeft = CONFIG.defaultPreviewSeconds;
+        state.previewSecondsLeft = (Number(pendingMinutes) || 10) * 60;
         state.userMessageCount = 0;
         state.hasInvitedToBedroom = false;
 
@@ -1502,8 +1534,16 @@
       showStageIdle(mediaGroup);
     }
 
+    function stageFrame(url) {
+      const src = String(url || '');
+      if (src.indexOf('IMG_3363') !== -1 || src.indexOf('IMG_3364') !== -1) return '36% center';
+      if (src.indexOf('IMG_3544') !== -1) return '34% 30%';
+      return '30% center';
+    }
+
     function showStageIdle(mediaGroup) {
       elStageVideo.loop = true;
+      elStageFallbackImg.style.objectPosition = stageFrame(mediaGroup.fallbackImage || mediaGroup.idleVideo);
       if (mediaGroup.idleVideo) {
         elStageVideo.src = mediaGroup.idleVideo;
         elStageVideo.style.display = 'block';
@@ -1879,6 +1919,14 @@
       elAccountSubmit.addEventListener('click', handleAccountSubmit);
       elAccountPassword.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleAccountSubmit(); });
       elAccountToggle.addEventListener('click', (e) => { e.preventDefault(); setAccountMode(accountMode === 'login' ? 'signup' : 'login'); });
+
+      elSessionPricingPanel.addEventListener('click', (e) => {
+        const enterBtn = e.target.closest('[data-enter]');
+        if (!enterBtn || !pendingDoorId) return;
+        const tier = enterBtn.closest('.session-tier');
+        pendingMinutes = Number(tier && tier.dataset.minutes) || 10;
+        enterRoom(pendingDoorId, true);
+      });
 
       elSwitchBtn.addEventListener('click', showSelectionView);
       elResetBtn.addEventListener('click', resetSessionState);
