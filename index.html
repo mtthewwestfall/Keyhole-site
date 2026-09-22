@@ -763,12 +763,16 @@
       <section class="session-pricing" aria-labelledby="session-pricing-title">
         <h2 class="session-pricing-title" id="session-pricing-title">Choose Your Session</h2>
         <div class="session-tier-grid">
-          <button class="session-tier featured" type="button" data-minutes="10" data-one-time="true" aria-label="Try it now: 10 minutes for $2.99, one time option">
-            <div class="session-tier-time">Try It Now</div>
-            <div class="session-tier-price">$2.99</div>
-            <div class="session-tier-messages">10 minutes · 100 messages</div>
-            <div class="session-tier-messages" style="margin-top:4px;color:var(--gold);font-weight:700;">One-time option</div>
-          </button>
+          <div class="session-tier featured" data-minutes="10" data-free-preview="true">
+            <div class="session-tier-time">Free Preview</div>
+            <div class="session-tier-price">FREE</div>
+            <div class="session-tier-messages">10 minutes</div>
+          </div>
+          <div class="session-tier" data-minutes="10" data-price="1.99">
+            <div class="session-tier-time">10 minutes</div>
+            <div class="session-tier-price">$1.99</div>
+            <div class="session-tier-messages">100 messages</div>
+          </div>
           <div class="session-tier" data-minutes="15">
             <div class="session-tier-time">15 minutes</div>
             <div class="session-tier-price">$7.99</div>
@@ -808,7 +812,7 @@
   <section id="room-view" class="view-section">
     <div id="preview-banner" class="preview-banner">
       <div>
-        <span>Free Preview Active</span> — <span id="preview-timer-text" class="preview-timer">60s remaining</span>
+        <span>Free Preview Active</span> — <span id="preview-timer-text" class="preview-timer">10:00 remaining</span>
       </div>
       <button id="banner-unlock-btn" class="btn-unlock">Unlock Bedroom Access</button>
     </div>
@@ -1250,7 +1254,7 @@
 
     // 2. STATE MANAGER & PERSISTENCE
     const CONFIG = {
-      defaultPreviewSeconds: 60,
+      defaultPreviewSeconds: 600,
       invitationMessageThreshold: 3
     };
 
