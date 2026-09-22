@@ -4,7 +4,7 @@ on:
   push:
     paths:
       - ".github/workflows/import-keyhole-assets.yml"
-  workflow_dispatch:
+  workflow_dispatch:\n\n# trigger: 2026-09-22
 
 permissions:
   contents: write
