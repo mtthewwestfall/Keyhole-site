@@ -756,6 +756,8 @@
     </a>
     <div class="header-nav">
       <span id="nav-badge" class="badge badge-live">Live</span>
+      <span id="account-status" class="badge" style="display:none;"></span>
+      <button id="account-btn" class="btn-small btn-gold-outline">Sign In</button>
       <button id="gemini-studio-btn" class="btn-small btn-gold-outline">Gemini Studio & Room Editor</button>
       <button id="switch-character-btn" class="btn-small" style="display:none;">Change Room</button>
       <button id="reset-session-btn" class="btn-small">Reset Session</button>
@@ -785,17 +787,17 @@
             <div class="session-tier-price">$4.99</div>
             <div class="session-tier-messages">100 messages</div>
           </div>
-          <div class="session-tier" data-minutes="15">
+          <div class="session-tier" data-minutes="15" data-package="quick">
             <div class="session-tier-time">15 minutes</div>
             <div class="session-tier-price">$7.99</div>
             <div class="session-tier-messages">100 messages</div>
           </div>
-          <div class="session-tier" data-minutes="30">
+          <div class="session-tier" data-minutes="30" data-package="standard">
             <div class="session-tier-time">30 minutes</div>
             <div class="session-tier-price">$11.99</div>
             <div class="session-tier-messages">100 messages</div>
           </div>
-          <div class="session-tier" data-minutes="45">
+          <div class="session-tier" data-minutes="45" data-package="extended">
             <div class="session-tier-time">45 minutes</div>
             <div class="session-tier-price">$14.99</div>
             <div class="session-tier-messages">100 messages</div>
@@ -805,7 +807,7 @@
             <div class="session-tier-price">$17.99</div>
             <div class="session-tier-messages">100 messages</div>
           </div>
-          <div class="session-tier featured" data-minutes="60">
+          <div class="session-tier featured" data-minutes="60" data-package="premium">
             <div class="session-tier-time">60 minutes</div>
             <div class="session-tier-price">$19.99</div>
             <div class="session-tier-messages">100 messages</div>
@@ -866,6 +868,38 @@
       </div>
     </div>
   </section>
+
+  <!-- CUSTOMER ACCOUNT MODAL -->
+  <div id="account-modal" class="modal-backdrop">
+    <div class="modal-card">
+      <button id="account-close-btn" class="modal-close">&times;</button>
+      <h2 class="modal-title" id="account-title">Sign In to Keyhole</h2>
+      <p class="modal-desc" id="account-desc">Sign in so your minutes land on your account the moment a payment clears.</p>
+
+      <div class="gate-input-group">
+        <label class="gate-label" for="account-email">Email</label>
+        <input type="email" id="account-email" class="gate-input" placeholder="you@example.com" autocomplete="email" />
+      </div>
+      <div class="gate-input-group">
+        <label class="gate-label" for="account-password">Password</label>
+        <input type="password" id="account-password" class="gate-input" placeholder="At least 8 characters" autocomplete="current-password" />
+      </div>
+      <div class="gate-input-group" id="account-name-group" style="display:none;">
+        <label class="gate-label" for="account-name">Display name</label>
+        <input type="text" id="account-name" class="gate-input" placeholder="What she should call you" autocomplete="nickname" />
+      </div>
+
+      <div id="account-error" class="modal-error"></div>
+      <div id="account-notice" class="modal-desc" style="display:none;"></div>
+
+      <button id="account-submit-btn" class="btn-verify">Sign In</button>
+      <p class="modal-desc" style="margin-top:14px;">
+        <a href="#" id="account-toggle-link" style="color:var(--gold);">New here? Create an account</a>
+        &nbsp;&middot;&nbsp;
+        <a href="#" id="account-resend-link" style="color:var(--gold);">Resend verification email</a>
+      </p>
+    </div>
+  </div>
 
   <!-- MEMBERSHIP GATE MODAL -->
   <div id="membership-modal" class="modal-backdrop">
@@ -1381,6 +1415,14 @@
      * @returns {Promise<{success: boolean, message?: string}>}
      */
     async function verifyMembershipEntitlement(token) {
+      // A signed-in customer with paid minutes on the account is entitled outright.
+      if (KeyholeAccount.token()) {
+        try {
+          const me = await KeyholeAccount.refresh();
+          if (me && (me.webcam_minutes_left > 0 || me.session_active)) return { success: true };
+        } catch (_) { /* fall through to the passcode path */ }
+      }
+
       // Simulate backend network roundtrip to entitlement service
       await new Promise(resolve => setTimeout(resolve, 600));
 
@@ -1396,6 +1438,89 @@
         message: 'Invalid Membership Token. Use "KEY-VIP-ROOM" for testing.'
       };
     }
+
+    /* ==========================================================================
+       CUSTOMER ACCOUNT + CHECKOUT (same-origin /auth and /keyhole, proxied to the backend)
+       ========================================================================== */
+
+    // Stripe Payment Link per package; a tier gets a "Pay with card" button only when its link is set.
+    const STRIPE_PAYMENT_LINKS = {
+      quick: '',
+      standard: '',
+      extended: '',
+      premium: '',
+      text_only: ''
+    };
+
+    const KeyholeAccount = (() => {
+      const TOKEN_KEY = 'keyhole_auth_token_v1';
+      let me = null;
+
+      const token = () => localStorage.getItem(TOKEN_KEY) || '';
+      const headers = () => {
+        const h = { 'Content-Type': 'application/json' };
+        const t = token();
+        if (t) h['Authorization'] = 'Bearer ' + t;
+        return h;
+      };
+
+      async function api(path, body) {
+        const res = await fetch(path, {
+          method: body === undefined ? 'GET' : 'POST',
+          headers: headers(),
+          body: body === undefined ? undefined : JSON.stringify(body)
+        });
+        let data = {};
+        try { data = await res.json(); } catch (_) { /* non-JSON error body */ }
+        if (!res.ok) {
+          const err = new Error(typeof data.detail === 'string' ? data.detail : (res.status === 401 ? 'Please sign in again.' : 'Request failed (' + res.status + ')'));
+          err.status = res.status;
+          throw err;
+        }
+        return data;
+      }
+
+      async function refresh() {
+        if (!token()) { me = null; return null; }
+        try {
+          me = await api('/keyhole/me');
+        } catch (err) {
+          if (err.status === 401) { localStorage.removeItem(TOKEN_KEY); me = null; }
+          else throw err;
+        }
+        return me;
+      }
+
+      async function login(email, password) {
+        const data = await api('/auth/login', { email, password });
+        localStorage.setItem(TOKEN_KEY, data.token);
+        return refresh();
+      }
+
+      async function signup(email, password, display_name) {
+        return api('/auth/signup', { email, password, display_name });
+      }
+
+      async function resendVerification(email) {
+        return api('/auth/resend-verification', { email });
+      }
+
+      function logout() {
+        localStorage.removeItem(TOKEN_KEY);
+        me = null;
+      }
+
+      async function packages() {
+        const data = await api('/keyhole/packages');
+        return data.packages || [];
+      }
+
+      async function createCryptoInvoice(pkg) {
+        return api('/keyhole/nowpayments/invoice', { package: pkg });
+      }
+
+      return { token, me: () => me, refresh, login, signup, resendVerification, logout, packages, createCryptoInvoice };
+    })();
 
     /* ==========================================================================
        UI RENDERING & DOM HANDLERS
@@ -2083,7 +2208,194 @@
       }
     }
 
+    /* ==========================================================================
+       CUSTOMER ACCOUNT UI + TIER CHECKOUT BUTTONS
+       ========================================================================== */
+    const elAccountBtn = document.getElementById('account-btn');
+    const elAccountStatus = document.getElementById('account-status');
+    const elAccountModal = document.getElementById('account-modal');
+    const elAccountEmail = document.getElementById('account-email');
+    const elAccountPassword = document.getElementById('account-password');
+    const elAccountName = document.getElementById('account-name');
+    const elAccountNameGroup = document.getElementById('account-name-group');
+    const elAccountError = document.getElementById('account-error');
+    const elAccountNotice = document.getElementById('account-notice');
+    const elAccountSubmit = document.getElementById('account-submit-btn');
+    const elAccountToggle = document.getElementById('account-toggle-link');
+    const elAccountTitle = document.getElementById('account-title');
+    let accountMode = 'login';
+
+    function showAccountError(msg) {
+      elAccountError.textContent = msg;
+      elAccountError.style.display = msg ? 'block' : 'none';
+    }
+    function showAccountNotice(msg) {
+      elAccountNotice.textContent = msg;
+      elAccountNotice.style.display = msg ? 'block' : 'none';
+    }
+
+    function setAccountMode(mode) {
+      accountMode = mode;
+      const signup = mode === 'signup';
+      elAccountNameGroup.style.display = signup ? '' : 'none';
+      elAccountTitle.textContent = signup ? 'Create Your Keyhole Account' : 'Sign In to Keyhole';
+      elAccountSubmit.textContent = signup ? 'Create Account' : 'Sign In';
+      elAccountToggle.textContent = signup ? 'Already have an account? Sign in' : 'New here? Create an account';
+      elAccountPassword.autocomplete = signup ? 'new-password' : 'current-password';
+      showAccountError('');
+      showAccountNotice('');
+    }
+
+    function openAccountModal(mode) {
+      setAccountMode(mode || 'login');
+      elAccountModal.classList.add('active');
+      elAccountEmail.focus();
+    }
+    function closeAccountModal() { elAccountModal.classList.remove('active'); }
+
+    function renderAccountStatus() {
+      const me = KeyholeAccount.me();
+      if (me) {
+        elAccountStatus.textContent = `${me.email || 'Signed in'} · ${me.webcam_minutes_left} min`;
+        elAccountStatus.style.display = '';
+        elAccountBtn.textContent = 'Sign Out';
+      } else {
+        elAccountStatus.style.display = 'none';
+        elAccountBtn.textContent = 'Sign In';
+      }
+    }
+
+    async function handleAccountSubmit() {
+      const email = elAccountEmail.value.trim();
+      const password = elAccountPassword.value;
+      showAccountError('');
+      if (!email || !password) return showAccountError('Email and password are required.');
+      elAccountSubmit.disabled = true;
+      try {
+        if (accountMode === 'signup') {
+          const res = await KeyholeAccount.signup(email, password, elAccountName.value.trim() || email.split('@')[0]);
+          if (res.needs_verification) {
+            setAccountMode('login');
+            showAccountNotice(`Check ${email} for a verification link, then sign in.`);
+            return;
+          }
+        }
+        await KeyholeAccount.login(email, password);
+        renderAccountStatus();
+        closeAccountModal();
+        appendSystemMessageIfInRoom('Signed in. Paid minutes now land on your account automatically.');
+        if (pendingCheckoutPackage) {
+          const pkg = pendingCheckoutPackage;
+          pendingCheckoutPackage = null;
+          startCryptoCheckout(pkg);
+        }
+      } catch (err) {
+        showAccountError(err.message || 'Could not sign in.');
+      } finally {
+        elAccountSubmit.disabled = false;
+      }
+    }
+
+    function appendSystemMessageIfInRoom(text) {
+      if (state.activeCharId && elRoomView.classList.contains('active')) appendSystemMessage(text);
+    }
+
+    let pendingCheckoutPackage = null;
+
+    async function startCryptoCheckout(pkg) {
+      if (!KeyholeAccount.token()) {
+        pendingCheckoutPackage = pkg;
+        openAccountModal('login');
+        showAccountNotice('Sign in first so the minutes land on your account when the payment clears.');
+        return;
+      }
+      const btn = document.querySelector(`.session-tier[data-package="${pkg}"] .tier-crypto-btn`);
+      if (btn) { btn.disabled = true; btn.textContent = 'Creating invoice...'; }
+      try {
+        const inv = await KeyholeAccount.createCryptoInvoice(pkg);
+        window.open(inv.invoice_url, '_blank', 'noopener');
+      } catch (err) {
+        if (err.status === 401) { pendingCheckoutPackage = pkg; openAccountModal('login'); showAccountNotice('Please sign in again.'); }
+        else alert(err.message || 'Could not create the invoice.');
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = 'Pay with crypto'; }
+      }
+    }
+
+    function renderTierCheckoutButtons(packages) {
+      const byName = {};
+      (packages || []).forEach(p => { byName[p.package] = p; });
+      document.querySelectorAll('.session-tier[data-package]').forEach(tier => {
+        const pkg = tier.dataset.package;
+        const info = byName[pkg];
+        if (info && info.price > 0) {
+          const priceEl = tier.querySelector('.session-tier-price');
+          if (priceEl) priceEl.textContent = '$' + info.price.toFixed(2);
+          const msgEl = tier.querySelector('.session-tier-messages');
+          if (msgEl && info.text_included) msgEl.textContent = `${info.text_included} messages`;
+        }
+        if (tier.querySelector('.tier-crypto-btn')) return;
+        const crypto = document.createElement('button');
+        crypto.type = 'button';
+        crypto.className = 'session-tier-buy tier-crypto-btn';
+        crypto.textContent = 'Pay with crypto';
+        crypto.addEventListener('click', (e) => { e.stopPropagation(); startCryptoCheckout(pkg); });
+        tier.appendChild(crypto);
+        const stripe = STRIPE_PAYMENT_LINKS[pkg];
+        if (stripe) {
+          const card = document.createElement('a');
+          card.className = 'session-tier-buy tier-card-btn';
+          card.textContent = 'Pay with card';
+          card.target = '_blank';
+          card.rel = 'noopener noreferrer';
+          card.href = stripe;
+          card.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const me = KeyholeAccount.me();
+            if (me && me.user_id) card.href = stripe + (stripe.includes('?') ? '&' : '?') + 'client_reference_id=' + encodeURIComponent(me.user_id) + (me.email ? '&prefilled_email=' + encodeURIComponent(me.email) : '');
+          });
+          tier.appendChild(card);
+        }
+      });
+    }
+
+    async function initAccountAndCheckout() {
+      elAccountBtn.addEventListener('click', () => {
+        if (KeyholeAccount.token()) { KeyholeAccount.logout(); renderAccountStatus(); }
+        else openAccountModal('login');
+      });
+      document.getElementById('account-close-btn').addEventListener('click', closeAccountModal);
+      elAccountSubmit.addEventListener('click', handleAccountSubmit);
+      elAccountPassword.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleAccountSubmit(); });
+      elAccountToggle.addEventListener('click', (e) => { e.preventDefault(); setAccountMode(accountMode === 'login' ? 'signup' : 'login'); });
+      document.getElementById('account-resend-link').addEventListener('click', async (e) => {
+        e.preventDefault();
+        const email = elAccountEmail.value.trim();
+        if (!email) return showAccountError('Enter your email first.');
+        try { await KeyholeAccount.resendVerification(email); showAccountNotice(`Verification email sent to ${email}.`); }
+        catch (err) { showAccountError(err.message); }
+      });
+
+      renderTierCheckoutButtons([]);
+      KeyholeAccount.packages().then(renderTierCheckoutButtons).catch(() => {});
+      KeyholeAccount.refresh().then(renderAccountStatus).catch(renderAccountStatus);
+
+      const paid = new URLSearchParams(location.search).get('paid');
+      if (paid && KeyholeAccount.token()) {
+        // Back from the payment page: the IPN grants once the payment is confirmed on-chain.
+        let tries = 0;
+        const poll = setInterval(async () => {
+          tries += 1;
+          const before = (KeyholeAccount.me() || {}).webcam_minutes_left || 0;
+          const me = await KeyholeAccount.refresh().catch(() => null);
+          renderAccountStatus();
+          if ((me && me.webcam_minutes_left > before) || tries >= 60) clearInterval(poll);
+        }, 10000);
+      }
+    }
+
 function setupEventListeners() {
+      initAccountAndCheckout();
       elSwitchBtn.addEventListener('click', showSelectionView);
       elResetBtn.addEventListener('click', resetSessionState);
       elLogoBtn.addEventListener('click', (e) => {
