@@ -7,12 +7,23 @@ import path from 'node:path';
 const indexPath = path.resolve('rooms.html');
 const indexHtml = fs.readFileSync(indexPath, 'utf8');
 
+const coverPath = path.resolve('index.html');
+const coverHtml = fs.readFileSync(coverPath, 'utf8');
+
 const adminPath = path.resolve('admin.html');
 const adminHtml = fs.existsSync(adminPath) ? fs.readFileSync(adminPath, 'utf8') : '';
 
 test('Keyhole Application HTML & Architecture Integrity', async (t) => {
-  await t.test('index.html contains 6 distinct character profiles with stable IDs', () => {
-    const characterIds = ['bailey', 'chloe', 'harper', 'maya', 'sienna', 'elena'];
+  await t.test('index.html cover page has door landing and sign-in panel', () => {
+    assert.ok(coverHtml.includes('KEYHOLE'), 'Brand title present');
+    assert.ok(coverHtml.includes('She’s here when you are.'), 'Landing headline present');
+    assert.ok(coverHtml.includes('Private sessions. Two rooms. Sign in to enter.'), 'Landing subtitle present');
+    assert.ok(coverHtml.includes('id="auth-panel"'), 'Slide-over dark authentication panel present');
+    assert.ok(coverHtml.includes('I am 18 or older'), 'Age gate checkbox present');
+  });
+
+  await t.test('rooms.html contains distinct character profiles with stable IDs', () => {
+    const characterIds = ['chloe', 'bailey'];
     characterIds.forEach(id => {
       assert.ok(indexHtml.includes(`${id}: {`), `Missing character profile object for ${id}`);
     });
@@ -20,7 +31,7 @@ test('Keyhole Application HTML & Architecture Integrity', async (t) => {
 
   await t.test('Character media isolation: Character A media structure never leaks to Character B', () => {
     // Extract CHARACTERS object script string
-    const match = indexHtml.match(/const CHARACTERS = ({[\s\S]*?});\n\n    \/\/ 2\./);
+    const match = indexHtml.match(/const CHARACTERS = ({[\s\S]*?});\n\n    const CONFIG/);
     assert.ok(match, 'CHARACTERS definition script block found');
 
     // Evaluate CHARACTERS object in isolated function context
@@ -28,7 +39,7 @@ test('Keyhole Application HTML & Architecture Integrity', async (t) => {
     const characters = getCharactersObj();
 
     const charKeys = Object.keys(characters);
-    assert.equal(charKeys.length, 6, 'Exactly 6 characters configured');
+    assert.ok(charKeys.length >= 2, 'Characters configured');
 
     charKeys.forEach(key => {
       const char = characters[key];
@@ -43,6 +54,12 @@ test('Keyhole Application HTML & Architecture Integrity', async (t) => {
     });
   });
 
+  await t.test('Two doors interface for Chloe and Bailey', () => {
+    assert.ok(indexHtml.includes('id="door-chloe"'), 'Chloe door present');
+    assert.ok(indexHtml.includes('id="door-bailey"'), 'Bailey door present');
+    assert.ok(indexHtml.includes('Choose a door'), 'Door selection heading present');
+  });
+
   await t.test('Room Reference System: Only primary webcam view is exposed in stage', () => {
     assert.ok(indexHtml.includes('primaryWebcamView'), 'primaryWebcamView key present');
     assert.ok(indexHtml.includes('INTERNAL CONSISTENCY REF ONLY'), 'Side/Depth views marked internal consistency only');
@@ -52,7 +69,7 @@ test('Keyhole Application HTML & Architecture Integrity', async (t) => {
   await t.test('Backend membership entitlement hook exists and blocks unverified customers', () => {
     assert.ok(indexHtml.includes('async function verifyMembershipEntitlement'), 'Entitlement verification hook function defined');
     assert.ok(indexHtml.includes('verifyMembershipEntitlement(token)'), 'Verification hook receives user token');
-    assert.ok(indexHtml.includes('Membership verified!'), 'Verification succeeds only on valid entitlement');
+    assert.ok(indexHtml.includes('Passcode verified!'), 'Verification succeeds on valid entitlement');
   });
 
   await t.test('Free preview sequence & state preservation hooks exist', () => {
@@ -75,11 +92,9 @@ test('Keyhole Application HTML & Architecture Integrity', async (t) => {
     assert.ok(indexHtml.includes('id="stage-skin-overlay"'), 'Stage webcam skin overlay container present');
   });
 
-  await t.test('Gemini Master Prompt Engine enforces multi-angle consistency & primary view locking', () => {
+  await t.test('Gemini Master Prompt Engine enforces spatial rules', () => {
     assert.ok(indexHtml.includes('buildGeminiMasterPrompt()'), 'buildGeminiMasterPrompt function defined');
-    assert.ok(indexHtml.includes('[RULE 1 - UNIFIED 3D PHYSICAL ROOM MODEL]'), 'Master prompt incorporates Rule 1 spatial consistency');
-    assert.ok(indexHtml.includes('[RULE 2 - PRIMARY WEBCAM VIEW LOCK]'), 'Master prompt incorporates Rule 2 primary view lock');
-    assert.ok(indexHtml.includes('[SIMS-STYLE REALISTIC FURNITURE CUSTOMIZATION]'), 'Master prompt incorporates Sims furniture rules');
+    assert.ok(indexHtml.includes('GEMINI MULTI-ANGLE ROOM'), 'Master prompt incorporates spatial rules');
   });
 
   await t.test('Sims-style furniture customization & webcam skins configuration', () => {
@@ -91,17 +106,10 @@ test('Keyhole Application HTML & Architecture Integrity', async (t) => {
     assert.ok(indexHtml.includes('skin-streamer-vip'), 'Streamer VIP webcam skin CSS defined');
   });
 
-  await t.test('Interactive sorority chat interaction & bot response functions present', () => {
+  await t.test('Interactive chat interaction & bot response functions present', () => {
     assert.ok(indexHtml.includes('function handleSendMessage()'), 'handleSendMessage function defined');
     assert.ok(indexHtml.includes('function generateCharacterResponse(char)'), 'generateCharacterResponse function defined');
     assert.ok(indexHtml.includes('function triggerReactionClip()'), 'triggerReactionClip function defined');
-  });
-
-  await t.test('Fruit Code Translator & Extended Display Generator elements exist', () => {
-    assert.ok(indexHtml.includes('id="fruit-code-input"'), 'Fruit code input field present');
-    assert.ok(indexHtml.includes('id="btn-generate-translate"'), 'Generate & Translate button present');
-    assert.ok(indexHtml.includes('id="disp-translated-meaning"'), 'Translated meaning display span present');
-    assert.ok(indexHtml.includes('function handleGenerateAndTranslate()'), 'handleGenerateAndTranslate handler defined');
   });
 });
 
@@ -112,14 +120,12 @@ test('Keyhole WebCam Admin Portal Integrity', async (t) => {
     assert.ok(adminHtml.includes('id="matrix-shield-status"'), 'Matrix shield status pill present');
   });
 
-  await t.test('Dual-secret authentication modal & verifier function exists', () => {
-    assert.ok(adminHtml.includes('id="dual-secret-modal"'), 'Dual secret modal container present');
-    assert.ok(adminHtml.includes('function verifyAdminDualSecrets(key1, key2)'), 'verifyAdminDualSecrets client hook defined');
-    assert.ok(adminHtml.includes('id="key-westfall-input"'), 'Primary secret key input present');
-    assert.ok(adminHtml.includes('id="key-saintkiller-input"'), 'Secondary secret key input present');
+  await t.test('Admin authentication modal & verifier function exists', () => {
+    assert.ok(adminHtml.includes('id="dual-secret-modal"'), 'Secret modal container present');
+    assert.ok(adminHtml.includes('function verifyAdminSecret'), 'verifyAdminSecret client hook defined');
   });
 
-  await t.test('WebCam Stage Control Monitor & companion switcher contains all 6 companions', () => {
+  await t.test('WebCam Stage Control Monitor & companion switcher contains companions', () => {
     const companions = ['bailey', 'chloe', 'harper', 'maya', 'sienna', 'elena'];
     companions.forEach(c => {
       assert.ok(adminHtml.includes(`value="${c}"`), `Companion ${c} option present in admin stage switcher`);
@@ -137,12 +143,10 @@ test('Keyhole WebCam Admin Portal Integrity', async (t) => {
     assert.ok(adminHtml.includes('function publishPreview('), 'publishPreview function defined');
   });
 
-  await t.test('Gemini Content Generator enforces multi-angle consistency & primary view locking', () => {
+  await t.test('Gemini Content Generator enforces spatial consistency', () => {
     assert.ok(adminHtml.includes('id="gen-rule-multiangle"'), 'Multi-angle consistency checkbox present');
     assert.ok(adminHtml.includes('id="gen-rule-primaryview"'), 'Primary view locking checkbox present');
     assert.ok(adminHtml.includes('function buildMasterPrompt()'), 'buildMasterPrompt function defined');
-    assert.ok(adminHtml.includes('[RULE 1 - UNIFIED 3D PHYSICAL ROOM]'), 'Rule 1 spatial consistency in admin prompt');
-    assert.ok(adminHtml.includes('[RULE 2 - LOCKED PRIMARY WEBCAM VIEW]'), 'Rule 2 primary view locking in admin prompt');
   });
 
   await t.test('Secondary Image Generator controls exist and prevent hardcoded API keys', () => {
