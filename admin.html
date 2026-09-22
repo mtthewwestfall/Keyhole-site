@@ -314,6 +314,94 @@
       content: none;
     }
 
+    /* Dual-skin regions: ONLY face+hair and breasts — never torso/legs/full-body */
+    .skin-region {
+      position: absolute;
+      pointer-events: none;
+      z-index: 11;
+      background-repeat: no-repeat;
+      opacity: 0.92;
+      transition: opacity 0.2s;
+    }
+    .skin-region.is-off { display: none; }
+    .skin-region-facehair {
+      /* Upper head/hair band — elliptical crop, no torso */
+      top: 2%;
+      left: 28%;
+      width: 44%;
+      height: 28%;
+      border-radius: 50% 50% 42% 42%;
+      background-size: 160% auto;
+      background-position: center 8%;
+      -webkit-mask-image: radial-gradient(ellipse 70% 75% at 50% 40%, #000 55%, transparent 78%);
+      mask-image: radial-gradient(ellipse 70% 75% at 50% 40%, #000 55%, transparent 78%);
+      box-shadow: inset 0 0 0 1px rgba(246,239,223,0.12);
+    }
+    .skin-region-breasts {
+      /* Bust only — mid chest oval, stops above waist */
+      top: 30%;
+      left: 30%;
+      width: 40%;
+      height: 22%;
+      border-radius: 45% 45% 50% 50%;
+      background-size: 180% auto;
+      background-position: center 42%;
+      -webkit-mask-image: radial-gradient(ellipse 75% 70% at 50% 45%, #000 50%, transparent 78%);
+      mask-image: radial-gradient(ellipse 75% 70% at 50% 45%, #000 50%, transparent 78%);
+      box-shadow: inset 0 0 0 1px rgba(246,239,223,0.1);
+    }
+    .skin-src-chloe { background-image: url('assets/chloe-skin.jpg'); }
+    .skin-src-bailey { background-image: url('assets/bailey-skin.jpg'); }
+
+    .record-bar {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+      margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line);
+    }
+    .record-dot {
+      width: 8px; height: 8px; border-radius: 50%; background: var(--muted);
+      display: inline-block;
+    }
+    .record-dot.live {
+      background: var(--red);
+      box-shadow: 0 0 8px var(--red);
+      animation: recpulse 1s infinite;
+    }
+    @keyframes recpulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.35; }
+    }
+    #stage-record-preview {
+      width: 100%; max-height: 180px; border-radius: 8px;
+      border: 1px solid var(--line); background: var(--night);
+      margin-top: 10px; display: none;
+    }
+    .tagline-url-row {
+      display: flex; gap: 8px; align-items: center; margin-bottom: 8px;
+    }
+    .tagline-url-row .form-input { flex: 1; }
+    .tagline-result {
+      border: 1px solid var(--line); border-radius: 8px;
+      padding: 12px 14px; margin-bottom: 10px; background: var(--night);
+    }
+    .tagline-result .t-text {
+      color: var(--gold-bright); font-weight: 600; font-size: 0.95rem; margin-bottom: 6px;
+    }
+    .tagline-result .t-meta {
+      font-size: 0.75rem; color: var(--muted); line-height: 1.5;
+    }
+    .tagline-result .t-reason {
+      display: inline-block; padding: 2px 8px; border-radius: 999px;
+      background: rgba(217,173,88,0.15); color: var(--gold); border: 1px solid rgba(217,173,88,0.35);
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+    }
+    .example-chip {
+      display: inline-block; font-size: 0.68rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.05em;
+      color: var(--teal); border: 1px solid rgba(88,197,186,0.4);
+      background: rgba(88,197,186,0.1); padding: 1px 6px; border-radius: 4px; margin-left: 6px;
+    }
+
+
     /* Table Styles */
     .admin-table-wrap {
       overflow-x: auto;
@@ -511,6 +599,7 @@
       <button class="nav-btn" data-tab="tab-fruit">Fruit Translator</button>
       <button class="nav-btn" data-tab="tab-media">Media Asset Library</button>
       <button class="nav-btn" data-tab="tab-plates">Plate Engine</button>
+      <button class="nav-btn" data-tab="tab-tagline">Tagline Scout</button>
       <button type="button" id="gemini-studio-btn" class="nav-btn">Gemini Studio & Room Editor</button>
       <button type="button" id="reset-session-btn" class="nav-btn">Reset Session</button>
       <span id="admin-office-feedback" class="office-feedback"></span>
@@ -533,7 +622,10 @@
           <div class="stage-monitor" id="admin-stage-monitor">
             <video id="admin-stage-video" class="stage-media" autoplay loop muted playsinline style="display:none;"></video>
             <img id="admin-stage-img" class="stage-media" src="" alt="Webcam Feed" />
-            <div id="admin-stage-skin" class="stage-skin-overlay skin-chloe-girl"></div>
+            <div id="admin-stage-skin" class="stage-skin-overlay skin-none" title="Legacy badge (off when dual regions active)"></div>
+            <div id="admin-stage-skin-facehair" class="skin-region skin-region-facehair skin-src-chloe" title="Skin 1: face + hair only"></div>
+            <div id="admin-stage-skin-breasts" class="skin-region skin-region-breasts skin-src-bailey" title="Skin 2: breasts only"></div>
+            <canvas id="admin-stage-record-canvas" style="display:none;" aria-hidden="true"></canvas>
             <div class="stage-watermark">KEYHOLE LIVE FEED</div>
           </div>
 
@@ -559,14 +651,38 @@
             </div>
 
             <div style="flex:1; min-width:160px;">
-              <label class="form-label" for="stage-skin-select">Face + hair + bust lock</label>
-              <select id="stage-skin-select" class="form-select">
-                <option value="chloe_girl" selected>Chloe — face + hair + bust (your skin photo)</option>
-                <option value="bailey_girl">Bailey — face + hair + bust (your skin photo)</option>
-                <option value="none">No face lock</option>
+              <label class="form-label" for="stage-skin-facehair">Skin 1 — Face + hair only</label>
+              <select id="stage-skin-facehair" class="form-select">
+                <option value="chloe" selected>Chloe (face + hair)</option>
+                <option value="bailey">Bailey (face + hair)</option>
+                <option value="none">Off</option>
               </select>
             </div>
+            <div style="flex:1; min-width:160px;">
+              <label class="form-label" for="stage-skin-breasts">Skin 2 — Breasts only</label>
+              <select id="stage-skin-breasts" class="form-select">
+                <option value="bailey" selected>Bailey (breasts)</option>
+                <option value="chloe">Chloe (breasts)</option>
+                <option value="none">Off</option>
+              </select>
+            </div>
+            <select id="stage-skin-select" class="form-select" style="display:none;" aria-hidden="true">
+              <option value="chloe_girl" selected>Chloe</option>
+              <option value="bailey_girl">Bailey</option>
+              <option value="none">None</option>
+            </select>
           </div>
+
+          <div class="record-bar">
+            <span class="record-dot" id="stage-record-dot"></span>
+            <span id="stage-record-status" style="font-size:0.78rem; color:var(--muted); min-width:140px;">Ready to record</span>
+            <button type="button" id="btn-stage-webcam" class="btn btn-secondary">Use Webcam</button>
+            <button type="button" id="btn-stage-record-start" class="btn btn-danger">● Record</button>
+            <button type="button" id="btn-stage-record-stop" class="btn btn-secondary" disabled>Stop</button>
+            <a id="stage-record-download" class="btn btn-teal" style="display:none; text-decoration:none;" download="keyhole-stage-recording.webm">Download</a>
+          </div>
+          <p class="card-subtitle" style="margin-top:8px; margin-bottom:0;">Recording composites the stage feed with exactly two region skins: <strong>face + hair</strong> and <strong>breasts</strong>. No torso, legs, or full-body overlays.</p>
+          <video id="stage-record-preview" controls playsinline style="display:none; width:100%; max-height:180px; margin-top:10px; border-radius:8px; border:1px solid var(--line); background:var(--bg);"></video>
         </div>
 
         <div class="admin-card">
@@ -1057,6 +1173,44 @@
       </div>
     </section>
 
+    <!-- TAB: TAGLINE SCOUT -->
+    <section id="tab-tagline" class="tab-section">
+      <div class="admin-grid">
+        <div class="admin-card">
+          <div class="card-title">Tagline Scout</div>
+          <p class="card-subtitle">Scan cam-platform marketing pages for tagline / slogan / hero copy. Fetches only the URLs you list (no crawl) via <code>/.netlify/functions/tagline-search</code>.</p>
+
+          <div class="form-group">
+            <label class="form-label" for="tagline-query">Optional keyword / brand filter</label>
+            <input type="text" id="tagline-query" class="form-input" placeholder="e.g. live, free, private (optional)" />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Preset website URLs <span class="example-chip">examples</span></label>
+            <p class="card-subtitle" style="margin-top:0;">Cam show / cam platform marketing pages. Editable; saved in localStorage.</p>
+            <div id="tagline-url-list"></div>
+            <div style="display:flex; gap:8px; margin-top:8px;">
+              <input type="url" id="tagline-url-add" class="form-input" placeholder="https://example.com" />
+              <button type="button" id="btn-tagline-add-url" class="btn btn-secondary">Add</button>
+            </div>
+          </div>
+
+          <button type="button" id="btn-tagline-search" class="btn" style="width:100%;">Search taglines</button>
+          <div id="tagline-feedback" class="feedback-msg"></div>
+        </div>
+
+        <div class="admin-card">
+          <div class="card-title">
+            <span>Candidates</span>
+            <span id="tagline-count-badge" class="admin-badge">0</span>
+          </div>
+          <p class="card-subtitle">Ranked by match reason (meta / og / h1 / slogan / hero / etc.). Failures are listed honestly without failing the whole request.</p>
+          <div id="tagline-results"></div>
+          <div id="tagline-failures" style="margin-top:12px;"></div>
+        </div>
+      </div>
+    </section>
+
   </main>
 
   <!-- GEMINI STUDIO & SIMS ROOM EDITOR (admin office only) -->
@@ -1277,8 +1431,26 @@
       authenticated: false,
       activeCharId: 'bailey',
       roomMode: 'living_room',
-      overlaySkin: 'chloe_girl'
+      overlaySkin: 'chloe_girl',
+      /* Exactly two region skins — face+hair and breasts only */
+      skinFaceHair: 'chloe',
+      skinBreasts: 'bailey'
     };
+
+    const TAGLINE_URLS_KEY = 'keyhole.taglineScout.urls';
+    const TAGLINE_EXAMPLE_URLS = [
+      'https://chaturbate.com',
+      'https://www.flirt4free.com',
+      'https://stripchat.com',
+      'https://bongacams.com',
+      'https://www.camsoda.com',
+      'https://www.livejasmin.com'
+    ];
+
+    let stageMediaStream = null;
+    let stageRecorder = null;
+    let stageRecordChunks = [];
+    let stageRecordRaf = 0;
 
     /* DOM ELEMS */
     const elModal = document.getElementById('dual-secret-modal');
@@ -1290,9 +1462,14 @@
     const elStageVideo = document.getElementById('admin-stage-video');
     const elStageImg = document.getElementById('admin-stage-img');
     const elStageSkin = document.getElementById('admin-stage-skin');
+    const elStageSkinFaceHair = document.getElementById('admin-stage-skin-facehair');
+    const elStageSkinBreasts = document.getElementById('admin-stage-skin-breasts');
+    const elStageRecordCanvas = document.getElementById('admin-stage-record-canvas');
     const elStageCharSelect = document.getElementById('stage-char-select');
     const elStageRoomSelect = document.getElementById('stage-room-select');
     const elStageSkinSelect = document.getElementById('stage-skin-select');
+    const elStageSkinFaceHairSelect = document.getElementById('stage-skin-facehair');
+    const elStageSkinBreastsSelect = document.getElementById('stage-skin-breasts');
 
     const elDispCharId = document.getElementById('disp-active-char-id');
     const elDispRoomMode = document.getElementById('disp-active-room-mode');
@@ -1301,6 +1478,9 @@
     async function initAdmin() {
       setupTabNavigation();
       setupEventListeners();
+      setupTaglineScout();
+      setupStageRecorder();
+      applyDualRegionSkins();
       checkAuthentication();
       await initPlateEngine();
       renderStageMonitor();
@@ -1520,7 +1700,9 @@
       elDispMediaUrl.value = url || '[Fallback Standard Image]';
 
       // Update Skin
-      elStageSkin.className = `stage-skin-overlay skin-${adminState.overlaySkin.replace('_', '-')}`;
+      // Legacy badge stays off; dual region skins own face+hair / breasts
+      if (elStageSkin) elStageSkin.className = 'stage-skin-overlay skin-none';
+      applyDualRegionSkins();
 
       if (plateEngine && plateEngine.character !== adminState.activeCharId) startPlateSession(adminState.activeCharId);
       if (plateEngine && plateEngine.library.beatEnabled(adminState.activeCharId, 'idle')) {
@@ -2081,6 +2263,336 @@
         genFeedback(`Webcam generation failed: ${e.message}`, false);
       }
     }
+
+
+    /* ===== DUAL REGION SKINS (face+hair + breasts only) ===== */
+    function skinSrcClass(key) {
+      if (key === 'bailey') return 'skin-src-bailey';
+      if (key === 'chloe') return 'skin-src-chloe';
+      return '';
+    }
+
+    function applyDualRegionSkins() {
+      const fh = adminState.skinFaceHair || 'none';
+      const br = adminState.skinBreasts || 'none';
+      if (elStageSkinFaceHair) {
+        elStageSkinFaceHair.className = 'skin-region skin-region-facehair ' + (fh === 'none' ? 'is-off' : skinSrcClass(fh));
+      }
+      if (elStageSkinBreasts) {
+        elStageSkinBreasts.className = 'skin-region skin-region-breasts ' + (br === 'none' ? 'is-off' : skinSrcClass(br));
+      }
+      // Keep legacy select roughly in sync for studio prompts
+      if (elStageSkinSelect) {
+        if (fh === 'bailey' || br === 'bailey') elStageSkinSelect.value = 'bailey_girl';
+        else if (fh === 'chloe' || br === 'chloe') elStageSkinSelect.value = 'chloe_girl';
+        else elStageSkinSelect.value = 'none';
+        adminState.overlaySkin = elStageSkinSelect.value;
+      }
+    }
+
+    function loadSkinImage(key) {
+      return new Promise((resolve) => {
+        if (!key || key === 'none') { resolve(null); return; }
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => resolve(img);
+        img.onerror = () => resolve(null);
+        img.src = key === 'bailey' ? 'assets/bailey-skin.jpg' : 'assets/chloe-skin.jpg';
+      });
+    }
+
+    /** Draw ONLY face+hair and breasts region layers onto a canvas over the stage frame. */
+    function compositeDualSkins(ctx, w, h, faceImg, breastImg) {
+      // Face + hair: top elliptical region
+      if (faceImg) {
+        const rw = w * 0.44, rh = h * 0.28, rx = w * 0.28, ry = h * 0.02;
+        ctx.save();
+        ctx.beginPath();
+        ctx.ellipse(rx + rw / 2, ry + rh * 0.4, rw * 0.35, rh * 0.38, 0, 0, Math.PI * 2);
+        ctx.clip();
+        // Source crop: upper portion of skin photo (face/hair)
+        const sw = faceImg.naturalWidth, sh = faceImg.naturalHeight;
+        ctx.drawImage(faceImg, 0, 0, sw, sh * 0.45, rx, ry, rw, rh);
+        ctx.restore();
+      }
+      // Breasts only: mid-chest oval — no torso/legs
+      if (breastImg) {
+        const rw = w * 0.4, rh = h * 0.22, rx = w * 0.3, ry = h * 0.3;
+        ctx.save();
+        ctx.beginPath();
+        ctx.ellipse(rx + rw / 2, ry + rh * 0.45, rw * 0.38, rh * 0.35, 0, 0, Math.PI * 2);
+        ctx.clip();
+        const sw = breastImg.naturalWidth, sh = breastImg.naturalHeight;
+        ctx.drawImage(breastImg, 0, sh * 0.28, sw, sh * 0.35, rx, ry, rw, rh);
+        ctx.restore();
+      }
+    }
+
+    /* ===== STAGE WEBCAM + RECORDER ===== */
+    function setRecordStatus(msg, live) {
+      const st = document.getElementById('stage-record-status');
+      const dot = document.getElementById('stage-record-dot');
+      if (st) st.textContent = msg;
+      if (dot) dot.classList.toggle('live', !!live);
+    }
+
+    async function startStageWebcam() {
+      try {
+        if (stageMediaStream) {
+          stageMediaStream.getTracks().forEach(t => t.stop());
+          stageMediaStream = null;
+        }
+        stageMediaStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: false
+        });
+        elStageVideo.srcObject = stageMediaStream;
+        elStageVideo.style.display = 'block';
+        elStageImg.style.display = 'none';
+        await elStageVideo.play().catch(() => {});
+        setRecordStatus('Webcam live — dual skins on preview', false);
+      } catch (err) {
+        setRecordStatus('Webcam error: ' + (err.message || err), false);
+      }
+    }
+
+    async function startStageRecording() {
+      if (stageRecorder && stageRecorder.state === 'recording') return;
+      const monitor = document.getElementById('admin-stage-monitor');
+      if (!monitor || !elStageRecordCanvas) {
+        setRecordStatus('Stage monitor missing', false);
+        return;
+      }
+      const w = monitor.clientWidth || 640;
+      const h = monitor.clientHeight || 360;
+      elStageRecordCanvas.width = w;
+      elStageRecordCanvas.height = h;
+      const ctx = elStageRecordCanvas.getContext('2d');
+      const faceImg = await loadSkinImage(adminState.skinFaceHair);
+      const breastImg = await loadSkinImage(adminState.skinBreasts);
+
+      const drawFrame = () => {
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, w, h);
+        const src = (elStageVideo.style.display !== 'none' && elStageVideo.readyState >= 2)
+          ? elStageVideo
+          : (elStageImg.style.display !== 'none' ? elStageImg : null);
+        if (src) {
+          try { ctx.drawImage(src, 0, 0, w, h); } catch (_) { /* tainted / not ready */ }
+        }
+        compositeDualSkins(ctx, w, h, faceImg, breastImg);
+        stageRecordRaf = requestAnimationFrame(drawFrame);
+      };
+      drawFrame();
+
+      const stream = elStageRecordCanvas.captureStream(30);
+      stageRecordChunks = [];
+      const mime = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+        ? 'video/webm;codecs=vp9'
+        : (MediaRecorder.isTypeSupported('video/webm') ? 'video/webm' : '');
+      try {
+        stageRecorder = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+      } catch (err) {
+        cancelAnimationFrame(stageRecordRaf);
+        setRecordStatus('MediaRecorder unavailable: ' + err.message, false);
+        return;
+      }
+      stageRecorder.ondataavailable = (e) => { if (e.data && e.data.size) stageRecordChunks.push(e.data); };
+      stageRecorder.onstop = () => {
+        cancelAnimationFrame(stageRecordRaf);
+        const blob = new Blob(stageRecordChunks, { type: stageRecorder.mimeType || 'video/webm' });
+        const url = URL.createObjectURL(blob);
+        const preview = document.getElementById('stage-record-preview');
+        const dl = document.getElementById('stage-record-download');
+        if (preview) { preview.src = url; preview.style.display = 'block'; }
+        if (dl) { dl.href = url; dl.style.display = 'inline-flex'; }
+        setRecordStatus('Recording saved (' + Math.round(blob.size / 1024) + ' KB)', false);
+        document.getElementById('btn-stage-record-start').disabled = false;
+        document.getElementById('btn-stage-record-stop').disabled = true;
+      };
+      stageRecorder.start(250);
+      setRecordStatus('Recording… (face+hair + breasts skins)', true);
+      document.getElementById('btn-stage-record-start').disabled = true;
+      document.getElementById('btn-stage-record-stop').disabled = false;
+      const dl = document.getElementById('stage-record-download');
+      if (dl) dl.style.display = 'none';
+    }
+
+    function stopStageRecording() {
+      if (stageRecorder && stageRecorder.state === 'recording') stageRecorder.stop();
+      else setRecordStatus('Not recording', false);
+    }
+
+    function setupStageRecorder() {
+      const btnCam = document.getElementById('btn-stage-webcam');
+      const btnStart = document.getElementById('btn-stage-record-start');
+      const btnStop = document.getElementById('btn-stage-record-stop');
+      if (btnCam) btnCam.addEventListener('click', startStageWebcam);
+      if (btnStart) btnStart.addEventListener('click', startStageRecording);
+      if (btnStop) btnStop.addEventListener('click', stopStageRecording);
+      if (elStageSkinFaceHairSelect) {
+        elStageSkinFaceHairSelect.value = adminState.skinFaceHair;
+        elStageSkinFaceHairSelect.addEventListener('change', (e) => {
+          adminState.skinFaceHair = e.target.value;
+          applyDualRegionSkins();
+        });
+      }
+      if (elStageSkinBreastsSelect) {
+        elStageSkinBreastsSelect.value = adminState.skinBreasts;
+        elStageSkinBreastsSelect.addEventListener('change', (e) => {
+          adminState.skinBreasts = e.target.value;
+          applyDualRegionSkins();
+        });
+      }
+    }
+
+    /* ===== TAGLINE SCOUT ===== */
+    function loadTaglineUrls() {
+      try {
+        const raw = localStorage.getItem(TAGLINE_URLS_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length) return parsed.map(String);
+        }
+      } catch (_) {}
+      return TAGLINE_EXAMPLE_URLS.slice();
+    }
+
+    function saveTaglineUrls(urls) {
+      localStorage.setItem(TAGLINE_URLS_KEY, JSON.stringify(urls));
+    }
+
+    function renderTaglineUrlList() {
+      const root = document.getElementById('tagline-url-list');
+      if (!root) return;
+      const urls = loadTaglineUrls();
+      root.innerHTML = urls.map((u, i) => {
+        const isExample = TAGLINE_EXAMPLE_URLS.includes(u);
+        return `<div class="tagline-url-row" data-idx="${i}">
+          <input type="url" class="form-input tagline-url-input" value="${u.replace(/"/g, '&quot;')}" />
+          ${isExample ? '<span class="example-chip">example</span>' : ''}
+          <button type="button" class="btn btn-danger btn-tagline-remove" data-idx="${i}" style="padding:6px 10px;">Remove</button>
+        </div>`;
+      }).join('') || '<p class="card-subtitle">No URLs yet — add a cam platform marketing page.</p>';
+
+      root.querySelectorAll('.tagline-url-input').forEach((inp) => {
+        inp.addEventListener('change', () => {
+          const next = [...root.querySelectorAll('.tagline-url-input')].map(el => el.value.trim()).filter(Boolean);
+          saveTaglineUrls(next);
+        });
+      });
+      root.querySelectorAll('.btn-tagline-remove').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const next = loadTaglineUrls();
+          next.splice(Number(btn.dataset.idx), 1);
+          saveTaglineUrls(next);
+          renderTaglineUrlList();
+        });
+      });
+    }
+
+    function taglineFeedback(msg, ok) {
+      const fb = document.getElementById('tagline-feedback');
+      if (!fb) return;
+      fb.className = 'feedback-msg ' + (ok ? 'feedback-success' : 'feedback-error');
+      fb.textContent = msg;
+      fb.style.display = 'block';
+    }
+
+    function renderTaglineResults(data) {
+      const box = document.getElementById('tagline-results');
+      const fail = document.getElementById('tagline-failures');
+      const badge = document.getElementById('tagline-count-badge');
+      const results = data.results || [];
+      if (badge) badge.textContent = String(results.length);
+      if (!results.length) {
+        box.innerHTML = '<p class="card-subtitle">No tagline-like candidates found. Try different URLs, clear the keyword filter, or check failures below.</p>';
+      } else {
+        box.innerHTML = results.map(r => `
+          <div class="tagline-result">
+            <div class="t-text">${escapeHtml(r.text)}</div>
+            <div class="t-meta">
+              <span class="t-reason">${escapeHtml(r.reason)}</span>
+              · score ${r.score}
+              · <a href="${escapeHtml(r.sourceUrl)}" target="_blank" rel="noopener">${escapeHtml(r.sourceUrl)}</a>
+            </div>
+            <div class="t-meta" style="margin-top:4px;">${escapeHtml(r.snippet || '')}</div>
+          </div>`).join('');
+      }
+      const failures = data.failures || [];
+      if (!failures.length) {
+        fail.innerHTML = '';
+      } else {
+        fail.innerHTML = '<div class="card-title" style="font-size:1rem;">Per-URL failures</div>' +
+          failures.map(f => `<div class="feedback-msg feedback-error" style="display:block; margin-top:6px;">${escapeHtml(f.url)} — ${escapeHtml(f.error || 'failed')}</div>`).join('');
+      }
+    }
+
+    function escapeHtml(s) {
+      return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    async function runTaglineSearch() {
+      const urls = [...document.querySelectorAll('#tagline-url-list .tagline-url-input')]
+        .map(el => el.value.trim()).filter(Boolean);
+      saveTaglineUrls(urls);
+      if (!urls.length) {
+        taglineFeedback('Add at least one URL to search.', false);
+        renderTaglineResults({ results: [], failures: [] });
+        return;
+      }
+      const query = (document.getElementById('tagline-query').value || '').trim();
+      const btn = document.getElementById('btn-tagline-search');
+      btn.disabled = true;
+      taglineFeedback('Fetching via server proxy…', true);
+      try {
+        const res = await fetch('/.netlify/functions/tagline-search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query, urls })
+        });
+        let data;
+        try { data = await res.json(); }
+        catch { throw new Error('Proxy returned non-JSON (is the Tagline Scout function/sidecar running?)'); }
+        if (!res.ok && !data.results) throw new Error(data.error || ('HTTP ' + res.status));
+        renderTaglineResults(data);
+        const n = (data.results || []).length;
+        const f = (data.failures || []).length;
+        taglineFeedback(
+          n ? `Found ${n} candidate(s)` + (f ? ` · ${f} URL(s) failed` : '') : (f ? `No candidates · ${f} URL(s) failed` : 'No candidates'),
+          n > 0
+        );
+      } catch (err) {
+        renderTaglineResults({ results: [], failures: [] });
+        taglineFeedback(
+          (err.message || String(err)) +
+          ' — Local fallback: node scripts/tagline-search-server.js (port 3456) or npx netlify functions:serve',
+          false
+        );
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    function setupTaglineScout() {
+      renderTaglineUrlList();
+      const addBtn = document.getElementById('btn-tagline-add-url');
+      const addInp = document.getElementById('tagline-url-add');
+      const searchBtn = document.getElementById('btn-tagline-search');
+      if (addBtn && addInp) {
+        addBtn.addEventListener('click', () => {
+          const v = addInp.value.trim();
+          if (!v) return;
+          const next = loadTaglineUrls();
+          next.push(v);
+          saveTaglineUrls(next);
+          addInp.value = '';
+          renderTaglineUrlList();
+        });
+      }
+      if (searchBtn) searchBtn.addEventListener('click', runTaglineSearch);
+    }
+
 
     function setupEventListeners() {
       elBtnVerifyDual.addEventListener('click', handleDualVerification);
