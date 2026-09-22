@@ -386,6 +386,73 @@
       margin-bottom: 12px;
       display: none;
     }
+    .modal-close {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      font-size: 1.4rem;
+      cursor: pointer;
+    }
+    .modal-card-large {
+      background: var(--panel);
+      border: 1px solid var(--gold);
+      border-radius: 16px;
+      max-width: 980px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 28px;
+      box-shadow: var(--shadow);
+      position: relative;
+    }
+    .studio-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+    @media (max-width: 820px) {
+      .studio-grid { grid-template-columns: 1fr; }
+    }
+    .studio-section {
+      background: rgba(0, 0, 0, 0.28);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 16px;
+    }
+    .studio-sec-title {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--gold-bright);
+      margin-bottom: 12px;
+      letter-spacing: 0.04em;
+    }
+    .furniture-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .prompt-output-box {
+      width: 100%;
+      min-height: 220px;
+      background: var(--night);
+      border: 1px solid var(--line);
+      color: var(--ink);
+      font-family: ui-monospace, monospace;
+      font-size: 0.78rem;
+      padding: 12px;
+      border-radius: 8px;
+      resize: vertical;
+      line-height: 1.4;
+    }
+    .office-feedback {
+      display: none;
+      color: var(--gold-bright);
+      font-size: 0.75rem;
+      max-width: 280px;
+    }
 
     .feedback-msg {
       padding: 10px 14px;
@@ -428,6 +495,9 @@
       <button class="nav-btn" data-tab="tab-fruit">Fruit Translator</button>
       <button class="nav-btn" data-tab="tab-media">Media Asset Library</button>
       <button class="nav-btn" data-tab="tab-plates">Plate Engine</button>
+      <button type="button" id="gemini-studio-btn" class="nav-btn">Gemini Studio & Room Editor</button>
+      <button type="button" id="reset-session-btn" class="nav-btn">Reset Session</button>
+      <span id="admin-office-feedback" class="office-feedback"></span>
       <button id="btn-reauthenticate" class="nav-btn btn-secondary" style="padding:6px 12px; font-size:0.78rem;">Admin Password</button>
     </nav>
   </header>
@@ -666,7 +736,7 @@
             <label class="form-label">Remove / Clean Items</label>
             <div class="chip-grid">
               <label class="chip-item"><input type="checkbox" class="gen-remove-check" value="Office Work Desk" /> Remove Desk</label>
-              <label class="chip-item"><input type="checkbox" class="chip-item" value="Coffee Table" /> Remove Coffee Table</label>
+              <label class="chip-item"><input type="checkbox" class="gen-remove-check" value="Coffee Table" /> Remove Coffee Table</label>
               <label class="chip-item"><input type="checkbox" class="gen-remove-check" value="Wall Artwork" /> Remove Wall Art</label>
             </div>
           </div>
@@ -941,6 +1011,126 @@
     </section>
 
   </main>
+
+  <!-- GEMINI STUDIO & SIMS ROOM EDITOR (admin office only) -->
+  <div id="gemini-studio-modal" class="modal-backdrop">
+    <div class="modal-card-large">
+      <button type="button" id="gemini-modal-close-btn" class="modal-close" aria-label="Close">&times;</button>
+      <h2 class="modal-title">Gemini AI Studio & Room Editor</h2>
+      <p class="modal-desc">
+        Admin only. Configure Gemini generation, Sims furniture, and the webcam skin, then apply them to the live stage.
+      </p>
+
+      <div class="studio-grid">
+        <div style="display:flex; flex-direction:column; gap:12px;">
+          <div class="studio-section">
+            <div class="studio-sec-title">Gemini Generation Rules</div>
+            <label class="chip-item" style="margin-bottom:6px;">
+              <input type="checkbox" id="rule-multiangle-check" checked />
+              <span>Multi-Angle 3D Spatial Consistency System</span>
+            </label>
+            <label class="chip-item" style="margin-bottom:6px;">
+              <input type="checkbox" id="rule-primaryview-check" checked />
+              <span>Lock Output strictly to PRIMARY WEBCAM VIEW</span>
+            </label>
+            <label style="font-size:0.8rem; color:var(--muted); display:block; margin-top:8px;">Motion Mode
+              <select id="gemini-motion-select" class="form-select" style="margin-top:4px;">
+                <option value="live_webcam">Live Motion Webcam Video</option>
+                <option value="static_render">Static High-Res Render Image</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="studio-section">
+            <div class="studio-sec-title">Sims-Style Furniture Additions</div>
+            <div class="furniture-grid">
+              <label class="chip-item"><input type="checkbox" class="furniture-add-check" value="Velvet Platform Bed" checked /> Velvet Platform Bed</label>
+              <label class="chip-item"><input type="checkbox" class="furniture-add-check" value="Plush L-Sofa" checked /> Plush L-Sofa</label>
+              <label class="chip-item"><input type="checkbox" class="furniture-add-check" value="Ambient Neon Wall Sign" /> Ambient Neon Sign</label>
+              <label class="chip-item"><input type="checkbox" class="furniture-add-check" value="Warm Ambient Floor Lamp" checked /> Warm Ambient Floor Lamp</label>
+              <label class="chip-item"><input type="checkbox" class="furniture-add-check" value="Potted Monstera Plant" /> Potted Monstera</label>
+              <label class="chip-item"><input type="checkbox" class="furniture-add-check" value="Full-Length Floor Mirror" /> Floor Mirror</label>
+            </div>
+          </div>
+
+          <div class="studio-section">
+            <div class="studio-sec-title">Remove / Clean Furniture</div>
+            <div class="furniture-grid">
+              <label class="chip-item"><input type="checkbox" class="furniture-remove-check" value="Office Work Desk" /> Remove Desk</label>
+              <label class="chip-item"><input type="checkbox" class="furniture-remove-check" value="Coffee Table" /> Remove Coffee Table</label>
+              <label class="chip-item"><input type="checkbox" class="furniture-remove-check" value="Wall Artwork" /> Remove Wall Art</label>
+              <label class="chip-item"><input type="checkbox" class="furniture-remove-check" value="Background Shelving" /> Remove Shelving</label>
+            </div>
+          </div>
+
+          <div class="studio-section">
+            <div class="studio-sec-title">Webcam Overlay Skins</div>
+            <select id="webcam-skin-select" class="form-select">
+              <option value="keyhole_gold">Classic Keyhole Gold HUD</option>
+              <option value="neon_cyber">Neon Cyber Frame</option>
+              <option value="glass_vignette">Minimalist Glass Vignette</option>
+              <option value="streamer_vip">Streamer VIP HUD</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:12px;">
+          <div class="studio-section" style="display:flex; flex-direction:column;">
+            <div class="studio-sec-title">Formatted Gemini Master Prompt</div>
+            <textarea id="gemini-prompt-output" class="prompt-output-box" readonly></textarea>
+            <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
+              <button type="button" id="btn-copy-prompt" class="btn btn-secondary">Copy Prompt</button>
+              <button type="button" id="btn-simulate-gemini" class="btn btn-teal">Simulate Gemini Gen</button>
+              <button type="button" id="btn-apply-gemini-stage" class="btn" style="flex:1; min-width:160px;">Apply to Active Room Stage</button>
+            </div>
+            <div id="gemini-status-feedback" class="feedback-msg feedback-success"></div>
+          </div>
+
+          <div class="studio-section">
+            <div class="studio-sec-title">Translation & Extended Display Generator</div>
+            <div style="display:flex; flex-direction:column; gap:8px; font-size:0.82rem;">
+              <label>Fruit Code Command
+                <input type="text" id="studio-fruit-code-input" class="form-input" value="o/banana" style="margin-top:4px;" />
+              </label>
+              <label>Output Selection
+                <select id="studio-fruit-output-select" class="form-select" style="margin-top:4px;">
+                  <option value="Pictures">Pictures</option>
+                  <option value="Video Clip">Video Clip</option>
+                  <option value="Live Stream">Live Stream</option>
+                </select>
+              </label>
+              <label>Media Source File
+                <input type="file" id="studio-fruit-media-file" class="form-input" style="margin-top:4px;" />
+              </label>
+              <label class="chip-item">
+                <input type="checkbox" id="studio-fruit-expand-surroundings" />
+                <span>Expand Surroundings</span>
+              </label>
+              <label>Extended Delay Duration (Seconds)
+                <input type="number" id="studio-fruit-delay-duration" class="form-input" value="0" min="0" style="margin-top:4px;" />
+              </label>
+              <label class="chip-item">
+                <input type="checkbox" id="studio-fruit-loop-video" checked />
+                <span>Loop Video After Extended Duration</span>
+              </label>
+              <button type="button" id="btn-generate-translate" class="btn" style="background:#d63384; color:#fff;">Generate & Translate</button>
+            </div>
+            <div style="margin-top:14px; padding:12px; background:var(--night); border:1px solid var(--line); border-radius:8px; font-size:0.82rem; line-height:1.6;">
+              <div><strong style="color:var(--muted);">Fruit Code Sent:</strong> <span id="studio-disp-fruit-code">o/banana</span></div>
+              <div><strong style="color:var(--muted);">Translated Meaning:</strong> <span id="studio-disp-translated-meaning" style="color:var(--gold-bright); font-weight:600;">Playful companion gesture and interaction</span></div>
+              <div><strong style="color:var(--muted);">Output Mode:</strong> <span id="studio-disp-output-mode">image</span></div>
+              <div><strong style="color:var(--muted);">Surroundings Context:</strong> <span id="studio-disp-surroundings-context">Standard focus framing</span></div>
+              <div><strong style="color:var(--muted);">Video Loop Config:</strong> <span id="studio-disp-loop-config">Standard playback</span></div>
+              <div style="margin-top:10px; width:100%; aspect-ratio:16/9; background:var(--paper-2); border:1px solid var(--line); border-radius:6px; overflow:hidden; position:relative;">
+                <img id="studio-fruit-preview-img" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='225' viewBox='0 0 400 225'><rect width='400' height='225' fill='%23071720'/><text x='200' y='115' font-family='sans-serif' font-size='14' fill='%23d9ad58' text-anchor='middle'>TRANSLATION DISPLAY READY</text></svg>" style="width:100%; height:100%; object-fit:cover;" alt="Translation Display" />
+                <div id="studio-fruit-skin-overlay" class="stage-skin-overlay skin-keyhole-gold"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- DUAL SECRET PASSCODE MODAL -->
   <div id="dual-secret-modal" class="modal-backdrop">
@@ -1464,6 +1654,178 @@
       document.getElementById('res-loop-config').textContent = isLoop ? `Loop enabled after ${delaySecs}s extended play` : `Single play (${delaySecs}s delay)`;
     }
 
+    /* GEMINI STUDIO & ROOM EDITOR — admin office only. Not reachable from rooms.html. */
+    const CUSTOMER_SESSION_KEY = 'keyhole_session_v1';
+
+    function officeFeedback(message) {
+      const el = document.getElementById('admin-office-feedback');
+      if (!el) return;
+      el.textContent = message;
+      el.style.display = message ? 'inline' : 'none';
+      if (message) setTimeout(() => { if (el.textContent === message) el.style.display = 'none'; }, 4000);
+    }
+
+    function studioStatus(message) {
+      const el = document.getElementById('gemini-status-feedback');
+      if (!el) return;
+      el.textContent = message || '';
+      el.style.display = message ? 'block' : 'none';
+    }
+
+    function requireAdminOffice() {
+      if (adminState.authenticated) return true;
+      elModal.classList.add('active');
+      return false;
+    }
+
+    function buildGeminiMasterPrompt() {
+      const char = ADMIN_CHARACTERS[adminState.activeCharId] || ADMIN_CHARACTERS.bailey;
+      const roomLabel = adminState.roomMode === 'bedroom' ? 'Private Bedroom Suite' : 'Living Room Lounge View';
+      const adds = Array.from(document.querySelectorAll('.furniture-add-check:checked')).map(cb => cb.value);
+      const removes = Array.from(document.querySelectorAll('.furniture-remove-check:checked')).map(cb => cb.value);
+      const multi = document.getElementById('rule-multiangle-check');
+      const primary = document.getElementById('rule-primaryview-check');
+      const motion = document.getElementById('gemini-motion-select');
+      const skin = document.getElementById('webcam-skin-select');
+
+      let prompt = `GEMINI MULTI-ANGLE ROOM GENERATION MASTER PROMPT\n`;
+      prompt += `--------------------------------------------------\n`;
+      prompt += `CHARACTER: ${char.name}\n`;
+      prompt += `ACTIVE ENVIRONMENT: ${roomLabel}\n\n`;
+      if (!multi || multi.checked) {
+        prompt += `[RULE 1 - UNIFIED 3D PHYSICAL ROOM MODEL]:\n`;
+        prompt += `Reference images represent ONE permanent, 3D consistent physical room. All furniture, geometry, walls, and lighting must remain spatially stable across generated clips.\n\n`;
+      }
+      if (!primary || primary.checked) {
+        prompt += `[RULE 2 - PRIMARY WEBCAM VIEW LOCK]:\n`;
+        prompt += `Rendered output MUST remain strictly locked to the PRIMARY WEBCAM VIEW camera position. DO NOT cut, pan away, or switch to secondary reference views.\n\n`;
+      }
+      prompt += `[SIMS-STYLE REALISTIC FURNITURE CUSTOMIZATION]:\n`;
+      prompt += `- Furniture Additions (Realistic Textures): ${adds.length ? adds.join(', ') : 'None specified'}\n`;
+      prompt += `- Furniture Removals / Clean Items: ${removes.length ? removes.join(', ') : 'None specified'}\n\n`;
+      prompt += `[WEBCAM OVERLAY & RENDER OUTPUT]:\n`;
+      prompt += `- Motion Format: ${motion && motion.value === 'static_render' ? 'Static High-Res Reference Render' : 'Live Webcam Stream (Dynamic Motion Video)'}\n`;
+      prompt += `- Webcam Overlay Skin: ${skin ? skin.value : adminState.overlaySkin}\n`;
+      return prompt;
+    }
+
+    function updateGeminiStudioPromptUI() {
+      const out = document.getElementById('gemini-prompt-output');
+      if (out) out.value = buildGeminiMasterPrompt();
+    }
+
+    function syncStudioSkinPreview() {
+      const skinSelect = document.getElementById('webcam-skin-select');
+      const overlay = document.getElementById('studio-fruit-skin-overlay');
+      if (!skinSelect || !overlay) return;
+      overlay.className = `stage-skin-overlay skin-${(skinSelect.value || 'keyhole_gold').replace('_', '-')}`;
+    }
+
+    function mirrorStudioRulesToGenerator() {
+      const multi = document.getElementById('rule-multiangle-check');
+      const primary = document.getElementById('rule-primaryview-check');
+      const motion = document.getElementById('gemini-motion-select');
+      const genMulti = document.getElementById('gen-rule-multiangle');
+      const genPrimary = document.getElementById('gen-rule-primaryview');
+      const genMotion = document.getElementById('gen-motion-mode');
+      if (multi && genMulti) genMulti.checked = multi.checked;
+      if (primary && genPrimary) genPrimary.checked = primary.checked;
+      if (motion && genMotion) genMotion.value = motion.value;
+      document.querySelectorAll('.furniture-add-check').forEach(cb => {
+        const gen = document.querySelector(`.gen-add-check[value="${CSS.escape(cb.value)}"]`);
+        if (gen) gen.checked = cb.checked;
+      });
+      document.querySelectorAll('.furniture-remove-check').forEach(cb => {
+        const gen = document.querySelector(`.gen-remove-check[value="${CSS.escape(cb.value)}"]`);
+        if (gen) gen.checked = cb.checked;
+      });
+    }
+
+    function openGeminiStudioModal() {
+      if (!requireAdminOffice()) return;
+      const skinSelect = document.getElementById('webcam-skin-select');
+      if (skinSelect) skinSelect.value = adminState.overlaySkin || 'keyhole_gold';
+      syncStudioSkinPreview();
+      updateGeminiStudioPromptUI();
+      document.getElementById('gemini-studio-modal').classList.add('active');
+    }
+
+    function closeGeminiStudioModal() {
+      const modal = document.getElementById('gemini-studio-modal');
+      if (modal) modal.classList.remove('active');
+    }
+
+    function applyGeminiRoomToStage() {
+      if (!requireAdminOffice()) return;
+      const skinSelect = document.getElementById('webcam-skin-select');
+      adminState.overlaySkin = (skinSelect && skinSelect.value) || 'keyhole_gold';
+      if (elStageSkinSelect) elStageSkinSelect.value = adminState.overlaySkin;
+      mirrorStudioRulesToGenerator();
+      syncStudioSkinPreview();
+      renderStageMonitor();
+      updateGeminiPrompt();
+      updateGeminiStudioPromptUI();
+      const adds = document.querySelectorAll('.furniture-add-check:checked').length;
+      studioStatus(`Gemini room model, ${adds} furniture items, and ${adminState.overlaySkin} skin applied to the active stage.`);
+      setTimeout(() => studioStatus(''), 3000);
+    }
+
+    function simulateGeminiGen() {
+      if (!requireAdminOffice()) return;
+      updateGeminiStudioPromptUI();
+      studioStatus('Simulating Gemini render pass... Multi-angle 3D spatial model built and locked to Primary View.');
+      setTimeout(() => {
+        studioStatus('Gemini render successful. Apply to Active Room Stage to display it.');
+      }, 1000);
+    }
+
+    function copyGeminiPromptToClipboard() {
+      const promptText = buildGeminiMasterPrompt();
+      const done = (msg) => { studioStatus(msg); setTimeout(() => studioStatus(''), 2500); };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(promptText).then(() => done('Gemini Master Prompt copied to clipboard.')).catch(() => done('Prompt ready in the text box.'));
+      } else {
+        done('Prompt ready in the text box.');
+      }
+    }
+
+    function handleGenerateAndTranslate() {
+      if (!requireAdminOffice()) return;
+      const rawCode = (document.getElementById('studio-fruit-code-input').value.trim() || 'o/banana').toLowerCase();
+      const outputSel = document.getElementById('studio-fruit-output-select').value;
+      const isExpand = document.getElementById('studio-fruit-expand-surroundings').checked;
+      const delaySecs = parseInt(document.getElementById('studio-fruit-delay-duration').value, 10) || 0;
+      const isLoop = document.getElementById('studio-fruit-loop-video').checked;
+      const fileInput = document.getElementById('studio-fruit-media-file');
+      const preview = document.getElementById('studio-fruit-preview-img');
+
+      document.getElementById('studio-disp-fruit-code').textContent = rawCode;
+      document.getElementById('studio-disp-translated-meaning').textContent = FRUIT_MAP[rawCode] || `Custom fruit signal sequence (${rawCode})`;
+      document.getElementById('studio-disp-output-mode').textContent = outputSel === 'Pictures' ? 'image' : (outputSel === 'Video Clip' ? 'video' : 'live_stream');
+      document.getElementById('studio-disp-surroundings-context').textContent = isExpand ? 'Outpainted extended background surroundings' : 'Standard focus framing';
+      document.getElementById('studio-disp-loop-config').textContent = isLoop ? `Loop video after ${delaySecs}s extended duration` : `Play once with ${delaySecs}s delay`;
+      syncStudioSkinPreview();
+
+      if (fileInput.files && fileInput.files[0]) {
+        const reader = new FileReader();
+        reader.onload = (e) => { preview.src = e.target.result; };
+        reader.readAsDataURL(fileInput.files[0]);
+      } else {
+        const char = ADMIN_CHARACTERS[adminState.activeCharId] || ADMIN_CHARACTERS.bailey;
+        preview.src = char.fallbackImg;
+      }
+    }
+
+    function resetSessionState() {
+      if (!requireAdminOffice()) return;
+      localStorage.removeItem(CUSTOMER_SESSION_KEY);
+      adminState.roomMode = 'living_room';
+      if (elStageRoomSelect) elStageRoomSelect.value = 'living_room';
+      renderStageMonitor();
+      updateGeminiPrompt();
+      officeFeedback('Customer session cleared. Preview clock, room, and chat on this browser were reset.');
+    }
+
     /* MEDIA ASSETS MANAGER */
     function renderMediaTable() {
       const tbody = document.getElementById('media-table-body');
@@ -1625,6 +1987,23 @@
       elBtnReauth.addEventListener('click', () => {
         sessionStorage.removeItem(ADMIN_SECRET_KEY);
         checkAuthentication();
+      });
+
+      document.getElementById('gemini-studio-btn').addEventListener('click', openGeminiStudioModal);
+      document.getElementById('gemini-modal-close-btn').addEventListener('click', closeGeminiStudioModal);
+      document.getElementById('btn-copy-prompt').addEventListener('click', copyGeminiPromptToClipboard);
+      document.getElementById('btn-simulate-gemini').addEventListener('click', simulateGeminiGen);
+      document.getElementById('btn-apply-gemini-stage').addEventListener('click', applyGeminiRoomToStage);
+      document.getElementById('btn-generate-translate').addEventListener('click', handleGenerateAndTranslate);
+      document.getElementById('reset-session-btn').addEventListener('click', resetSessionState);
+      ['rule-multiangle-check', 'rule-primaryview-check', 'gemini-motion-select', 'webcam-skin-select'].forEach(id => {
+        document.getElementById(id).addEventListener('change', () => {
+          syncStudioSkinPreview();
+          updateGeminiStudioPromptUI();
+        });
+      });
+      document.querySelectorAll('.furniture-add-check, .furniture-remove-check').forEach(cb => {
+        cb.addEventListener('change', updateGeminiStudioPromptUI);
       });
 
       elStageCharSelect.addEventListener('change', (e) => {

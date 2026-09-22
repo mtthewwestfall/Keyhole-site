@@ -98,6 +98,20 @@ test('Keyhole Application HTML & Architecture Integrity', async (t) => {
     customerAdmin.forEach(marker => {
       assert.ok(!indexHtml.includes(marker), `Customer room must not include ${marker}`);
     });
+    assert.ok(!indexHtml.includes('id="reset-session-btn"'), 'Customer room must not include Reset Session');
+    assert.ok(!indexHtml.includes('resetSessionState'), 'Customer room must not expose a session reset function');
+    assert.ok(!indexHtml.includes('Gemini Studio'), 'Customer room must not mention Gemini Studio');
+    assert.ok(!coverHtml.includes('id="reset-session-btn"'), 'Cover page must not include Reset Session');
+    assert.ok(!coverHtml.includes('id="gemini-studio-btn"'), 'Cover page must not include Gemini Studio');
+    assert.ok(indexHtml.includes('id="switch-character-btn"'), 'Change Room stays on the customer page');
+    assert.ok(indexHtml.includes('>Change Room<'), 'Change Room label stays on the customer page');
+    const customerButtons = [...indexHtml.matchAll(/<button\b[^>]*>[\s\S]*?<\/button>/g)].map(m => m[0]);
+    const header = indexHtml.match(/<header class="site-header">[\s\S]*?<\/header>/);
+    assert.ok(header, 'Customer site header exists');
+    assert.ok(!header[0].includes('Reset Session'), 'Customer header has no Reset Session');
+    assert.ok(!header[0].includes('Gemini'), 'Customer header has no Gemini Studio');
+    assert.ok(header[0].includes('Change Room'), 'Customer header keeps Change Room');
+    assert.equal(customerButtons.filter(b => /Reset Session|Gemini Studio|Room Editor/.test(b)).length, 0, 'No customer button offers studio or session reset');
     assert.ok(adminHtml.includes('Show Manager'), 'Show Manager stays on admin.html');
     assert.ok(adminHtml.includes('Content & Gemini Generator'), 'Content generator stays on admin.html');
     assert.ok(adminHtml.includes('id="fruit-code-input"'), 'Extended display generator stays on admin.html');
@@ -214,6 +228,22 @@ test('Keyhole WebCam Admin Portal Integrity', async (t) => {
     assert.ok(adminHtml.includes('id="fruit-expand-surroundings"'), 'Expand surroundings checkbox present');
     assert.ok(adminHtml.includes('id="btn-translate-generate"'), 'Generate & Translate button present');
     assert.ok(adminHtml.includes('function handleFruitTranslation()'), 'handleFruitTranslation function defined');
+  });
+
+  await t.test('Gemini Studio and Reset Session live only in the admin office', () => {
+    assert.ok(adminHtml.includes('id="gemini-studio-btn"'), 'Gemini Studio button is on admin.html');
+    assert.ok(adminHtml.includes('>Gemini Studio & Room Editor<'), 'Gemini Studio keeps its label');
+    assert.ok(adminHtml.includes('id="gemini-studio-modal"'), 'Gemini Studio modal is on admin.html');
+    assert.ok(adminHtml.includes('id="gemini-prompt-output"'), 'Studio prompt output is on admin.html');
+    assert.ok(adminHtml.includes('function buildGeminiMasterPrompt()'), 'Studio prompt builder is on admin.html');
+    assert.ok(adminHtml.includes('function openGeminiStudioModal()'), 'Studio open path is on admin.html');
+    assert.ok(adminHtml.includes('function applyGeminiRoomToStage()'), 'Apply to stage stays on admin.html');
+    assert.ok(adminHtml.includes('function handleGenerateAndTranslate()'), 'Studio fruit translator stays on admin.html');
+    assert.ok(adminHtml.includes('id="reset-session-btn"'), 'Reset Session button is on admin.html');
+    assert.ok(adminHtml.includes('>Reset Session<'), 'Reset Session keeps its label');
+    assert.ok(adminHtml.includes('function resetSessionState()'), 'Reset Session function is on admin.html');
+    assert.ok(adminHtml.includes("localStorage.removeItem(CUSTOMER_SESSION_KEY)"), 'Reset clears the customer session record');
+    assert.ok(adminHtml.includes('function requireAdminOffice()'), 'Office controls require the admin gate');
   });
 
   await t.test('WebCam Media Asset Library Manager controls exist', () => {
