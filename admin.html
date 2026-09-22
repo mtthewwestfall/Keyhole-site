@@ -596,7 +596,7 @@
       <button class="nav-btn active" data-tab="tab-stage">Stage Control</button>
       <button class="nav-btn" data-tab="tab-shows">Show Manager</button>
       <button class="nav-btn" data-tab="tab-generator">Content & Gemini Generator</button>
-      <button class="nav-btn" data-tab="tab-fruit">Fruit Translator</button>
+      <button class="nav-btn" data-tab="tab-fruit">Plate Beats</button>
       <button class="nav-btn" data-tab="tab-media">Media Asset Library</button>
       <button class="nav-btn" data-tab="tab-plates">Plate Engine</button>
       <button class="nav-btn" data-tab="tab-tagline">Tagline Scout</button>
@@ -957,16 +957,30 @@
       </div>
     </section>
 
-    <!-- TAB 4: FRUIT TRANSLATOR -->
+    <!-- TAB 4: PLATE BEATS (no fruit codes) -->
     <section id="tab-fruit" class="tab-section">
       <div class="admin-grid">
         <div class="admin-card">
-          <div class="card-title">Fruit Code Command Translator</div>
-          <p class="card-subtitle">Translate fruit codes (e.g. o/banana) into gestures and generate extended display clips.</p>
+          <div class="card-title">Plate Beat Translator</div>
+          <p class="card-subtitle">Chloe or Bailey + real plate beats only (idle · tease · give · stop · presence). No fruit codes.</p>
 
           <div class="form-group">
-            <label class="form-label" for="fruit-code-input">Fruit Code Command</label>
-            <input type="text" id="fruit-code-input" class="form-input" value="o/banana" placeholder="e.g. o/banana or /cherries" />
+            <label class="form-label" for="plate-who">Who</label>
+            <select id="plate-who" class="form-select">
+              <option value="chloe" selected>Chloe</option>
+              <option value="bailey">Bailey</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="plate-beat">Plate Beat</label>
+            <select id="plate-beat" class="form-select">
+              <option value="idle" selected>Idle</option>
+              <option value="tease">Tease</option>
+              <option value="give">Give</option>
+              <option value="stop">Stop</option>
+              <option value="presence">Presence</option>
+            </select>
           </div>
 
           <div class="form-group">
@@ -979,8 +993,8 @@
           </div>
 
           <div class="form-group">
-            <label class="form-label" for="fruit-media-file">Media Source File</label>
-            <input type="file" id="fruit-media-file" class="form-input" />
+            <label class="form-label" for="fruit-media-file">Media Source File (optional)</label>
+            <input type="file" id="fruit-media-file" class="form-input" accept="image/*,video/*" />
           </div>
 
           <div class="form-group">
@@ -1002,23 +1016,26 @@
             </label>
           </div>
 
-          <button id="btn-translate-generate" class="btn" style="width:100%; background:#d63384; color:#fff;">Generate & Translate</button>
+          <input type="hidden" id="fruit-code-input" value="" />
+          <button id="btn-translate-generate" class="btn" style="width:100%;">Load Plate Beat</button>
         </div>
 
         <div class="admin-card">
-          <div class="card-title">Translation & Extended Display Result</div>
-          <p class="card-subtitle">Live output details and translated action meaning.</p>
+          <div class="card-title">Plate Beat Result</div>
+          <p class="card-subtitle">Who + beat mapped to the live plate library (no fruit codes).</p>
 
           <div style="line-height:1.8; font-size:0.88rem; margin-bottom:16px;">
-            <div><strong style="color:var(--muted);">Fruit Code Sent:</strong> <span id="res-fruit-code" style="color:var(--ink);">o/banana</span></div>
-            <div><strong style="color:var(--muted);">Translated Meaning:</strong> <span id="res-translated-meaning" style="color:var(--gold-bright); font-weight:700;">Playful companion gesture and interaction</span></div>
-            <div><strong style="color:var(--muted);">Output Mode:</strong> <span id="res-output-mode" style="color:var(--ink);">image</span></div>
-            <div><strong style="color:var(--muted);">Surroundings Context:</strong> <span id="res-surroundings" style="color:var(--ink);">Standard focus framing</span></div>
+            <div><strong style="color:var(--muted);">Who:</strong> <span id="res-plate-who" style="color:var(--ink);">Chloe</span></div>
+            <div><strong style="color:var(--muted);">Beat:</strong> <span id="res-plate-beat" style="color:var(--gold-bright); font-weight:700;">idle</span></div>
+            <div><strong style="color:var(--muted);">Meaning:</strong> <span id="res-translated-meaning" style="color:var(--ink);">Calm on-cam presence</span></div>
+            <div><strong style="color:var(--muted);">Output Mode:</strong> <span id="res-output-mode" style="color:var(--ink);">Pictures</span></div>
+            <div><strong style="color:var(--muted);">Surroundings:</strong> <span id="res-surroundings" style="color:var(--ink);">Standard focus framing</span></div>
             <div><strong style="color:var(--muted);">Loop Config:</strong> <span id="res-loop-config" style="color:var(--ink);">Loop enabled after 10s extended play</span></div>
+            <div id="res-fruit-code" style="display:none;">chloe:idle</div>
           </div>
 
           <div style="width:100%; aspect-ratio:16/9; background:var(--night); border:1px solid var(--line); border-radius:8px; overflow:hidden; position:relative;">
-            <img id="res-preview-img" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='640' height='360' viewBox='0 0 640 360'><rect width='640' height='360' fill='%23071720'/><text x='320' y='180' font-family='sans-serif' font-size='16' fill='%23d9ad58' text-anchor='middle'>TRANSLATION READY</text></svg>" style="width:100%; height:100%; object-fit:cover;" alt="Translation Display" />
+            <img id="res-preview-img" alt="Plate Beat Display" style="width:100%; height:100%; object-fit:cover;" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='640' height='360' viewBox='0 0 640 360'><rect width='640' height='360' fill='%23071720'/><text x='320' y='180' font-family='sans-serif' font-size='16' fill='%23d9ad58' text-anchor='middle'>PLATE BEAT READY</text></svg>" />
           </div>
         </div>
       </div>
@@ -1287,10 +1304,22 @@
           </div>
 
           <div class="studio-section">
-            <div class="studio-sec-title">Translation & Extended Display Generator</div>
+            <div class="studio-sec-title">Plate Beat Display</div>
             <div style="display:flex; flex-direction:column; gap:8px; font-size:0.82rem;">
-              <label>Fruit Code Command
-                <input type="text" id="studio-fruit-code-input" class="form-input" value="o/banana" style="margin-top:4px;" />
+              <label>Who
+                <select id="studio-plate-who" class="form-select" style="margin-top:4px;">
+                  <option value="chloe" selected>Chloe</option>
+                  <option value="bailey">Bailey</option>
+                </select>
+              </label>
+              <label>Plate Beat
+                <select id="studio-plate-beat" class="form-select" style="margin-top:4px;">
+                  <option value="idle" selected>Idle</option>
+                  <option value="tease">Tease</option>
+                  <option value="give">Give</option>
+                  <option value="stop">Stop</option>
+                  <option value="presence">Presence</option>
+                </select>
               </label>
               <label>Output Selection
                 <select id="studio-fruit-output-select" class="form-select" style="margin-top:4px;">
@@ -1300,7 +1329,7 @@
                 </select>
               </label>
               <label>Media Source File
-                <input type="file" id="studio-fruit-media-file" class="form-input" style="margin-top:4px;" />
+                <input type="file" id="studio-fruit-media-file" class="form-input" style="margin-top:4px;" accept="image/*,video/*" />
               </label>
               <label class="chip-item">
                 <input type="checkbox" id="studio-fruit-expand-surroundings" />
@@ -1313,16 +1342,19 @@
                 <input type="checkbox" id="studio-fruit-loop-video" checked />
                 <span>Loop Video After Extended Duration</span>
               </label>
-              <button type="button" id="btn-generate-translate" class="btn" style="background:#d63384; color:#fff;">Generate & Translate</button>
+              <input type="hidden" id="studio-fruit-code-input" value="" />
+              <button type="button" id="btn-generate-translate" class="btn">Load Plate Beat</button>
             </div>
             <div style="margin-top:14px; padding:12px; background:var(--night); border:1px solid var(--line); border-radius:8px; font-size:0.82rem; line-height:1.6;">
-              <div><strong style="color:var(--muted);">Fruit Code Sent:</strong> <span id="studio-disp-fruit-code">o/banana</span></div>
-              <div><strong style="color:var(--muted);">Translated Meaning:</strong> <span id="studio-disp-translated-meaning" style="color:var(--gold-bright); font-weight:600;">Playful companion gesture and interaction</span></div>
-              <div><strong style="color:var(--muted);">Output Mode:</strong> <span id="studio-disp-output-mode">image</span></div>
-              <div><strong style="color:var(--muted);">Surroundings Context:</strong> <span id="studio-disp-surroundings-context">Standard focus framing</span></div>
-              <div><strong style="color:var(--muted);">Video Loop Config:</strong> <span id="studio-disp-loop-config">Standard playback</span></div>
+              <div><strong style="color:var(--muted);">Who:</strong> <span id="studio-disp-plate-who">Chloe</span></div>
+              <div><strong style="color:var(--muted);">Beat:</strong> <span id="studio-disp-plate-beat" style="color:var(--gold-bright); font-weight:600;">idle</span></div>
+              <div><strong style="color:var(--muted);">Meaning:</strong> <span id="studio-disp-translated-meaning">Calm on-cam presence</span></div>
+              <div><strong style="color:var(--muted);">Output Mode:</strong> <span id="studio-disp-output-mode">Pictures</span></div>
+              <div><strong style="color:var(--muted);">Surroundings:</strong> <span id="studio-disp-surroundings-context">Standard focus framing</span></div>
+              <div><strong style="color:var(--muted);">Video Loop:</strong> <span id="studio-disp-loop-config">Standard playback</span></div>
+              <div id="studio-disp-fruit-code" style="display:none;">chloe:idle</div>
               <div style="margin-top:10px; width:100%; aspect-ratio:16/9; background:var(--paper-2); border:1px solid var(--line); border-radius:6px; overflow:hidden; position:relative;">
-                <img id="studio-fruit-preview-img" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='225' viewBox='0 0 400 225'><rect width='400' height='225' fill='%23071720'/><text x='200' y='115' font-family='sans-serif' font-size='14' fill='%23d9ad58' text-anchor='middle'>TRANSLATION DISPLAY READY</text></svg>" style="width:100%; height:100%; object-fit:cover;" alt="Translation Display" />
+                <img id="studio-fruit-preview-img" alt="Plate Beat Display" style="width:100%; height:100%; object-fit:cover;" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='225' viewBox='0 0 400 225'><rect width='400' height='225' fill='%23071720'/><text x='200' y='115' font-family='sans-serif' font-size='14' fill='%23d9ad58' text-anchor='middle'>PLATE BEAT READY</text></svg>" />
                 <div id="studio-fruit-skin-overlay" class="stage-skin-overlay skin-chloe-girl"></div>
               </div>
             </div>
@@ -1905,28 +1937,34 @@
       if (textarea) textarea.value = buildMasterPrompt();
     }
 
-    /* FRUIT CODE TRANSLATOR */
-    const FRUIT_MAP = {
-      'o/banana': 'Playful companion gesture and interaction',
-      'o/peach': 'Charming lounge posture and motion',
-      'o/cherry': 'Sweet conversation highlight',
-      '/cherries': 'bra comes off',
-      '/apples': 'pants come off',
-      '/oranges': 'shirt comes off'
+    /* PLATE BEAT TRANSLATOR — no fruit codes */
+    const PLATE_BEAT_MEANING = {
+      idle: 'Calm on-cam presence',
+      tease: 'Flirty tease beat',
+      give: 'Giving / offering beat',
+      stop: 'Stop / boundary beat',
+      presence: 'Strong presence beat'
     };
+    // Keep alias so any leftover fruit references don't crash
+    const FRUIT_MAP = PLATE_BEAT_MEANING;
 
     function handleFruitTranslation() {
-      const input = document.getElementById('fruit-code-input').value.trim();
-      const outputMode = document.getElementById('fruit-output-mode').value;
-      const isExpand = document.getElementById('fruit-expand-surroundings').checked;
-      const delaySecs = document.getElementById('fruit-delay-duration').value;
-      const isLoop = document.getElementById('fruit-loop-video').checked;
-
-      document.getElementById('res-fruit-code').textContent = input;
-      document.getElementById('res-translated-meaning').textContent = FRUIT_MAP[input.toLowerCase()] || `Custom fruit sequence (${input})`;
-      document.getElementById('res-output-mode').textContent = outputMode;
-      document.getElementById('res-surroundings').textContent = isExpand ? 'Outpainted background visuals active' : 'Standard focus framing';
-      document.getElementById('res-loop-config').textContent = isLoop ? `Loop enabled after ${delaySecs}s extended play` : `Single play (${delaySecs}s delay)`;
+      const who = (document.getElementById('plate-who') || {}).value || 'chloe';
+      const beat = (document.getElementById('plate-beat') || {}).value || 'idle';
+      const outputMode = (document.getElementById('fruit-output-mode') || {}).value || 'Pictures';
+      const isExpand = !!(document.getElementById('fruit-expand-surroundings') || {}).checked;
+      const delaySecs = (document.getElementById('fruit-delay-duration') || {}).value || '10';
+      const isLoop = !!(document.getElementById('fruit-loop-video') || {}).checked;
+      const whoLabel = who === 'bailey' ? 'Bailey' : 'Chloe';
+      const meaning = PLATE_BEAT_MEANING[beat] || beat;
+      const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+      set('res-plate-who', whoLabel);
+      set('res-plate-beat', beat);
+      set('res-translated-meaning', meaning);
+      set('res-output-mode', outputMode);
+      set('res-surroundings', isExpand ? 'Outpainted background visuals active' : 'Standard focus framing');
+      set('res-loop-config', isLoop ? `Loop enabled after ${delaySecs}s extended play` : `Single play (${delaySecs}s delay)`);
+      set('res-fruit-code', `${who}:${beat}`);
     }
 
     /* GEMINI STUDIO & ROOM EDITOR — admin office only. Not reachable from rooms.html. */
@@ -2066,19 +2104,25 @@
 
     function handleGenerateAndTranslate() {
       if (!requireAdminOffice()) return;
-      const rawCode = (document.getElementById('studio-fruit-code-input').value.trim() || 'o/banana').toLowerCase();
-      const outputSel = document.getElementById('studio-fruit-output-select').value;
-      const isExpand = document.getElementById('studio-fruit-expand-surroundings').checked;
-      const delaySecs = parseInt(document.getElementById('studio-fruit-delay-duration').value, 10) || 0;
-      const isLoop = document.getElementById('studio-fruit-loop-video').checked;
+      const who = (document.getElementById('studio-plate-who') || {}).value || 'chloe';
+      const beat = (document.getElementById('studio-plate-beat') || {}).value || 'idle';
+      const outputSel = (document.getElementById('studio-fruit-output-select') || {}).value || 'Pictures';
+      const isExpand = !!(document.getElementById('studio-fruit-expand-surroundings') || {}).checked;
+      const delaySecs = parseInt((document.getElementById('studio-fruit-delay-duration') || {}).value, 10) || 0;
+      const isLoop = !!(document.getElementById('studio-fruit-loop-video') || {}).checked;
       const fileInput = document.getElementById('studio-fruit-media-file');
       const preview = document.getElementById('studio-fruit-preview-img');
+      const whoLabel = who === 'bailey' ? 'Bailey' : 'Chloe';
+      const meaning = PLATE_BEAT_MEANING[beat] || beat;
 
-      document.getElementById('studio-disp-fruit-code').textContent = rawCode;
-      document.getElementById('studio-disp-translated-meaning').textContent = FRUIT_MAP[rawCode] || `Custom fruit signal sequence (${rawCode})`;
-      document.getElementById('studio-disp-output-mode').textContent = outputSel === 'Pictures' ? 'image' : (outputSel === 'Video Clip' ? 'video' : 'live_stream');
-      document.getElementById('studio-disp-surroundings-context').textContent = isExpand ? 'Outpainted extended background surroundings' : 'Standard focus framing';
-      document.getElementById('studio-disp-loop-config').textContent = isLoop ? `Loop video after ${delaySecs}s extended duration` : `Play once with ${delaySecs}s delay`;
+      const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+      set('studio-disp-plate-who', whoLabel);
+      set('studio-disp-plate-beat', beat);
+      set('studio-disp-translated-meaning', meaning);
+      set('studio-disp-output-mode', outputSel === 'Pictures' ? 'image' : (outputSel === 'Video Clip' ? 'video' : 'live_stream'));
+      set('studio-disp-surroundings-context', isExpand ? 'Outpainted extended background surroundings' : 'Standard focus framing');
+      set('studio-disp-loop-config', isLoop ? `Loop video after ${delaySecs}s extended duration` : `Play once with ${delaySecs}s delay`);
+      set('studio-disp-fruit-code', `${who}:${beat}`);
       syncStudioSkinPreview();
 
       if (fileInput.files && fileInput.files[0]) {
