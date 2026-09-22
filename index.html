@@ -293,6 +293,18 @@
       font-size: .8rem;
       color: var(--muted);
     }
+    .session-tier-buy {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 7px 12px;
+      border: 1px solid var(--gold);
+      border-radius: 8px;
+      color: var(--gold-bright);
+      font-size: .78rem;
+      font-weight: 700;
+      text-decoration: none;
+    }
+    .session-tier-buy:hover { background: rgba(217,173,88,.12); }
     @media (max-width: 680px) {
       .session-tier-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
@@ -792,6 +804,7 @@
             <div class="session-tier-time">55 minutes</div>
             <div class="session-tier-price">$17.99</div>
             <div class="session-tier-messages">100 messages</div>
+            <a class="session-tier-buy" href="https://nowpayments.io/payment/?iid=4970242486&amp;source=button" target="_blank" rel="noreferrer noopener">Pay with crypto</a>
           </div>
           <div class="session-tier featured" data-minutes="60">
             <div class="session-tier-time">60 minutes</div>
