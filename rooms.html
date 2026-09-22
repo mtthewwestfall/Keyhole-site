@@ -390,6 +390,22 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
+      gap: 12px;
+    }
+    .message-credits {
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      color: var(--gold);
+      text-align: right;
+    }
+    .session-pricing-note {
+      max-width: 640px;
+      margin: -8px auto 22px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.85rem;
+      line-height: 1.45;
     }
     .chat-messages {
       flex: 1;
@@ -692,7 +708,6 @@
       <span id="nav-badge" class="badge badge-live">Live</span>
       <span id="account-status" class="badge" style="display:none;"></span>
       <button id="account-btn" class="btn-small btn-gold-outline">Sign In</button>
-      <button id="gemini-studio-btn" class="btn-small btn-gold-outline">Gemini Studio & Room Editor</button>
       <button id="switch-character-btn" class="btn-small" style="display:none;">Change Room</button>
       <button id="reset-session-btn" class="btn-small">Reset Session</button>
     </div>
@@ -726,11 +741,12 @@
 
       <section class="session-pricing" id="session-pricing-panel" aria-labelledby="session-pricing-title">
         <h2 class="session-pricing-title" id="session-pricing-title">Available Sessions</h2>
+        <p class="session-pricing-note" id="message-credit-policy">Verified email gets 50 free messages while the preview plays. Each paid purchase adds 100. Unused messages roll over.</p>
         <div class="session-tier-grid">
           <div class="session-tier featured" data-minutes="10" data-free-preview="true">
             <div class="session-tier-time">Free Preview</div>
             <div class="session-tier-price">FREE</div>
-            <div class="session-tier-messages">10 minutes · one per account</div>
+            <div class="session-tier-messages">10 minutes · 50 messages · one per account</div>
           </div>
           <div class="session-tier" data-minutes="10" data-package="intro" data-once="intro" data-stripe="https://buy.stripe.com/9B69AM0Ur38HchN0ZrdjO0a">
             <div class="session-tier-time">10 minutes</div>
@@ -776,7 +792,8 @@
   <section id="room-view" class="view-section">
     <div id="preview-banner" class="preview-banner">
       <div>
-        <span>Free Preview Active</span> — <span id="preview-timer-text" class="preview-timer">10:00 remaining</span>
+        <span id="preview-status-label">Free Preview Active</span> — <span id="preview-timer-text" class="preview-timer">10:00 remaining</span>
+        <div id="preview-credit-note" style="font-size:0.75rem; color:var(--muted); margin-top:4px;">Verified email gets 50 free messages while this preview plays. Each purchase adds 100. Unused messages roll over.</div>
       </div>
       <button id="banner-unlock-btn" class="btn-unlock">Unlock Bedroom Access</button>
     </div>
@@ -804,6 +821,7 @@
       <div class="chat-panel">
         <div class="chat-header">
           <span id="chat-header-title">Private Session with Chloe</span>
+          <span id="message-credits" class="message-credits" title="Verified email gets 50 free messages while the preview plays. Each paid purchase adds 100. Unused messages roll over.">Messages left: —</span>
           <span class="muted" style="font-size:0.75rem;" id="chat-status-text">Connected</span>
         </div>
 
@@ -855,12 +873,12 @@
       <button id="modal-close-btn" class="modal-close">&times;</button>
       <h2 class="modal-title" id="modal-title">Unlock Bedroom Access</h2>
       <p class="modal-desc" id="modal-desc">
-        Your free preview has reached its limit. Enter your Keyhole Member Passcode to continue.
+        Private room access is checked against the purchase on your signed-in account.
       </p>
 
       <div class="gate-input-group">
         <label class="gate-label" for="member-key-input">Passcode / Key</label>
-        <input type="text" id="member-key-input" class="gate-input" placeholder="e.g. KEY-VIP-ROOM" value="KEY-VIP-ROOM" />
+        <input type="text" id="member-key-input" class="gate-input" placeholder="" autocomplete="off" autocapitalize="off" spellcheck="false" value="" />
       </div>
 
       <div id="modal-error" class="modal-error">Invalid passcode. Please try again.</div>
@@ -869,124 +887,6 @@
     </div>
   </div>
 
-  <!-- GEMINI STUDIO & SIMS ROOM EDITOR MODAL -->
-  <div id="gemini-studio-modal" class="modal-backdrop">
-    <div class="modal-card-large">
-      <button id="gemini-modal-close-btn" class="modal-close">&times;</button>
-      <h2 class="modal-title">Gemini AI Studio & Room Editor</h2>
-      <p class="modal-desc">
-        Configure Gemini image generation parameters enforcing multi-angle 3D spatial consistency and primary webcam view locking.
-      </p>
-
-      <div class="studio-grid">
-        <div style="display:flex; flex-direction:column; gap:12px;">
-          <div class="studio-section">
-            <div class="studio-sec-title">Gemini Generation Rules</div>
-            <label class="furniture-chip" style="margin-bottom:6px;">
-              <input type="checkbox" id="rule-multiangle-check" checked />
-              <span>Multi-Angle 3D Spatial Consistency System</span>
-            </label>
-            <label class="furniture-chip" style="margin-bottom:6px;">
-              <input type="checkbox" id="rule-primaryview-check" checked />
-              <span>Lock Output strictly to PRIMARY WEBCAM VIEW</span>
-            </label>
-            <div style="display:flex; gap:10px; margin-top:8px;">
-              <label style="font-size:0.8rem; color:var(--muted);">Motion Mode:
-                <select id="gemini-motion-select" class="gate-input" style="padding:4px 8px; font-size:0.8rem; margin-top:4px;">
-                  <option value="live_webcam">Live Motion Webcam Video</option>
-                  <option value="static_render">Static High-Res Render Image</option>
-                </select>
-              </label>
-            </div>
-          </div>
-
-          <div class="studio-section">
-            <div class="studio-sec-title">Sims-Style Furniture Additions</div>
-            <div class="furniture-grid">
-              <label class="furniture-chip"><input type="checkbox" class="furniture-add-check" value="Velvet Platform Bed" checked /> Velvet Platform Bed</label>
-              <label class="furniture-chip"><input type="checkbox" class="furniture-add-check" value="Plush L-Sofa" checked /> Plush L-Sofa</label>
-              <label class="furniture-chip"><input type="checkbox" class="furniture-add-check" value="Ambient Neon Wall Sign" /> Ambient Neon Sign</label>
-              <label class="furniture-chip"><input type="checkbox" class="furniture-add-check" value="Warm Ambient Floor Lamp" checked /> Warm Ambient Floor Lamp</label>
-            </div>
-          </div>
-
-          <div class="studio-section">
-            <div class="studio-sec-title">Remove / Clean Furniture</div>
-            <div class="furniture-grid">
-              <label class="furniture-chip"><input type="checkbox" class="furniture-remove-check" value="Office Work Desk" /> Remove Desk</label>
-              <label class="furniture-chip"><input type="checkbox" class="furniture-remove-check" value="Coffee Table" /> Remove Coffee Table</label>
-            </div>
-          </div>
-
-          <div class="studio-section">
-            <div class="studio-sec-title">Webcam Overlay Skins</div>
-            <select id="webcam-skin-select" class="gate-input" style="padding:6px 10px; font-size:0.85rem;">
-              <option value="keyhole_gold">Classic Keyhole Gold HUD</option>
-              <option value="neon_cyber">Neon Cyber Frame</option>
-              <option value="glass_vignette">Minimalist Glass Vignette</option>
-            </select>
-          </div>
-        </div>
-
-        <div style="display:flex; flex-direction:column; gap:12px;">
-          <div class="studio-section" style="flex:1; display:flex; flex-direction:column;">
-            <div class="studio-sec-title">Formatted Gemini Master Prompt</div>
-            <textarea id="gemini-prompt-output" class="prompt-output-box" readonly style="flex:1;"></textarea>
-
-            <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
-              <button id="btn-copy-prompt" class="btn-small">Copy Prompt</button>
-              <button id="btn-simulate-gemini" class="btn-small">Simulate Gemini Gen</button>
-              <button id="btn-apply-gemini-stage" class="btn-verify" style="flex:1; min-width:160px; font-size:0.85rem; padding:8px 12px;">Apply to Stage</button>
-            </div>
-            <div id="gemini-status-feedback" style="font-size:0.8rem; color:var(--cream); margin-top:8px; display:none;"></div>
-          </div>
-
-          <div class="studio-section" style="margin-top:12px;">
-            <div class="studio-sec-title">Translation & Extended Display Generator</div>
-            <div style="display:flex; flex-direction:column; gap:8px; font-size:0.82rem;">
-              <label>Fruit Code Command:
-                <input type="text" id="fruit-code-input" class="gate-input" value="o/banana" style="padding:6px 10px; font-size:0.85rem; margin-top:2px;" />
-              </label>
-              <label>Output Selection:
-                <select id="fruit-output-select" class="gate-input" style="padding:6px 10px; font-size:0.85rem; margin-top:2px;">
-                  <option value="Pictures">Pictures</option>
-                  <option value="Video Clip">Video Clip</option>
-                </select>
-              </label>
-              <label>Media Source File:
-                <input type="file" id="fruit-media-file" class="gate-input" style="padding:6px 10px; font-size:0.8rem; margin-top:2px;" />
-              </label>
-              <label class="furniture-chip" style="margin-top:4px;">
-                <input type="checkbox" id="fruit-expand-surroundings" />
-                <span>Expand Surroundings</span>
-              </label>
-              <label>Extended Delay Duration (Seconds):
-                <input type="number" id="fruit-delay-duration" class="gate-input" value="0" min="0" style="padding:6px 10px; font-size:0.85rem; margin-top:2px;" />
-              </label>
-              <label class="furniture-chip" style="margin-top:2px;">
-                <input type="checkbox" id="fruit-loop-video" checked />
-                <span>Loop Video</span>
-              </label>
-              <button id="btn-generate-translate" class="btn-verify" style="margin-top:6px; padding:10px;">Generate & Translate</button>
-            </div>
-
-            <div style="margin-top:14px; padding:12px; background:var(--bg-charcoal); border:1px solid var(--line); border-radius:6px; font-size:0.82rem; line-height:1.6;">
-              <div><strong style="color:var(--muted);">Fruit Code Sent:</strong> <span id="disp-fruit-code" style="color:var(--ink);">o/banana</span></div>
-              <div><strong style="color:var(--muted);">Translated Meaning:</strong> <span id="disp-translated-meaning" style="color:var(--cream); font-weight:600;">Playful companion gesture and interaction</span></div>
-              <div><strong style="color:var(--muted);">Output Mode:</strong> <span id="disp-output-mode" style="color:var(--ink);">image</span></div>
-              <div><strong style="color:var(--muted);">Surroundings Context:</strong> <span id="disp-surroundings-context" style="color:var(--ink);">Standard focus framing</span></div>
-              <div><strong style="color:var(--muted);">Video Loop Config:</strong> <span id="disp-loop-config" style="color:var(--ink);">Standard playback</span></div>
-
-              <div id="fruit-display-preview-wrap" style="margin-top:10px; width:100%; aspect-ratio:16/9; background:var(--panel-dark); border:1px solid var(--line); border-radius:4px; overflow:hidden; position:relative; display:flex; align-items:center; justify-content:center;">
-                <img id="fruit-preview-img" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='225' viewBox='0 0 400 225'><rect width='400' height='225' fill='%2312100E'/><text x='200' y='115' font-family='sans-serif' font-size='14' fill='%23C4A574' text-anchor='middle'>TRANSLATION DISPLAY READY</text></svg>" style="width:100%; height:100%; object-fit:cover;" alt="Translation Display" />
-                <div id="fruit-skin-overlay" class="stage-skin-overlay skin-keyhole-gold"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
 
   <footer class="site-footer">
     <div><strong>21+ Adults Only.</strong> Keyhole Connection.</div>
@@ -1108,7 +1008,10 @@
 
     const CONFIG = {
       defaultPreviewSeconds: 600,
-      invitationMessageThreshold: 3
+      invitationMessageThreshold: 3,
+      freePreviewMinutes: 10,
+      verifiedPreviewMessages: 50,
+      purchaseMessageGrant: 100
     };
 
     let state = {
@@ -1119,16 +1022,12 @@
       isVerifiedMember: false,
       userMessageCount: 0,
       hasInvitedToBedroom: false,
-      chatLogs: {},
-      geminiStudio: {
-        multiAngleLock: true,
-        primaryViewLock: true,
-        motionMode: 'live_webcam',
-        furnitureAdditions: ['Velvet Platform Bed', 'Warm Ambient Floor Lamp'],
-        furnitureRemovals: [],
-        webcamSkin: 'keyhole_gold'
-      }
+      chatLogs: {}
     };
+
+    // Set when a saved session was in the bedroom. Restored only after the server
+    // confirms a paid entitlement — never from localStorage alone.
+    let pendingBedroomRestore = false;
 
     let timerInterval = null;
 
@@ -1186,7 +1085,11 @@
         const saved = localStorage.getItem('keyhole_session_v1');
         if (saved) {
           const parsed = JSON.parse(saved);
-          state = { ...state, ...parsed };
+          pendingBedroomRestore = parsed.roomMode === 'bedroom';
+          delete parsed.isVerifiedMember;
+          delete parsed.geminiStudio;
+          if (parsed.roomMode === 'bedroom') parsed.roomMode = 'living_room';
+          state = { ...state, ...parsed, isVerifiedMember: false };
         }
       } catch (e) {
         console.warn('Failed to load session state:', e);
@@ -1195,7 +1098,9 @@
 
     function saveSessionState() {
       try {
-        localStorage.setItem('keyhole_session_v1', JSON.stringify(state));
+        const persisted = { ...state, isVerifiedMember: false };
+        delete persisted.geminiStudio;
+        localStorage.setItem('keyhole_session_v1', JSON.stringify(persisted));
       } catch (e) {
         console.warn('Failed to save session state:', e);
       }
@@ -1217,19 +1122,41 @@
       showSelectionView();
     }
 
+    function hasPaidBedroomAccess(me, previewMinutes) {
+      if (!me) return false;
+      const minutes = Number(me.webcam_minutes_left) || 0;
+      const sessionLeft = Number(me.session_minutes_left) || 0;
+      const active = !!me.session_active && (sessionLeft > 0 || minutes > 0);
+      const cap = Number(previewMinutes) > 0 ? Number(previewMinutes) : 10;
+      // Time that exists before the one-time free preview is claimed is not that grant.
+      if (me.free_preview_available) return minutes > 0 || active;
+      // Preview already claimed: require a purchase signal, not the free minutes alone.
+      if (me.intro_available === false && (minutes > 0 || active)) return true;
+      if (minutes > cap || sessionLeft > cap) return true;
+      return false;
+    }
+
     async function verifyMembershipEntitlement(token) {
-      if (KeyholeAccount.token()) {
-        try {
-          const me = await KeyholeAccount.refresh();
-          if (me && (me.webcam_minutes_left > 0 || me.session_active)) return { success: true };
-        } catch (_) {}
+      // `token` is ignored. A typed passcode is not an entitlement; GET /keyhole/me is.
+      void token;
+      if (!KeyholeAccount.token()) {
+        return { success: false, message: 'Sign in with the account that purchased this room.' };
       }
-      await new Promise(resolve => setTimeout(resolve, 600));
-      const cleanedToken = (token || '').trim().toUpperCase();
-      if (cleanedToken.startsWith('KEY-') || cleanedToken === 'VIP' || cleanedToken === 'MEMBER') {
-        return { success: true };
+      let me;
+      try {
+        me = await KeyholeAccount.refresh();
+      } catch (_) {
+        return { success: false, message: 'Could not reach Keyhole to verify your purchase.' };
       }
-      return { success: false, message: 'Invalid Passcode / Token.' };
+      if (!hasPaidBedroomAccess(me, CONFIG.freePreviewMinutes)) {
+        return { success: false, message: 'No paid room access on this account. Purchase a session to unlock the private room.' };
+      }
+      try {
+        await KeyholeAccount.startSession();
+      } catch (err) {
+        return { success: false, message: (err && err.message) || 'The server did not start a paid session.' };
+      }
+      return { success: true };
     }
 
     /* ACCOUNT CLIENT */
@@ -1303,7 +1230,11 @@
         return api('/keyhole/preview/claim', {});
       }
 
-      return { token, me: () => me, refresh, login, signup, resendVerification, logout, packages, createCryptoInvoice, claimFreePreview };
+      async function startSession() {
+        return api('/keyhole/session/start', {});
+      }
+
+      return { token, me: () => me, refresh, login, signup, resendVerification, logout, packages, createCryptoInvoice, claimFreePreview, startSession };
     })();
 
     /* UI ELEMENTS */
@@ -1327,6 +1258,7 @@
     const elPreviewTimerText = document.getElementById('preview-timer-text');
     const elBannerUnlockBtn = document.getElementById('banner-unlock-btn');
     const elChatHeaderTitle = document.getElementById('chat-header-title');
+    const elMessageCredits = document.getElementById('message-credits');
     const elChatMessages = document.getElementById('chat-messages');
     const elChatInput = document.getElementById('chat-input');
     const elChatSendBtn = document.getElementById('chat-send-btn');
@@ -1336,20 +1268,6 @@
     const elModalCloseBtn = document.getElementById('modal-close-btn');
     const elMemberKeyInput = document.getElementById('member-key-input');
     const elModalError = document.getElementById('modal-error');
-
-    const elGeminiStudioBtn = document.getElementById('gemini-studio-btn');
-    const elGeminiModal = document.getElementById('gemini-studio-modal');
-    const elGeminiModalCloseBtn = document.getElementById('gemini-modal-close-btn');
-    const elRuleMultiangleCheck = document.getElementById('rule-multiangle-check');
-    const elRulePrimaryviewCheck = document.getElementById('rule-primaryview-check');
-    const elGeminiMotionSelect = document.getElementById('gemini-motion-select');
-    const elWebcamSkinSelect = document.getElementById('webcam-skin-select');
-    const elGeminiPromptOutput = document.getElementById('gemini-prompt-output');
-    const elBtnCopyPrompt = document.getElementById('btn-copy-prompt');
-    const elBtnSimulateGemini = document.getElementById('btn-simulate-gemini');
-    const elBtnApplyGeminiStage = document.getElementById('btn-apply-gemini-stage');
-    const elGeminiStatusFeedback = document.getElementById('gemini-status-feedback');
-    const elStageSkinOverlay = document.getElementById('stage-skin-overlay');
     const elVerifyMemberBtn = document.getElementById('verify-member-btn');
 
     async function initApp() {
@@ -1359,9 +1277,10 @@
       await initPlateLibrary();
 
       if (state.view === 'room' && state.activeCharId && CHARACTERS[state.activeCharId]) {
-        enterRoom(state.activeCharId, false);
+        await enterRoom(state.activeCharId, false);
       } else {
         showSelectionView();
+        await syncAccountEntitlement();
       }
     }
 
@@ -1442,6 +1361,7 @@
       saveSessionState();
       renderRoomView();
       startPreviewTimer();
+      return syncAccountEntitlement();
     }
 
     function renderRoomView() {
@@ -1469,9 +1389,14 @@
         elNavBadge.className = 'badge badge-live';
 
         if (state.isVerifiedMember) {
-          elPreviewBanner.style.display = 'none';
+          elPreviewBanner.style.display = 'flex';
+          document.getElementById('preview-status-label').textContent = 'Session ready';
+          elPreviewTimerText.textContent = 'Unlock to enter the private room';
+          document.getElementById('preview-credit-note').style.display = 'none';
         } else {
           elPreviewBanner.style.display = 'flex';
+          document.getElementById('preview-status-label').textContent = 'Free Preview Active';
+          document.getElementById('preview-credit-note').style.display = '';
           updateTimerDisplay();
         }
 
@@ -1479,6 +1404,68 @@
       }
 
       renderChatMessages();
+      renderMessageCredits();
+    }
+
+    function messagesRemaining() {
+      const me = KeyholeAccount.me();
+      if (!me) return null;
+      return Math.max(0, Number(me.text_balance) || 0);
+    }
+
+    function renderMessageCredits() {
+      if (!elMessageCredits) return;
+      const left = messagesRemaining();
+      const policy = `Verified email gets ${CONFIG.verifiedPreviewMessages} free messages while the preview plays. Each paid purchase adds ${CONFIG.purchaseMessageGrant}. Unused messages roll over.`;
+      elMessageCredits.title = policy;
+      elMessageCredits.textContent = left === null ? 'Messages left: —' : `${left} messages left`;
+    }
+
+    async function syncAccountEntitlement() {
+      if (!KeyholeAccount.token()) {
+        state.isVerifiedMember = false;
+        renderAccountStatus();
+        renderMessageCredits();
+        return;
+      }
+      try {
+        let me = await KeyholeAccount.refresh();
+        const inPreview = state.view === 'room' && state.roomMode !== 'bedroom';
+        if (inPreview && me && me.free_preview_available) {
+          try { await KeyholeAccount.claimFreePreview(); } catch (_) {}
+          me = await KeyholeAccount.refresh();
+        }
+        const paid = hasPaidBedroomAccess(me, CONFIG.freePreviewMinutes);
+        state.isVerifiedMember = !!paid;
+        if (paid && pendingBedroomRestore) {
+          try {
+            await KeyholeAccount.startSession();
+            state.roomMode = 'bedroom';
+          } catch (_) {
+            state.roomMode = 'living_room';
+          }
+        } else if (!paid && state.roomMode === 'bedroom') {
+          state.roomMode = 'living_room';
+          state.isVerifiedMember = false;
+        }
+        pendingBedroomRestore = false;
+        saveSessionState();
+        renderAccountStatus();
+        renderMessageCredits();
+        if (state.view === 'room') {
+          renderRoomView();
+          startPreviewTimer();
+        }
+      } catch (_) {
+        state.isVerifiedMember = false;
+        if (state.roomMode === 'bedroom') state.roomMode = 'living_room';
+        pendingBedroomRestore = false;
+        renderMessageCredits();
+        if (state.view === 'room') {
+          renderRoomView();
+          startPreviewTimer();
+        }
+      }
     }
 
     function isImagePlate(url) {
@@ -1628,9 +1615,19 @@
       elChatMessages.scrollTop = elChatMessages.scrollHeight;
     }
 
-    function handleSendMessage() {
+    async function handleSendMessage() {
       const text = elChatInput.value.trim();
       if (!text || !state.activeCharId) return;
+
+      if (KeyholeAccount.token()) {
+        try { await KeyholeAccount.refresh(); } catch (_) {}
+        renderMessageCredits();
+        const me = KeyholeAccount.me();
+        if (me && (Number(me.text_balance) || 0) <= 0 && !me.free_preview_available) {
+          appendSystemMessage(`No messages left. A verified email gets ${CONFIG.verifiedPreviewMessages} free while the preview plays. Each paid purchase adds ${CONFIG.purchaseMessageGrant}. Unused messages roll over.`);
+          return;
+        }
+      }
 
       const char = CHARACTERS[state.activeCharId];
 
@@ -1699,7 +1696,7 @@
       saveSessionState();
       renderChatMessages();
 
-      openMembershipGateModal("Unlock Private Room", `Enter your Keyhole passcode to enter ${char.name}'s room.`);
+      openMembershipGateModal("Unlock Private Room", `Purchase required to enter ${char.name}'s private room.`);
     }
 
     function handleDeclineInvitation() {
@@ -1731,6 +1728,7 @@
     function openMembershipGateModal(title, desc) {
       if (title) document.getElementById('modal-title').textContent = title;
       if (desc) document.getElementById('modal-desc').textContent = desc;
+      if (elMemberKeyInput) elMemberKeyInput.value = '';
       elModalError.style.display = 'none';
       elModal.classList.add('active');
     }
@@ -1767,28 +1765,6 @@
         elVerifyMemberBtn.disabled = false;
         elVerifyMemberBtn.textContent = 'Verify Passcode & Unlock';
       }
-    }
-
-    /* GEMINI STUDIO */
-    function buildGeminiMasterPrompt() {
-      const activeChar = CHARACTERS[state.activeCharId] || CHARACTERS['chloe'];
-      let prompt = `GEMINI MULTI-ANGLE ROOM MASTER PROMPT\nCOMPANION: ${activeChar.name}\n`;
-      return prompt;
-    }
-
-    function updateGeminiStudioPromptUI() {
-      if (elGeminiPromptOutput) {
-        elGeminiPromptOutput.value = buildGeminiMasterPrompt();
-      }
-    }
-
-    function openGeminiStudioModal() {
-      updateGeminiStudioPromptUI();
-      elGeminiModal.classList.add('active');
-    }
-
-    function closeGeminiStudioModal() {
-      elGeminiModal.classList.remove('active');
     }
 
     /* ACCOUNT & CHECKOUT */
@@ -1836,7 +1812,7 @@
     function renderAccountStatus() {
       const me = KeyholeAccount.me();
       if (me) {
-        elAccountStatus.textContent = `${me.email || 'Signed in'} · ${me.webcam_minutes_left} min`;
+        elAccountStatus.textContent = `${me.email || 'Signed in'} · ${Number(me.text_balance) || 0} messages`;
         elAccountStatus.style.display = '';
         elAccountBtn.textContent = 'Sign Out';
       } else {
@@ -1861,7 +1837,7 @@
           }
         }
         await KeyholeAccount.login(email, password);
-        renderAccountStatus();
+        await syncAccountEntitlement();
         closeAccountModal();
       } catch (err) {
         showAccountError(err.message || 'Could not sign in.');
@@ -1894,14 +1870,16 @@
 
       elBannerUnlockBtn.addEventListener('click', () => {
         const char = CHARACTERS[state.activeCharId];
-        openMembershipGateModal("Unlock Private Room", `Verify passcode to enter ${char ? char.name : ''}'s room.`);
+        openMembershipGateModal("Unlock Private Room", `Purchase required to enter ${char ? char.name : ''}'s room.`);
       });
 
       elModalCloseBtn.addEventListener('click', closeMembershipGateModal);
       elVerifyMemberBtn.addEventListener('click', handleVerifyMembership);
-
-      elGeminiStudioBtn.addEventListener('click', openGeminiStudioModal);
-      elGeminiModalCloseBtn.addEventListener('click', closeGeminiStudioModal);
+      if (elMemberKeyInput) {
+        elMemberKeyInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') handleVerifyMembership();
+        });
+      }
     }
 
     document.addEventListener('DOMContentLoaded', () => {
