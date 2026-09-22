@@ -280,19 +280,38 @@
       transition: all 0.3s ease;
       z-index: 10;
     }
-    /* Girl overlays: put Chloe/Bailey over people — not HUD chrome borders */
-    .skin-chloe-girl {
-      background: url('assets/chloe-room.png') center bottom / contain no-repeat;
+    /* Face+hair lock badge only — never stamp the full skin pose over the stage */
+    .skin-chloe-girl,
+    .skin-bailey-girl {
+      background: none;
       background-color: transparent;
     }
-    .skin-bailey-girl {
-      background: url('assets/bailey-profile.png') center bottom / contain no-repeat;
-      background-color: transparent;
+    .skin-chloe-girl::after,
+    .skin-bailey-girl::after {
+      content: '';
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      border: 2px solid rgba(255, 255, 255, 0.75);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+      pointer-events: none;
+    }
+    .skin-chloe-girl::after {
+      background: url('assets/chloe-skin.jpg') center 18% / cover no-repeat;
+    }
+    .skin-bailey-girl::after {
+      background: url('assets/bailey-skin.jpg') center 18% / cover no-repeat;
     }
     .skin-none {
       background: none;
       border: none;
       box-shadow: none;
+    }
+    .skin-none::after {
+      content: none;
     }
 
     /* Table Styles */
@@ -540,11 +559,11 @@
             </div>
 
             <div style="flex:1; min-width:160px;">
-              <label class="form-label" for="stage-skin-select">Girl overlay (over people)</label>
+              <label class="form-label" for="stage-skin-select">Face + hair lock</label>
               <select id="stage-skin-select" class="form-select">
-                <option value="chloe_girl" selected>Chloe — girl over people</option>
-                <option value="bailey_girl">Bailey — girl over people</option>
-                <option value="none">No girl overlay</option>
+                <option value="chloe_girl" selected>Chloe — face + hair (your skin photo)</option>
+                <option value="bailey_girl">Bailey — face + hair (your skin photo)</option>
+                <option value="none">No face lock</option>
               </select>
             </div>
           </div>
@@ -1060,11 +1079,11 @@
           </div>
 
           <div class="studio-section">
-            <div class="studio-sec-title">Girl overlays (Chloe / Bailey over people)</div>
+            <div class="studio-sec-title">Face + hair lock (identity from your skin photos — not pose)</div>
             <select id="webcam-skin-select" class="form-select">
-              <option value="chloe_girl" selected>Chloe — girl over people</option>
-              <option value="bailey_girl">Bailey — girl over people</option>
-              <option value="none">No girl overlay</option>
+              <option value="chloe_girl" selected>Chloe — face + hair (your skin photo)</option>
+              <option value="bailey_girl">Bailey — face + hair (your skin photo)</option>
+              <option value="none">No face lock</option>
             </select>
           </div>
         </div>
@@ -1588,6 +1607,28 @@
     }
 
     /* GEMINI PROMPT GENERATOR */
+
+    function faceLockPromptLines(skinKey) {
+      const key = (skinKey || 'none').toString();
+      if (key === 'none' || !key) {
+        return [
+          '- Face + hair lock: none',
+          '- Do not apply Chloe or Bailey identity to people in frame.'
+        ];
+      }
+      const isChloe = key.indexOf('chloe') !== -1;
+      const name = isChloe ? 'Chloe' : 'Bailey';
+      const ref = isChloe ? 'assets/chloe-skin.jpg' : 'assets/bailey-skin.jpg';
+      return [
+        `- Face + hair lock: ${name}`,
+        `- Identity reference photo: ${ref}`,
+        `- FACE LOCK ONLY: transfer ${name}'s face identity and hair from the reference photo onto people in the scene.`,
+        `- Do NOT copy the reference pose, body, clothing, hands, torso, or room from the skin photo.`,
+        `- Keep each person's pose, body, and clothing from the live scene; only face + hair become ${name}.`,
+        '- This is NOT a HUD border and NOT a full-body paste of the skin photo.'
+      ];
+    }
+
     function buildMasterPrompt() {
       const charName = ADMIN_CHARACTERS[adminState.activeCharId].name;
       const isMulti = document.getElementById('gen-rule-multiangle').checked;
@@ -1615,8 +1656,7 @@
 
       prompt += `[OUTPUT SPECS]:\n`;
       prompt += `- Format: ${motion === 'live_webcam' ? 'Live Dynamic Webcam Video Clip' : 'Static High-Res Render'}\n`;
-      prompt += `- Girl Overlay (over people): ${adminState.overlaySkin}\n`;
-      prompt += `- Composite the selected girl (Chloe or Bailey) ON TOP OF people in the scene — face/body of the girl replaces or covers people. This is NOT a HUD border or frame around the webcam.\n`;
+      faceLockPromptLines(adminState.overlaySkin).forEach(line => { prompt += line + '\n'; });
 
       return prompt;
     }
@@ -1701,8 +1741,7 @@
       prompt += `- Furniture Removals / Clean Items: ${removes.length ? removes.join(', ') : 'None specified'}\n\n`;
       prompt += `[WEBCAM OVERLAY & RENDER OUTPUT]:\n`;
       prompt += `- Motion Format: ${motion && motion.value === 'static_render' ? 'Static High-Res Reference Render' : 'Live Webcam Stream (Dynamic Motion Video)'}\n`;
-      prompt += `- Girl Overlay (over people): ${skin ? skin.value : adminState.overlaySkin}\n`;
-      prompt += `- Put the selected girl (Chloe or Bailey likeness) OVER people in frame — not a gold/neon HUD border around the webcam.\n`;
+      faceLockPromptLines(skin ? skin.value : adminState.overlaySkin).forEach(line => { prompt += line + '\n'; });
       return prompt;
     }
 

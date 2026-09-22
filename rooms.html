@@ -610,15 +610,36 @@
       transition: all 0.3s ease;
       z-index: 10;
     }
-    .skin-chloe-girl {
-      background: url('assets/chloe-room.png') center bottom / contain no-repeat;
-    }
+    /* Face+hair lock badge only — never stamp the full skin pose */
+    .skin-chloe-girl,
     .skin-bailey-girl {
-      background: url('assets/bailey-profile.png') center bottom / contain no-repeat;
+      background: none;
+    }
+    .skin-chloe-girl::after,
+    .skin-bailey-girl::after {
+      content: '';
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      border: 2px solid rgba(255, 255, 255, 0.75);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+      pointer-events: none;
+    }
+    .skin-chloe-girl::after {
+      background: url('assets/chloe-skin.jpg') center 18% / cover no-repeat;
+    }
+    .skin-bailey-girl::after {
+      background: url('assets/bailey-skin.jpg') center 18% / cover no-repeat;
     }
     .skin-none {
       background: none;
       border: none;
+    }
+    .skin-none::after {
+      content: none;
     }
 
     /* Footer */
