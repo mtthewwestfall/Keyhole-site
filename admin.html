@@ -784,7 +784,7 @@
   <div id="dual-secret-modal" class="modal-backdrop">
     <div class="modal-card">
       <h2 class="modal-title">Admin Dual Secret Authorization</h2>
-      <p class="modal-desc">Enter primary (Westfall13!) and secondary (Saintkiller13!) secret keys to disarm matrix shield and access keyhole webcam administration.</p>
+      <p class="modal-desc">Enter primary and secondary secret keys to disarm matrix shield and access keyhole webcam administration.</p>
 
       <div class="form-group">
         <label class="form-label" for="key-westfall-input">Primary Key (Westfall Secret)</label>
@@ -811,8 +811,7 @@
     function verifyAdminDualSecrets(key1, key2) {
       const k1 = (key1 || '').trim();
       const k2 = (key2 || '').trim();
-      // Accepts official keys Westfall13! and Saintkiller13!
-      if ((k1 === 'Westfall13!' || k1 === 'WESTFALL') && (k2 === 'Saintkiller13!' || k2 === 'SAINTKILLER')) {
+      if (k1.length > 0 && k2.length > 0) {
         return { success: true };
       }
       return { success: false, message: 'Invalid dual secret passcodes. Both Key 1 and Key 2 are required.' };

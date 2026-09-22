@@ -115,8 +115,8 @@ test('Keyhole WebCam Admin Portal Integrity', async (t) => {
   await t.test('Dual-secret authentication modal & verifier function exists', () => {
     assert.ok(adminHtml.includes('id="dual-secret-modal"'), 'Dual secret modal container present');
     assert.ok(adminHtml.includes('function verifyAdminDualSecrets(key1, key2)'), 'verifyAdminDualSecrets client hook defined');
-    assert.ok(adminHtml.includes('Westfall13!'), 'Primary secret default key present');
-    assert.ok(adminHtml.includes('Saintkiller13!'), 'Secondary secret default key present');
+    assert.ok(adminHtml.includes('id="key-westfall-input"'), 'Primary secret key input present');
+    assert.ok(adminHtml.includes('id="key-saintkiller-input"'), 'Secondary secret key input present');
   });
 
   await t.test('WebCam Stage Control Monitor & companion switcher contains all 6 companions', () => {
