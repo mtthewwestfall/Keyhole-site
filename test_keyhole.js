@@ -85,25 +85,76 @@ test('Keyhole Application HTML & Architecture Integrity', async (t) => {
     assert.ok(indexHtml.includes('@media (min-width: 820px)'), 'Responsive media queries configured for mobile first');
   });
 
-  await t.test('Gemini AI Studio UI & Sims Furniture Editor elements exist in DOM', () => {
-    assert.ok(indexHtml.includes('id="gemini-studio-btn"'), 'Gemini studio nav button present');
-    assert.ok(indexHtml.includes('id="gemini-studio-modal"'), 'Gemini studio modal present');
-    assert.ok(indexHtml.includes('id="gemini-prompt-output"'), 'Gemini prompt output textarea present');
-    assert.ok(indexHtml.includes('id="stage-skin-overlay"'), 'Stage webcam skin overlay container present');
+  await t.test('Customer room hides admin chrome; generators stay on admin.html', () => {
+    const customerAdmin = [
+      'id="gemini-studio-btn"',
+      'id="gemini-studio-modal"',
+      'id="gemini-prompt-output"',
+      'id="fruit-code-input"',
+      'Show Manager',
+      'Content & Gemini Generator',
+      'buildGeminiMasterPrompt()'
+    ];
+    customerAdmin.forEach(marker => {
+      assert.ok(!indexHtml.includes(marker), `Customer room must not include ${marker}`);
+    });
+    assert.ok(adminHtml.includes('Show Manager'), 'Show Manager stays on admin.html');
+    assert.ok(adminHtml.includes('Content & Gemini Generator'), 'Content generator stays on admin.html');
+    assert.ok(adminHtml.includes('id="fruit-code-input"'), 'Extended display generator stays on admin.html');
+    assert.ok(indexHtml.includes('id="stage-skin-overlay"'), 'Customer stage keeps its passive frame');
   });
 
-  await t.test('Gemini Master Prompt Engine enforces spatial rules', () => {
-    assert.ok(indexHtml.includes('buildGeminiMasterPrompt()'), 'buildGeminiMasterPrompt function defined');
-    assert.ok(indexHtml.includes('GEMINI MULTI-ANGLE ROOM'), 'Master prompt incorporates spatial rules');
-  });
-
-  await t.test('Sims-style furniture customization & webcam skins configuration', () => {
-    assert.ok(indexHtml.includes('furnitureAdditions'), 'Furniture additions state present');
-    assert.ok(indexHtml.includes('furnitureRemovals'), 'Furniture removals state present');
+  await t.test('Webcam frame skins remain defined for the customer stage', () => {
     assert.ok(indexHtml.includes('skin-neon-cyber'), 'Neon Cyber webcam skin CSS defined');
     assert.ok(indexHtml.includes('skin-keyhole-gold'), 'Classic Keyhole Gold HUD webcam skin CSS defined');
     assert.ok(indexHtml.includes('skin-glass-vignette'), 'Minimalist Glass Vignette webcam skin CSS defined');
     assert.ok(indexHtml.includes('skin-streamer-vip'), 'Streamer VIP webcam skin CSS defined');
+  });
+
+  await t.test('Private room unlock requires a paid backend entitlement', () => {
+    assert.ok(!indexHtml.includes('KEY-VIP-ROOM'), 'Public VIP key is not shipped in the customer page');
+    assert.ok(!indexHtml.includes("startsWith('KEY-')"), 'KEY- prefix is not accepted in the browser');
+    assert.ok(!indexHtml.includes("=== 'VIP'"), 'VIP is not accepted in the browser');
+    assert.ok(!indexHtml.includes("=== 'MEMBER'"), 'MEMBER is not accepted in the browser');
+    assert.ok(indexHtml.includes('function hasPaidBedroomAccess'), 'Paid entitlement check exists');
+    assert.ok(indexHtml.includes("api('/keyhole/me')"), 'Entitlement is read from GET /keyhole/me');
+    assert.ok(indexHtml.includes("api('/keyhole/session/start'"), 'Paid unlock starts a server session');
+    assert.ok(indexHtml.includes('pendingBedroomRestore'), 'Saved bedroom mode is not trusted until the server agrees');
+    const input = indexHtml.match(/<input[^>]*id="member-key-input"[^>]*>/);
+    assert.ok(input, 'Passcode field exists');
+    assert.ok(!/value\s*=\s*["'][^"']+["']/.test(input[0]), 'Passcode field starts empty');
+
+    const fnMatch = indexHtml.match(/function hasPaidBedroomAccess\(me, previewMinutes\) \{[\s\S]*?\n    \}/);
+    assert.ok(fnMatch, 'hasPaidBedroomAccess source can be evaluated');
+    const hasPaidBedroomAccess = new Function('me', 'previewMinutes', `${fnMatch[0]}\nreturn hasPaidBedroomAccess(me, previewMinutes);`);
+    assert.equal(hasPaidBedroomAccess(null, 10), false);
+    assert.equal(hasPaidBedroomAccess({ webcam_minutes_left: 0, free_preview_available: true }, 10), false);
+    assert.equal(hasPaidBedroomAccess({
+      webcam_minutes_left: 10, free_preview_available: false, intro_available: true, session_active: false
+    }, 10), false, 'Free preview minutes do not unlock the bedroom');
+    assert.equal(hasPaidBedroomAccess({
+      webcam_minutes_left: 10, session_active: true, session_minutes_left: 10,
+      free_preview_available: false, intro_available: true
+    }, 10), false, 'An active free-preview session does not unlock the bedroom');
+    assert.equal(hasPaidBedroomAccess({
+      webcam_minutes_left: 10, free_preview_available: true, intro_available: true
+    }, 10), true, 'Purchased minutes before the free preview is claimed do unlock');
+    assert.equal(hasPaidBedroomAccess({
+      webcam_minutes_left: 10, free_preview_available: false, intro_available: false
+    }, 10), true, 'A purchased intro unlocks');
+    assert.equal(hasPaidBedroomAccess({
+      webcam_minutes_left: 25, free_preview_available: false, intro_available: true
+    }, 10), true, 'More time than the preview grant unlocks');
+  });
+
+  await t.test('Message credits are shown and loaded from Keyhole APIs', () => {
+    assert.ok(indexHtml.includes('id="message-credits"'), 'Remaining messages are shown in the room');
+    assert.ok(indexHtml.includes('id="message-credit-policy"'), 'Credit policy is visible on the session list');
+    assert.ok(indexHtml.includes('verifiedPreviewMessages: 50'), 'Verified preview allowance is 50 messages');
+    assert.ok(indexHtml.includes('purchaseMessageGrant: 100'), 'Each paid purchase adds 100 messages');
+    assert.ok(indexHtml.includes("api('/keyhole/preview/claim'"), 'Preview claim is requested from the backend');
+    assert.ok(indexHtml.includes('text_balance'), 'Rollover balance comes from the account');
+    assert.ok(indexHtml.includes('Unused messages roll over'), 'Rollover is explained in the UI');
   });
 
   await t.test('Interactive chat interaction & bot response functions present', () => {
