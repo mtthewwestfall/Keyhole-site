@@ -962,24 +962,24 @@
       <div class="admin-grid">
         <div class="admin-card">
           <div class="card-title">Plate Beat Translator</div>
-          <p class="card-subtitle">Chloe or Bailey + real plate beats only (idle · tease · give · stop · presence). No fruit codes.</p>
+          <p class="card-subtitle">Pick the beat first (idle · tease · give · stop · presence), then the name under it. No fruit codes.</p>
 
           <div class="form-group">
-            <label class="form-label" for="plate-who">Who</label>
-            <select id="plate-who" class="form-select">
-              <option value="chloe" selected>Chloe</option>
-              <option value="bailey">Bailey</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="plate-beat">Plate Beat</label>
+            <label class="form-label" for="plate-beat">Beat</label>
             <select id="plate-beat" class="form-select">
               <option value="idle" selected>Idle</option>
               <option value="tease">Tease</option>
               <option value="give">Give</option>
               <option value="stop">Stop</option>
               <option value="presence">Presence</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="plate-who">Name</label>
+            <select id="plate-who" class="form-select">
+              <option value="chloe" selected>Chloe</option>
+              <option value="bailey">Bailey</option>
             </select>
           </div>
 
@@ -1025,8 +1025,8 @@
           <p class="card-subtitle">Who + beat mapped to the live plate library (no fruit codes).</p>
 
           <div style="line-height:1.8; font-size:0.88rem; margin-bottom:16px;">
-            <div><strong style="color:var(--muted);">Who:</strong> <span id="res-plate-who" style="color:var(--ink);">Chloe</span></div>
             <div><strong style="color:var(--muted);">Beat:</strong> <span id="res-plate-beat" style="color:var(--gold-bright); font-weight:700;">idle</span></div>
+            <div><strong style="color:var(--muted);">Name:</strong> <span id="res-plate-who" style="color:var(--ink);">Chloe</span></div>
             <div><strong style="color:var(--muted);">Meaning:</strong> <span id="res-translated-meaning" style="color:var(--ink);">Calm on-cam presence</span></div>
             <div><strong style="color:var(--muted);">Output Mode:</strong> <span id="res-output-mode" style="color:var(--ink);">Pictures</span></div>
             <div><strong style="color:var(--muted);">Surroundings:</strong> <span id="res-surroundings" style="color:var(--ink);">Standard focus framing</span></div>
@@ -1306,19 +1306,19 @@
           <div class="studio-section">
             <div class="studio-sec-title">Plate Beat Display</div>
             <div style="display:flex; flex-direction:column; gap:8px; font-size:0.82rem;">
-              <label>Who
-                <select id="studio-plate-who" class="form-select" style="margin-top:4px;">
-                  <option value="chloe" selected>Chloe</option>
-                  <option value="bailey">Bailey</option>
-                </select>
-              </label>
-              <label>Plate Beat
+              <label>Beat
                 <select id="studio-plate-beat" class="form-select" style="margin-top:4px;">
                   <option value="idle" selected>Idle</option>
                   <option value="tease">Tease</option>
                   <option value="give">Give</option>
                   <option value="stop">Stop</option>
                   <option value="presence">Presence</option>
+                </select>
+              </label>
+              <label>Name
+                <select id="studio-plate-who" class="form-select" style="margin-top:4px;">
+                  <option value="chloe" selected>Chloe</option>
+                  <option value="bailey">Bailey</option>
                 </select>
               </label>
               <label>Output Selection
@@ -1346,8 +1346,8 @@
               <button type="button" id="btn-generate-translate" class="btn">Load Plate Beat</button>
             </div>
             <div style="margin-top:14px; padding:12px; background:var(--night); border:1px solid var(--line); border-radius:8px; font-size:0.82rem; line-height:1.6;">
-              <div><strong style="color:var(--muted);">Who:</strong> <span id="studio-disp-plate-who">Chloe</span></div>
               <div><strong style="color:var(--muted);">Beat:</strong> <span id="studio-disp-plate-beat" style="color:var(--gold-bright); font-weight:600;">idle</span></div>
+              <div><strong style="color:var(--muted);">Name:</strong> <span id="studio-disp-plate-who">Chloe</span></div>
               <div><strong style="color:var(--muted);">Meaning:</strong> <span id="studio-disp-translated-meaning">Calm on-cam presence</span></div>
               <div><strong style="color:var(--muted);">Output Mode:</strong> <span id="studio-disp-output-mode">Pictures</span></div>
               <div><strong style="color:var(--muted);">Surroundings:</strong> <span id="studio-disp-surroundings-context">Standard focus framing</span></div>
