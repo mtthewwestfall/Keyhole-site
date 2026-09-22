@@ -692,6 +692,15 @@
           <p class="card-subtitle">Configure Gemini generation enforcing 3D physical consistency & locked primary view.</p>
 
           <div class="form-group">
+            <label class="form-label" for="gen-who">Who in the picture</label>
+            <select id="gen-who" class="form-select">
+              <option value="chloe" selected>Chloe — your skin (face + hair + bust)</option>
+              <option value="bailey">Bailey — your skin (face + hair + bust)</option>
+            </select>
+            <span style="font-size:0.75rem; color:var(--muted); display:block; margin-top:4px;">Only Chloe or Bailey. Uses your locked skin photos — not anyone else’s uploads.</span>
+          </div>
+
+          <div class="form-group">
             <label class="form-label" for="gen-beat">Plate Beat (saved into her folder)</label>
             <select id="gen-beat" class="form-select">
               <option value="idle" selected>Idle</option>
@@ -703,14 +712,37 @@
           </div>
 
           <div class="form-group">
-            <label class="form-label" for="gen-skin-asset">Skin (reference portrait of the active companion)</label>
-            <select id="gen-skin-asset" class="form-select"><option value="">Newest uploaded skin</option></select>
-            <span style="font-size:0.75rem; color:var(--muted); display:block; margin-top:4px;">Upload her portrait in Media Assets with tag <code>skin</code>; it is fed into every image and webcam clip so the output is her.</span>
+            <label class="form-label" for="gen-outfit">Outfit</label>
+            <select id="gen-outfit" class="form-select">
+              <option value="casual loungewear" selected>Casual loungewear</option>
+              <option value="silk robe, loosely tied">Silk robe</option>
+              <option value="cozy sweater and soft shorts">Cozy sweater</option>
+              <option value="black lingerie set">Black lingerie</option>
+              <option value="white tank and grey sweatpants">Tank + sweats</option>
+              <option value="bikini, indoor lighting">Bikini</option>
+              <option value="oversized tee, bare legs">Oversized tee</option>
+              <option value="custom">Custom (type below)</option>
+            </select>
+            <input type="text" id="gen-outfit-custom" class="form-input" style="margin-top:8px; display:none;" placeholder="Describe the outfit…" />
           </div>
 
           <div class="form-group">
-            <label class="form-label" for="gen-scene-prompt">Scene / action for this beat</label>
-            <input type="text" id="gen-scene-prompt" class="form-input" placeholder="e.g. sitting on the velvet bed, glancing at the camera, slow smile" />
+            <label class="form-label" for="gen-scene-prompt">Scene / action</label>
+            <input type="text" id="gen-scene-prompt" class="form-input" placeholder="e.g. sitting on the bed, looking at camera, soft smile" />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="gen-clip-seconds">Short clip length (video)</label>
+            <select id="gen-clip-seconds" class="form-select">
+              <option value="4">4 seconds</option>
+              <option value="6">6 seconds</option>
+              <option value="8" selected>8 seconds</option>
+            </select>
+          </div>
+
+          <div class="form-group" style="display:none;">
+            <label class="form-label" for="gen-skin-asset">Skin (unused — owner lock)</label>
+            <select id="gen-skin-asset" class="form-select"><option value="">Owner locked skin</option></select>
           </div>
 
           <div class="form-group">
@@ -795,7 +827,7 @@
           <div style="display:flex; gap:10px; margin-top:14px; flex-wrap:wrap;">
             <button id="btn-copy-gen-prompt" class="btn btn-secondary">Copy Prompt</button>
             <button id="btn-gen-image" class="btn btn-teal">Generate Image (Gemini)</button>
-            <button id="btn-gen-webcam" class="btn" style="flex:1;">Generate Webcam Clip (Veo) → save as plate</button>
+            <button id="btn-gen-webcam" class="btn" style="flex:1;">Generate Short Clip (4–8s) → save as plate</button>
             <button id="btn-apply-gen-stage" class="btn btn-secondary">Apply to Active Stage</button>
           </div>
           <div id="gen-feedback" class="feedback-msg feedback-success">Prompt updated!</div>
@@ -1631,7 +1663,10 @@
     }
 
     function buildMasterPrompt() {
-      const charName = ADMIN_CHARACTERS[adminState.activeCharId].name;
+      const whoEl = document.getElementById('gen-who');
+      const who = (whoEl && whoEl.value) || adminState.activeCharId || 'chloe';
+      const charName = (ADMIN_CHARACTERS[who] || ADMIN_CHARACTERS.chloe).name;
+      const lockKey = who === 'bailey' ? 'bailey_girl' : 'chloe_girl';
       const isMulti = document.getElementById('gen-rule-multiangle').checked;
       const isPrimary = document.getElementById('gen-rule-primaryview').checked;
       const motion = document.getElementById('gen-motion-mode').value;
@@ -1657,7 +1692,8 @@
 
       prompt += `[OUTPUT SPECS]:\n`;
       prompt += `- Format: ${motion === 'live_webcam' ? 'Live Dynamic Webcam Video Clip' : 'Static High-Res Render'}\n`;
-      faceLockPromptLines(adminState.overlaySkin).forEach(line => { prompt += line + '\n'; });
+      faceLockPromptLines(lockKey).forEach(line => { prompt += line + '\n'; });
+      prompt += `- Outfit for this render: ${selectedOutfit()}\n`;
 
       return prompt;
     }
@@ -1936,14 +1972,41 @@
       document.getElementById('gen-result-meta').textContent = `#${asset.id} ${asset.character_id} · ${(asset.tags || []).join(', ')} · ${meta || ''}`;
     }
 
+    function selectedOutfit() {
+      const sel = document.getElementById('gen-outfit');
+      if (!sel) return 'casual loungewear';
+      if (sel.value === 'custom') {
+        const custom = (document.getElementById('gen-outfit-custom') || {}).value || '';
+        return custom.trim() || 'casual loungewear';
+      }
+      return sel.value;
+    }
+
+    function syncWhoToStage() {
+      const who = (document.getElementById('gen-who') || {}).value || 'chloe';
+      adminState.activeCharId = who;
+      const stage = document.getElementById('stage-char-select');
+      if (stage && [...stage.options].some(o => o.value === who)) stage.value = who;
+      adminState.overlaySkin = who === 'bailey' ? 'bailey_girl' : 'chloe_girl';
+      const stageSkin = document.getElementById('stage-skin-select');
+      if (stageSkin) stageSkin.value = adminState.overlaySkin;
+      const webcamSkin = document.getElementById('webcam-skin-select');
+      if (webcamSkin) webcamSkin.value = adminState.overlaySkin;
+      if (typeof renderSkinOptions === 'function') renderSkinOptions();
+      if (typeof updateGeminiPrompt === 'function') updateGeminiPrompt();
+    }
+
     function generatorInputs() {
-      const skin = document.getElementById('gen-skin-asset').value;
+      syncWhoToStage();
+      const who = (document.getElementById('gen-who') || {}).value || 'chloe';
       return {
-        character: adminState.activeCharId,
+        character: who === 'bailey' ? 'bailey' : 'chloe',
         beat: document.getElementById('gen-beat').value,
-        reference_asset_id: skin ? Number(skin) : null,
+        reference_asset_id: null,
         use_reference: true,
-        scene: document.getElementById('gen-scene-prompt').value.trim()
+        scene: document.getElementById('gen-scene-prompt').value.trim(),
+        outfit: selectedOutfit(),
+        clip_seconds: Number((document.getElementById('gen-clip-seconds') || {}).value || 8)
       };
     }
 
@@ -1951,8 +2014,8 @@
       const g = generatorInputs();
       if (!KeyholePlateEngine.REQUIRED_CHARACTERS.includes(g.character)) { genFeedback('Generators are wired for Bailey and Chloe only.', false); return; }
       const prompt = engine === 'secondary'
-        ? `${ADMIN_CHARACTERS[g.character].name}. ${document.getElementById('sec-gen-prompt').value.trim()} ${g.scene}`.trim()
-        : `${buildMasterPrompt()}\n[SCENE]: ${g.scene || 'natural webcam moment'}`;
+        ? `${ADMIN_CHARACTERS[g.character].name}, face hair and bust locked to her skin photo, wearing ${g.outfit}. ${document.getElementById('sec-gen-prompt').value.trim()} ${g.scene}`.trim()
+        : `${buildMasterPrompt()}\n[WHO]: ${ADMIN_CHARACTERS[g.character].name} — face+hair+bust locked to your skin photo\n[OUTFIT]: ${g.outfit}\n[SCENE]: ${g.scene || 'natural webcam moment'}`;
       const status = engine === 'secondary' ? document.getElementById('sec-gen-status') : null;
       if (status) { status.style.display = 'block'; status.className = 'feedback-msg feedback-success'; status.textContent = 'Generating with Sogni…'; }
       genFeedback(`Generating ${g.beat} image for ${ADMIN_CHARACTERS[g.character].name} (${engine === 'secondary' ? 'Sogni' : 'Gemini'})…`, true);
@@ -1983,10 +2046,10 @@
       genFeedback(`Starting Veo webcam clip: ${ADMIN_CHARACTERS[g.character].name} / ${g.beat}…`, true);
       try {
         const start = await api('/admin/generator/webcam', { body: {
-          prompt: `${buildMasterPrompt()}\n[SCENE]: ${g.scene || 'natural webcam moment, subtle motion'}`,
+          prompt: `${buildMasterPrompt()}\n[WHO]: ${ADMIN_CHARACTERS[g.character].name} — face+hair+bust from your skin photo\n[OUTFIT]: ${g.outfit}\n[SCENE]: ${g.scene || 'natural webcam moment, subtle motion'}`,
           character: g.character, beat: g.beat,
           reference_asset_id: g.reference_asset_id, use_reference: g.use_reference,
-          duration_seconds: 8, aspect_ratio: '16:9',
+          duration_seconds: g.clip_seconds, aspect_ratio: '16:9',
           title: `${ADMIN_CHARACTERS[g.character].name} ${g.beat} webcam`
         } });
         const jobId = start.job_id;
@@ -2135,6 +2198,15 @@
 
       document.getElementById('btn-sec-gen-generate').addEventListener('click', () => runImageGenerator('secondary'));
       document.getElementById('btn-gen-image').addEventListener('click', () => runImageGenerator('primary'));
+      document.getElementById('gen-who').addEventListener('change', syncWhoToStage);
+      document.getElementById('gen-outfit').addEventListener('change', () => {
+        const custom = document.getElementById('gen-outfit-custom');
+        custom.style.display = document.getElementById('gen-outfit').value === 'custom' ? 'block' : 'none';
+        updateGeminiPrompt();
+      });
+      document.getElementById('gen-outfit-custom').addEventListener('input', updateGeminiPrompt);
+      document.getElementById('gen-clip-seconds').addEventListener('change', updateGeminiPrompt);
+
       document.getElementById('btn-gen-webcam').addEventListener('click', runWebcamGenerator);
 
       document.getElementById('gen-rule-multiangle').addEventListener('change', updateGeminiPrompt);
