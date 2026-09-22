@@ -1,0 +1,39 @@
+# Netlify hosting for the Keyhole static site. Mirrors nginx.conf.template: the
+# Sorority-house backend on Railway serves webhooks, auth, the Keyhole API, the admin
+# console and the media library; everything else is a static file.
+[build]
+  publish = "."
+  command = ""
+
+[functions]
+  directory = "netlify/functions"
+
+[[redirects]]
+  from = "/webhooks/*"
+  to = "https://sorority-house-production-aeb5.up.railway.app/webhooks/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/keyhole/*"
+  to = "https://sorority-house-production-aeb5.up.railway.app/keyhole/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/auth/*"
+  to = "https://sorority-house-production-aeb5.up.railway.app/auth/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/admin/*"
+  to = "https://sorority-house-production-aeb5.up.railway.app/admin/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/media/*"
+  to = "https://sorority-house-production-aeb5.up.railway.app/media/:splat"
+  status = 200
+  force = true
