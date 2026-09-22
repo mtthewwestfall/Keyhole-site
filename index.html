@@ -6,18 +6,94 @@
 <meta name="theme-color" content="#071720">
 <title>Keyhole — Private Live Connection</title>
 <style>
-:root{--night:#020c11;--paper:#071720;--panel:#102b35;--ink:#f6efdf;--muted:#bac7c8;--gold:#d9ad58;--bright:#f0c879;--line:rgba(246,239,223,.15)}
+:root{--night:#020c11;--paper:#071720;--panel:#102b35;--ink:#f6efdf;--muted:#bac7c8;--gold:#d9ad58;--bright:#f0c879;--line:rgba(246,239,223,.15);--danger:#ff8a80}
 *{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 50% 20%,#12313d 0,#071720 38%,#020c11 78%);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-main{min-height:100vh;display:grid;place-items:center;padding:28px 20px}.cover{width:min(680px,100%);text-align:center;padding:54px 24px;border:1px solid var(--line);border-radius:22px;background:rgba(7,23,32,.84);box-shadow:0 28px 80px rgba(0,0,0,.4)}
-.mark{width:58px;height:58px;margin:0 auto 22px;border:2px solid var(--gold);border-radius:50%;display:grid;place-items:center;color:var(--bright);font-size:28px}
-h1{margin:0;color:var(--bright);font-family:Georgia,serif;font-size:clamp(2.7rem,12vw,5rem);letter-spacing:.16em}p{margin:18px auto 30px;max-width:480px;color:var(--muted);font-size:1.05rem;line-height:1.6}
-.enter{display:inline-block;padding:14px 28px;border-radius:10px;background:linear-gradient(135deg,var(--gold),var(--bright));color:#071720;text-decoration:none;font-weight:800;letter-spacing:.04em}
+main{min-height:100vh;display:grid;place-items:center;padding:28px 20px}.cover{width:min(520px,100%);text-align:center;padding:44px 28px;border:1px solid var(--line);border-radius:22px;background:rgba(7,23,32,.84);box-shadow:0 28px 80px rgba(0,0,0,.4)}
+.mark{width:58px;height:58px;margin:0 auto 18px;border:2px solid var(--gold);border-radius:50%;display:grid;place-items:center;color:var(--bright);font-size:28px}
+h1{margin:0;color:var(--bright);font-family:Georgia,serif;font-size:clamp(2.4rem,10vw,4rem);letter-spacing:.16em}p{margin:14px auto 22px;max-width:440px;color:var(--muted);font-size:1rem;line-height:1.6}
+form{display:grid;gap:10px;text-align:left}label{font-size:.8rem;color:var(--muted);letter-spacing:.04em}
+input{width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--line);background:rgba(2,12,17,.7);color:var(--ink);font-size:1rem}input:focus{outline:none;border-color:var(--gold)}
+.enter{width:100%;margin-top:6px;padding:14px 28px;border:0;border-radius:10px;background:linear-gradient(135deg,var(--gold),var(--bright));color:#071720;font-weight:800;letter-spacing:.04em;font-size:1rem;cursor:pointer}.enter:disabled{opacity:.6;cursor:wait}
+.alt{margin-top:14px;font-size:.9rem;color:var(--muted)}.alt a{color:var(--bright);text-decoration:none}.alt a:hover{text-decoration:underline}
+.msg{min-height:1.2em;margin-top:10px;font-size:.9rem}.msg.error{color:var(--danger)}.msg.ok{color:var(--bright)}
 .note{margin-top:22px;font-size:.78rem;color:#87999d}
 </style>
 </head>
-<body><main><section class="cover" aria-label="Keyhole welcome">
+<body><main><section class="cover" aria-label="Keyhole sign up">
 <div class="mark">⌾</div><h1>KEYHOLE</h1>
-<p>Private live connection, personal rooms, and real-time conversation. Enter when you’re ready.</p>
-<a class="enter" href="rooms.html">Enter Keyhole</a>
+<p id="intro-copy">Private live connection, personal rooms, and real-time conversation. Create your account to start your free 10-minute preview.</p>
+<form id="account-form" novalidate>
+  <div id="name-row"><label for="display_name">Name</label><input id="display_name" name="display_name" type="text" autocomplete="nickname" placeholder="What should she call you?"></div>
+  <label for="email">Email</label><input id="email" name="email" type="email" autocomplete="email" required placeholder="you@example.com">
+  <label for="password">Password</label><input id="password" name="password" type="password" autocomplete="new-password" required placeholder="At least 8 characters">
+  <button class="enter" id="submit-btn" type="submit">Create Account &amp; Enter</button>
+  <div id="msg" class="msg" role="status"></div>
+</form>
+<div class="alt"><a href="#" id="toggle-link">Already have an account? Sign in</a> · <a href="#" id="resend-link">Resend verification</a></div>
 <div class="note">Private access • Live rooms • Personal connection</div>
-</section></main></body></html>
+</section></main>
+<script>
+(() => {
+  const TOKEN_KEY = 'keyhole_auth_token_v1';
+  const NEXT = 'rooms.html';
+  if (localStorage.getItem(TOKEN_KEY)) { location.replace(NEXT); return; }
+
+  const form = document.getElementById('account-form');
+  const nameRow = document.getElementById('name-row');
+  const email = document.getElementById('email');
+  const password = document.getElementById('password');
+  const displayName = document.getElementById('display_name');
+  const submit = document.getElementById('submit-btn');
+  const toggle = document.getElementById('toggle-link');
+  const resend = document.getElementById('resend-link');
+  const msg = document.getElementById('msg');
+  let mode = 'signup';
+
+  function say(text, kind) { msg.textContent = text || ''; msg.className = 'msg' + (kind ? ' ' + kind : ''); }
+  function setMode(m) {
+    mode = m;
+    const signup = m === 'signup';
+    nameRow.style.display = signup ? '' : 'none';
+    password.autocomplete = signup ? 'new-password' : 'current-password';
+    submit.textContent = signup ? 'Create Account & Enter' : 'Sign In & Enter';
+    toggle.textContent = signup ? 'Already have an account? Sign in' : 'New here? Create an account';
+    say('');
+  }
+  async function api(path, body) {
+    const res = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    let data = {};
+    try { data = await res.json(); } catch (_) {}
+    if (!res.ok) { const e = new Error(data.detail || `Request failed (${res.status})`); e.status = res.status; throw e; }
+    return data;
+  }
+
+  toggle.addEventListener('click', (e) => { e.preventDefault(); setMode(mode === 'signup' ? 'login' : 'signup'); });
+  resend.addEventListener('click', async (e) => {
+    e.preventDefault();
+    if (!email.value.trim()) return say('Enter your email first.', 'error');
+    try { await api('/auth/resend-verification', { email: email.value.trim() }); say(`Verification email sent to ${email.value.trim()}.`, 'ok'); }
+    catch (err) { say(err.message, 'error'); }
+  });
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const em = email.value.trim(), pw = password.value;
+    if (!em || !pw) return say('Email and password are required.', 'error');
+    submit.disabled = true; say('');
+    try {
+      if (mode === 'signup') {
+        const res = await api('/auth/signup', { email: em, password: pw, display_name: displayName.value.trim() || em.split('@')[0] });
+        if (res.needs_verification) { setMode('login'); say(`Check ${em} for a verification link, then sign in.`, 'ok'); return; }
+      }
+      const data = await api('/auth/login', { email: em, password: pw });
+      localStorage.setItem(TOKEN_KEY, data.token);
+      location.replace(NEXT);
+    } catch (err) {
+      say(err.message || 'Could not sign in.', 'error');
+    } finally {
+      submit.disabled = false;
+    }
+  });
+  setMode('signup');
+})();
+</script>
+</body></html>

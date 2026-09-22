@@ -780,19 +780,19 @@
           <div class="session-tier featured" data-minutes="10" data-free-preview="true">
             <div class="session-tier-time">Free Preview</div>
             <div class="session-tier-price">FREE</div>
-            <div class="session-tier-messages">10 minutes</div>
+            <div class="session-tier-messages">10 minutes · one per account</div>
           </div>
-          <div class="session-tier" data-minutes="10" data-price="4.99">
+          <div class="session-tier" data-minutes="10" data-package="intro" data-once="intro" data-stripe="https://buy.stripe.com/9B69AM0Ur38HchN0ZrdjO0a">
             <div class="session-tier-time">10 minutes</div>
-            <div class="session-tier-price">$4.99</div>
-            <div class="session-tier-messages">100 messages</div>
+            <div class="session-tier-price">$5.99</div>
+            <div class="session-tier-messages">100 messages · one per account</div>
           </div>
-          <div class="session-tier" data-minutes="15" data-package="quick">
+          <div class="session-tier" data-minutes="15" data-package="quick" data-stripe="https://buy.stripe.com/00w14gav1bFddlR6jLdjO09">
             <div class="session-tier-time">15 minutes</div>
             <div class="session-tier-price">$7.99</div>
             <div class="session-tier-messages">100 messages</div>
           </div>
-          <div class="session-tier" data-minutes="30" data-package="standard">
+          <div class="session-tier" data-minutes="30" data-package="standard" data-stripe="https://buy.stripe.com/bJeeV67iPdNl2Hd8rTdjO08">
             <div class="session-tier-time">30 minutes</div>
             <div class="session-tier-price">$11.99</div>
             <div class="session-tier-messages">100 messages</div>
@@ -802,17 +802,17 @@
             <div class="session-tier-price">$14.99</div>
             <div class="session-tier-messages">100 messages</div>
           </div>
-          <div class="session-tier" data-minutes="55" data-stripe="https://buy.stripe.com/4gM9AM46DbFda9F23vdjO03">
+          <div class="session-tier" data-minutes="55" data-package="long" data-stripe="https://buy.stripe.com/4gM9AM46DbFda9F23vdjO03">
             <div class="session-tier-time">55 minutes</div>
             <div class="session-tier-price">$17.99</div>
             <div class="session-tier-messages">100 messages</div>
           </div>
-          <div class="session-tier featured" data-minutes="60" data-package="premium">
+          <div class="session-tier featured" data-minutes="60" data-package="premium" data-stripe="https://buy.stripe.com/9B600c0UrcJh4Pl0ZrdjO07">
             <div class="session-tier-time">60 minutes</div>
             <div class="session-tier-price">$19.99</div>
             <div class="session-tier-messages">100 messages</div>
           </div>
-          <div class="session-tier" data-minutes="75" data-stripe="https://buy.stripe.com/5kQ5kw0UrfVtepVaA1djO04">
+          <div class="session-tier" data-minutes="75" data-package="marathon" data-stripe="https://buy.stripe.com/5kQ5kw0UrfVtepVaA1djO04">
             <div class="session-tier-time">75 minutes</div>
             <div class="session-tier-price">$23.99</div>
             <div class="session-tier-messages">100 messages</div>
@@ -1510,7 +1510,11 @@
         return api('/keyhole/nowpayments/invoice', { package: pkg });
       }
 
-      return { token, me: () => me, refresh, login, signup, resendVerification, logout, packages, createCryptoInvoice };
+      async function claimFreePreview() {
+        return api('/keyhole/preview/claim', {});
+      }
+
+      return { token, me: () => me, refresh, login, signup, resendVerification, logout, packages, createCryptoInvoice, claimFreePreview };
     })();
 
     /* ==========================================================================
@@ -2254,6 +2258,37 @@
         elAccountStatus.style.display = 'none';
         elAccountBtn.textContent = 'Sign In';
       }
+      renderOncePerAccountTiers(me);
+    }
+
+    // Free preview and the 10-minute starter are one per account: hide them once used.
+    function renderOncePerAccountTiers(me) {
+      const preview = document.querySelector('.session-tier[data-free-preview]');
+      if (preview) preview.style.display = (me && me.free_preview_available === false) ? 'none' : '';
+      document.querySelectorAll('.session-tier[data-once]').forEach(tier => {
+        const key = tier.dataset.once + '_available';
+        tier.style.display = (me && me[key] === false) ? 'none' : '';
+      });
+    }
+
+    async function claimFreePreview(btn) {
+      if (!KeyholeAccount.token()) {
+        openAccountModal('signup');
+        showAccountNotice('Create your account to start the free 10-minute preview.');
+        return;
+      }
+      btn.disabled = true; btn.textContent = 'Starting...';
+      try {
+        await KeyholeAccount.claimFreePreview();
+        await KeyholeAccount.refresh();
+        renderAccountStatus();
+        appendSystemMessageIfInRoom('Your free 10-minute preview is on your account.');
+      } catch (err) {
+        if (err.status === 401) { openAccountModal('login'); showAccountNotice('Please sign in again.'); }
+        else { alert(err.message || 'Could not start the free preview.'); await KeyholeAccount.refresh().catch(() => {}); renderAccountStatus(); }
+      } finally {
+        btn.disabled = false; btn.textContent = 'Start free preview';
+      }
     }
 
     async function handleAccountSubmit() {
@@ -2316,6 +2351,15 @@
     function renderTierCheckoutButtons(packages) {
       const byName = {};
       (packages || []).forEach(p => { byName[p.package] = p; });
+      const previewTier = document.querySelector('.session-tier[data-free-preview]');
+      if (previewTier && !previewTier.querySelector('.tier-preview-btn')) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'session-tier-buy tier-preview-btn';
+        b.textContent = 'Start free preview';
+        b.addEventListener('click', (e) => { e.stopPropagation(); claimFreePreview(b); });
+        previewTier.appendChild(b);
+      }
       document.querySelectorAll('.session-tier[data-package], .session-tier[data-stripe]').forEach(tier => {
         const pkg = tier.dataset.package;
         const info = pkg ? byName[pkg] : null;
@@ -2346,7 +2390,14 @@
           card.addEventListener('click', (e) => {
             e.stopPropagation();
             const me = KeyholeAccount.me();
-            if (me && me.user_id) card.href = stripe + (stripe.includes('?') ? '&' : '?') + 'client_reference_id=' + encodeURIComponent(me.user_id) + (me.email ? '&prefilled_email=' + encodeURIComponent(me.email) : '');
+            if (!me || !me.user_id) {
+              // Sign in first: client_reference_id is how the Stripe webhook finds this account.
+              e.preventDefault();
+              openAccountModal('login');
+              showAccountNotice('Sign in first so the minutes land on your account when the payment clears.');
+              return;
+            }
+            card.href = stripe + (stripe.includes('?') ? '&' : '?') + 'client_reference_id=' + encodeURIComponent(me.user_id) + (me.email ? '&prefilled_email=' + encodeURIComponent(me.email) : '');
           });
           tier.appendChild(card);
         }
@@ -2355,7 +2406,7 @@
 
     async function initAccountAndCheckout() {
       elAccountBtn.addEventListener('click', () => {
-        if (KeyholeAccount.token()) { KeyholeAccount.logout(); renderAccountStatus(); }
+        if (KeyholeAccount.token()) { KeyholeAccount.logout(); renderAccountStatus(); location.replace('index.html'); }
         else openAccountModal('login');
       });
       document.getElementById('account-close-btn').addEventListener('click', closeAccountModal);
@@ -2372,7 +2423,15 @@
 
       renderTierCheckoutButtons([]);
       KeyholeAccount.packages().then(renderTierCheckoutButtons).catch(() => {});
-      KeyholeAccount.refresh().then(renderAccountStatus).catch(renderAccountStatus);
+      KeyholeAccount.refresh().catch(() => null).then(() => {
+        renderAccountStatus();
+        if (!KeyholeAccount.token()) location.replace('index.html');  // token expired
+      });
+      if (!KeyholeAccount.token()) {
+        // Sign-up lives on the cover page; the rooms + session tiers are the page after it.
+        location.replace('index.html');
+        return;
+      }
 
       const paid = new URLSearchParams(location.search).get('paid');
       if (paid && KeyholeAccount.token()) {
