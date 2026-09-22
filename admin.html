@@ -559,10 +559,10 @@
             </div>
 
             <div style="flex:1; min-width:160px;">
-              <label class="form-label" for="stage-skin-select">Face + hair lock</label>
+              <label class="form-label" for="stage-skin-select">Face + hair + bust lock</label>
               <select id="stage-skin-select" class="form-select">
-                <option value="chloe_girl" selected>Chloe — face + hair (your skin photo)</option>
-                <option value="bailey_girl">Bailey — face + hair (your skin photo)</option>
+                <option value="chloe_girl" selected>Chloe — face + hair + bust (your skin photo)</option>
+                <option value="bailey_girl">Bailey — face + hair + bust (your skin photo)</option>
                 <option value="none">No face lock</option>
               </select>
             </div>
@@ -1079,10 +1079,10 @@
           </div>
 
           <div class="studio-section">
-            <div class="studio-sec-title">Face + hair lock (identity from your skin photos — not pose)</div>
+            <div class="studio-sec-title">Face + hair + bust lock (identity from your skin photos — not pose)</div>
             <select id="webcam-skin-select" class="form-select">
-              <option value="chloe_girl" selected>Chloe — face + hair (your skin photo)</option>
-              <option value="bailey_girl">Bailey — face + hair (your skin photo)</option>
+              <option value="chloe_girl" selected>Chloe — face + hair + bust (your skin photo)</option>
+              <option value="bailey_girl">Bailey — face + hair + bust (your skin photo)</option>
               <option value="none">No face lock</option>
             </select>
           </div>
@@ -1612,7 +1612,7 @@
       const key = (skinKey || 'none').toString();
       if (key === 'none' || !key) {
         return [
-          '- Face + hair lock: none',
+          '- Face + hair + bust lock: none',
           '- Do not apply Chloe or Bailey identity to people in frame.'
         ];
       }
@@ -1620,11 +1620,12 @@
       const name = isChloe ? 'Chloe' : 'Bailey';
       const ref = isChloe ? 'assets/chloe-skin.jpg' : 'assets/bailey-skin.jpg';
       return [
-        `- Face + hair lock: ${name}`,
+        `- Face + hair + bust lock: ${name}`,
         `- Identity reference photo: ${ref}`,
-        `- FACE LOCK ONLY: transfer ${name}'s face identity and hair from the reference photo onto people in the scene.`,
-        `- Do NOT copy the reference pose, body, clothing, hands, torso, or room from the skin photo.`,
-        `- Keep each person's pose, body, and clothing from the live scene; only face + hair become ${name}.`,
+        `- IDENTITY LOCK: transfer ${name}'s face, hair, and bust (chest/breast shape) from the reference photo onto people in the scene.`,
+        `- Keep the live scene pose — arms, hands, stance, camera angle, and body position stay from the webcam/scene, not from the skin photo.`,
+        `- Do NOT paste the reference photo's exact pose, clothing outfit, room, or full-body stamp.`,
+        `- Clothing can follow the scene, but bust shape under it should match ${name}'s reference.`,
         '- This is NOT a HUD border and NOT a full-body paste of the skin photo.'
       ];
     }
