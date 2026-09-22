@@ -3,9 +3,12 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 
-// Read index.html content
+// Read index.html and admin.html content
 const indexPath = path.resolve('index.html');
 const indexHtml = fs.readFileSync(indexPath, 'utf8');
+
+const adminPath = path.resolve('admin.html');
+const adminHtml = fs.existsSync(adminPath) ? fs.readFileSync(adminPath, 'utf8') : '';
 
 test('Keyhole Application HTML & Architecture Integrity', async (t) => {
   await t.test('index.html contains 6 distinct character profiles with stable IDs', () => {
@@ -99,5 +102,59 @@ test('Keyhole Application HTML & Architecture Integrity', async (t) => {
     assert.ok(indexHtml.includes('id="btn-generate-translate"'), 'Generate & Translate button present');
     assert.ok(indexHtml.includes('id="disp-translated-meaning"'), 'Translated meaning display span present');
     assert.ok(indexHtml.includes('function handleGenerateAndTranslate()'), 'handleGenerateAndTranslate handler defined');
+  });
+});
+
+test('Keyhole WebCam Admin Portal Integrity', async (t) => {
+  await t.test('admin.html exists and contains valid Keyhole Admin header', () => {
+    assert.ok(adminHtml.length > 0, 'admin.html file exists and is not empty');
+    assert.ok(adminHtml.includes('<title>Keyhole — WebCam Admin & Control Center</title>'), 'Admin portal title present');
+    assert.ok(adminHtml.includes('id="matrix-shield-status"'), 'Matrix shield status pill present');
+  });
+
+  await t.test('Dual-secret authentication modal & verifier function exists', () => {
+    assert.ok(adminHtml.includes('id="dual-secret-modal"'), 'Dual secret modal container present');
+    assert.ok(adminHtml.includes('function verifyAdminDualSecrets(key1, key2)'), 'verifyAdminDualSecrets client hook defined');
+    assert.ok(adminHtml.includes('Westfall13!'), 'Primary secret default key present');
+    assert.ok(adminHtml.includes('Saintkiller13!'), 'Secondary secret default key present');
+  });
+
+  await t.test('WebCam Stage Control Monitor & companion switcher contains all 6 companions', () => {
+    const companions = ['bailey', 'chloe', 'harper', 'maya', 'sienna', 'elena'];
+    companions.forEach(c => {
+      assert.ok(adminHtml.includes(`value="${c}"`), `Companion ${c} option present in admin stage switcher`);
+    });
+    assert.ok(adminHtml.includes('id="admin-stage-video"'), 'Admin stage video element present');
+    assert.ok(adminHtml.includes('id="admin-stage-skin"'), 'Admin stage skin overlay element present');
+    assert.ok(adminHtml.includes('function renderStageMonitor()'), 'renderStageMonitor function defined');
+  });
+
+  await t.test('WebCam Show Manager & booking workflow functions present', () => {
+    assert.ok(adminHtml.includes('id="shows-table-body"'), 'Shows table body present');
+    assert.ok(adminHtml.includes('id="btn-demo-simulate"'), 'Demo simulate private request button present');
+    assert.ok(adminHtml.includes('id="btn-create-pub-show"'), 'Create public show button present');
+    assert.ok(adminHtml.includes('function renderShowsTable()'), 'renderShowsTable function defined');
+    assert.ok(adminHtml.includes('function publishPreview('), 'publishPreview function defined');
+  });
+
+  await t.test('Gemini Content Generator enforces multi-angle consistency & primary view locking', () => {
+    assert.ok(adminHtml.includes('id="gen-rule-multiangle"'), 'Multi-angle consistency checkbox present');
+    assert.ok(adminHtml.includes('id="gen-rule-primaryview"'), 'Primary view locking checkbox present');
+    assert.ok(adminHtml.includes('function buildMasterPrompt()'), 'buildMasterPrompt function defined');
+    assert.ok(adminHtml.includes('[RULE 1 - UNIFIED 3D PHYSICAL ROOM]'), 'Rule 1 spatial consistency in admin prompt');
+    assert.ok(adminHtml.includes('[RULE 2 - LOCKED PRIMARY WEBCAM VIEW]'), 'Rule 2 primary view locking in admin prompt');
+  });
+
+  await t.test('Fruit Code Translator & Extended Display Engine present in Admin', () => {
+    assert.ok(adminHtml.includes('id="fruit-code-input"'), 'Fruit code input field present');
+    assert.ok(adminHtml.includes('id="fruit-expand-surroundings"'), 'Expand surroundings checkbox present');
+    assert.ok(adminHtml.includes('id="btn-translate-generate"'), 'Generate & Translate button present');
+    assert.ok(adminHtml.includes('function handleFruitTranslation()'), 'handleFruitTranslation function defined');
+  });
+
+  await t.test('WebCam Media Asset Library Manager controls exist', () => {
+    assert.ok(adminHtml.includes('id="media-table-body"'), 'Media table body present');
+    assert.ok(adminHtml.includes('id="btn-import-url"'), 'Import URL button present');
+    assert.ok(adminHtml.includes('function renderMediaTable()'), 'renderMediaTable function defined');
   });
 });
