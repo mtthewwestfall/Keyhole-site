@@ -20,6 +20,11 @@ test('Keyhole Application HTML & Architecture Integrity', async (t) => {
     assert.ok(coverHtml.includes('Private sessions. Two rooms. Sign in to enter.'), 'Landing subtitle present');
     assert.ok(coverHtml.includes('id="auth-panel"'), 'Slide-over dark authentication panel present');
     assert.ok(coverHtml.includes('I am 18 or older'), 'Age gate checkbox present');
+    assert.ok(coverHtml.includes('assets/IMG_3547.jpeg'), 'Landing uses a real night still');
+    assert.ok(!coverHtml.includes('door-chloe') && !coverHtml.includes('door-bailey'), 'No girl doors before sign-in');
+    assert.ok(!coverHtml.includes('session-tier') && !coverHtml.includes('$5.99'), 'No prices on the locked door');
+    assert.ok(!coverHtml.includes('data:image/svg+xml'), 'No fake SVG apartment');
+    assert.ok(coverHtml.includes('/auth/login') && coverHtml.includes('/auth/signup'), 'Existing auth endpoints');
   });
 
   await t.test('rooms.html contains distinct character profiles with stable IDs', () => {
@@ -58,6 +63,13 @@ test('Keyhole Application HTML & Architecture Integrity', async (t) => {
     assert.ok(indexHtml.includes('id="door-chloe"'), 'Chloe door present');
     assert.ok(indexHtml.includes('id="door-bailey"'), 'Bailey door present');
     assert.ok(indexHtml.includes('Choose a door'), 'Door selection heading present');
+    assert.ok(indexHtml.includes('assets/IMG_3542.jpeg'), 'Chloe door uses her still');
+    assert.ok(indexHtml.includes('assets/IMG_3546.jpeg'), 'Bailey door uses her still');
+    assert.ok(!indexHtml.includes('door-chloe') || indexHtml.indexOf('assets/IMG_3542.jpeg') !== indexHtml.indexOf('assets/IMG_3546.jpeg'), 'Doors do not share one still');
+    const selectFn = indexHtml.match(/function selectDoor\(charId\) \{[\s\S]*?\n    \}/);
+    assert.ok(selectFn, 'selectDoor exists');
+    assert.ok(!selectFn[0].includes('enterRoom'), 'A door click shows times and does not start the clock');
+    assert.ok(indexHtml.includes("if (!localStorage.getItem('keyhole_auth_token_v1')) location.replace('index.html')"), 'Rooms page sends signed-out visitors back to the door');
   });
 
   await t.test('Room Reference System: Only primary webcam view is exposed in stage', () => {
