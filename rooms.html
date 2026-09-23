@@ -1818,12 +1818,23 @@
       }
     }
 
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', async () => {
+      // Never allow a stale/invalid local token to expose the Rooms UI.
       if (!KeyholeAccount.token()) {
         location.replace('index.html');
         return;
       }
-      initApp();
+      try {
+        const me = await KeyholeAccount.refresh();
+        if (!me) {
+          location.replace('index.html');
+          return;
+        }
+        initApp();
+      } catch (err) {
+        localStorage.removeItem('keyhole_auth_token_v1');
+        location.replace('index.html');
+      }
     });
   </script>
 </body>
