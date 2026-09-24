@@ -1356,6 +1356,10 @@
     function messagesRemaining() {
       const me = KeyholeAccount.me();
       if (!me) return null;
+      // messages_left is the server-computed total: preview credits (while the
+      // free preview plays) + paid message credits + package text balance.
+      // Fall back to text_balance only for older API responses.
+      if (typeof me.messages_left === 'number') return Math.max(0, me.messages_left);
       return Math.max(0, Number(me.text_balance) || 0);
     }
 
@@ -1575,7 +1579,8 @@
         try { await KeyholeAccount.refresh(); } catch (_) {}
         renderMessageCredits();
         const me = KeyholeAccount.me();
-        if (me && (Number(me.text_balance) || 0) <= 0 && !me.free_preview_available) {
+        const left = messagesRemaining();
+        if (me && left !== null && left <= 0 && !me.free_preview_available) {
           appendSystemMessage(`No messages left. A verified email gets ${CONFIG.verifiedPreviewMessages} free while the preview plays. Each paid purchase adds ${CONFIG.purchaseMessageGrant}. Unused messages roll over.`);
           return;
         }
@@ -1764,7 +1769,7 @@
     function renderAccountStatus() {
       const me = KeyholeAccount.me();
       if (me) {
-        elAccountStatus.textContent = `${me.email || 'Signed in'} · ${Number(me.text_balance) || 0} messages`;
+        elAccountStatus.textContent = `${me.email || 'Signed in'} · ${messagesRemaining()} messages`;
         elAccountStatus.style.display = '';
         elAccountBtn.textContent = 'Sign Out';
       } else {

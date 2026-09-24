@@ -203,6 +203,17 @@ test('Keyhole Application HTML & Architecture Integrity', async (t) => {
     assert.ok(indexHtml.includes('Unused messages roll over'), 'Rollover is explained in the UI');
   });
 
+  await t.test('Message count uses the server-computed total (preview + paid + package)', () => {
+    // /keyhole/me returns messages_left = preview credits (while playing) +
+    // paid message credits + package text balance. The UI must count that total,
+    // not text_balance alone, or free-preview users see "0 messages" and get blocked.
+    assert.ok(indexHtml.includes('me.messages_left'), 'messagesRemaining prefers the server-computed messages_left total');
+    assert.ok(!indexHtml.includes('`${me.email || \'Signed in\'} · ${Number(me.text_balance) || 0} messages`'),
+      'Account header no longer counts text_balance alone');
+    assert.ok(!indexHtml.includes('(Number(me.text_balance) || 0) <= 0 && !me.free_preview_available'),
+      'Send gate no longer blocks on text_balance alone');
+  });
+
   await t.test('Interactive chat interaction & bot response functions present', () => {
     assert.ok(indexHtml.includes('function handleSendMessage()'), 'handleSendMessage function defined');
     assert.ok(indexHtml.includes('function generateCharacterResponse(char)'), 'generateCharacterResponse function defined');
