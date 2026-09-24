@@ -999,7 +999,10 @@
       if (typeof KeyholePlateEngine === 'undefined') return;
       let manifest = null;
       try {
-        const res = await fetch('/keyhole/plates', { cache: 'no-store' });
+        const headers = { 'Content-Type': 'application/json' };
+        const t = (typeof KeyholeAccount !== 'undefined' && KeyholeAccount.token) ? KeyholeAccount.token() : '';
+        if (t) headers['Authorization'] = 'Bearer ' + t;
+        const res = await fetch('/keyhole/plates', { cache: 'no-store', headers });
         if (res.ok) manifest = await res.json();
       } catch (e) {
         console.warn('Server plates unavailable:', e);
@@ -1026,6 +1029,15 @@
         library: plateLibrary,
         log: new KeyholePlateEngine.PlayLog({ storage: window.localStorage })
       });
+    }
+
+    // Reports a played plate to the backend so the 30-day rotation covers previews too.
+    function reportPlatePlay(url, variant) {
+      try {
+        if (typeof KeyholeAccount === 'undefined' || !KeyholeAccount.token()) return;
+        const character = (plateEngine && plateEngine.character) || state.character || 'chloe';
+        KeyholeAccount.api('/keyhole/plates/played', { character, url, variant: variant || '' }).catch(() => {});
+      } catch (_) {}
     }
 
     function loadSessionState() {
@@ -1414,6 +1426,7 @@
       if (plateEngine && plateEngine.library.beatEnabled(plateEngine.character, 'idle')) {
         plateEngine.next('idle').then(res => {
           if (res.action === 'plate' || res.action === 'generated') {
+            reportPlatePlay(res.url, res.variant);
             if (isImagePlate(res.url)) showStageIdle({ fallbackImage: res.url });
             else showStageIdle({ idleVideo: res.url, fallbackImage: mediaGroup.fallbackImage });
           } else {
@@ -1460,7 +1473,10 @@
           if (res.action === 'plate' || res.action === 'generated') return res;
           return beat === 'give' ? plateEngine.next('tease') : res;
         }).then(res => {
-          if (res.action === 'plate' || res.action === 'generated') playStageCut(res.url, mediaGroup);
+          if (res.action === 'plate' || res.action === 'generated') {
+            reportPlatePlay(res.url, res.variant);
+            playStageCut(res.url, mediaGroup);
+          }
         });
         return;
       }
