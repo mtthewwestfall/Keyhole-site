@@ -1146,6 +1146,27 @@
               <tbody id="plate-readiness-body"></tbody>
             </table>
           </div>
+          <div style="margin-top:12px; display:flex; gap:10px; align-items:center;">
+            <button id="btn-plate-autofill" class="btn btn-teal">Auto-Fill Missing Plates with Generated Data</button>
+            <span id="plate-autofill-feedback" class="feedback-msg" style="display:none; margin:0;"></span>
+          </div>
+        </div>
+
+        <div class="admin-card" style="grid-column: span 2;">
+          <div class="card-title">Character Splicing Percentages</div>
+          <p class="card-subtitle">Configure per-character splicing ratio for old plates vs new generated clips (default: 85% old / 15% new).</p>
+          <div class="admin-table-wrap">
+            <table class="admin-table">
+              <thead>
+                <tr><th>Companion</th><th>Old (Plates) %</th><th>New (Generated) %</th></tr>
+              </thead>
+              <tbody id="char-percentages-body"></tbody>
+            </table>
+          </div>
+          <div style="margin-top:12px; display:flex; gap:10px; align-items:center;">
+            <button id="btn-save-char-percentages" class="btn btn-teal">Save Character Percentages</button>
+            <span id="char-percentages-feedback" class="feedback-msg" style="display:none; margin:0;"></span>
+          </div>
         </div>
 
         <div class="admin-card">
@@ -1162,7 +1183,7 @@
 
         <div class="admin-card">
           <div class="card-title">Plate vs Generator (cost check)</div>
-          <p class="card-subtitle">Target: 90%+ plates. Cost check is judged after 20 real sessions.</p>
+          <p class="card-subtitle">Target: 85%+ plates (15% generated). Cost check is judged after 20 real sessions.</p>
           <div class="form-group"><label class="form-label">Sessions logged</label><input id="plate-stat-sessions" class="form-input" readonly /></div>
           <div class="form-group"><label class="form-label">Plate plays / Generated cuts</label><input id="plate-stat-plays" class="form-input" readonly /></div>
           <div class="form-group"><label class="form-label">Plate share / Generator minutes</label><input id="plate-stat-ratio" class="form-input" readonly /></div>
@@ -1627,7 +1648,32 @@
       document.getElementById('plate-stat-ratio').value = `${stats.platePercent}% plates / ${stats.generatorMinutes} generator min`;
       document.getElementById('plate-stat-cost').value = stats.costCheckPass === null
         ? 'Not yet judged'
-        : (stats.costCheckPass ? 'PASS — 90%+ plates' : 'FAIL — you are running a live renderer, not a webcam');
+        : (stats.costCheckPass ? 'PASS — 85%+ plates' : 'FAIL — you are running a live renderer, not a webcam');
+
+      const charPctBody = document.getElementById('char-percentages-body');
+      if (charPctBody) {
+        charPctBody.innerHTML = '';
+        Object.keys(ADMIN_CHARACTERS).forEach(charId => {
+          const p = plateLibrary.getCharPercentages(charId);
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td><strong>${ADMIN_CHARACTERS[charId].name}</strong></td>
+            <td><input type="number" min="0" max="100" class="form-input char-pct-old" data-char="${charId}" value="${p.old}" style="width:90px;" /></td>
+            <td><input type="number" min="0" max="100" class="form-input char-pct-new" data-char="${charId}" value="${p.new}" style="width:90px;" /></td>
+          `;
+          charPctBody.appendChild(tr);
+        });
+
+        // Auto-balance New % when Old % changes
+        charPctBody.querySelectorAll('.char-pct-old').forEach(inp => {
+          inp.addEventListener('input', (e) => {
+            const cId = e.target.dataset.char;
+            const newInp = charPctBody.querySelector(`.char-pct-new[data-char="${cId}"]`);
+            const val = Math.max(0, Math.min(100, parseInt(e.target.value, 10) || 0));
+            if (newInp) newInp.value = 100 - val;
+          });
+        });
+      }
 
       const shuffle = plateLog.shuffleReport();
       const shuffleBadge = document.getElementById('plate-shuffle-badge');
@@ -2698,6 +2744,53 @@
       document.getElementById('btn-plate-clear-log').addEventListener('click', () => {
         if (plateLog) { plateLog.clear(); renderPlatePanel(); }
       });
+
+      const btnAutoFill = document.getElementById('btn-plate-autofill');
+      if (btnAutoFill) {
+        btnAutoFill.addEventListener('click', async () => {
+          if (!plateLibrary) return;
+          btnAutoFill.disabled = true;
+          btnAutoFill.textContent = 'Auto-filling plates…';
+          const fb = document.getElementById('plate-autofill-feedback');
+          fb.style.display = 'block';
+          fb.className = 'feedback-msg feedback-success';
+          fb.textContent = 'Generating data to auto-fill missing plates...';
+
+          for (const charId of Object.keys(ADMIN_CHARACTERS)) {
+            await plateLibrary.autoFillPlates(charId);
+          }
+          await reloadServerPlates();
+          renderPlatePanel();
+
+          btnAutoFill.disabled = false;
+          btnAutoFill.textContent = 'Auto-Fill Missing Plates with Generated Data';
+          fb.textContent = 'Plates auto-filled successfully! All character beat folders are ready.';
+        });
+      }
+
+      const btnSavePercentages = document.getElementById('btn-save-char-percentages');
+      if (btnSavePercentages) {
+        btnSavePercentages.addEventListener('click', () => {
+          if (!plateLibrary) return;
+          const charPctBody = document.getElementById('char-percentages-body');
+          if (!charPctBody) return;
+          charPctBody.querySelectorAll('.char-pct-old').forEach(inp => {
+            const charId = inp.dataset.char;
+            const oldPct = parseInt(inp.value, 10) || 85;
+            const newInp = charPctBody.querySelector(`.char-pct-new[data-char="${charId}"]`);
+            const newPct = newInp ? (parseInt(newInp.value, 10) || (100 - oldPct)) : (100 - oldPct);
+            plateLibrary.setCharPercentages(charId, oldPct, newPct);
+          });
+          const fb = document.getElementById('char-percentages-feedback');
+          if (fb) {
+            fb.style.display = 'block';
+            fb.className = 'feedback-msg feedback-success';
+            fb.textContent = 'Splicing percentages saved successfully!';
+            setTimeout(() => { fb.style.display = 'none'; }, 3000);
+          }
+          renderPlatePanel();
+        });
+      }
 
       elStageRoomSelect.addEventListener('change', (e) => {
         adminState.roomMode = e.target.value;

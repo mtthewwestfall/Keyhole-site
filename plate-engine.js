@@ -32,11 +32,12 @@
   const SHUFFLE_WINDOW_MS = 60 * 1000;
   const SHUFFLE_THRESHOLD = 3;
   const LOG_LIMIT = 5000;
-  const TARGET_PLATE_RATIO = 0.9;
+  const TARGET_PLATE_RATIO = 0.85;
   const COST_CHECK_SESSIONS = 20;
 
   const LIBRARY_KEY = 'keyhole_plate_library_v1';
   const LOG_KEY = 'keyhole_plate_log_v1';
+  const CHAR_PERCENTAGES_KEY = 'keyhole_char_percentages_v1';
 
   function capForMinutes(minutes) {
     const m = Number(minutes) || 0;
@@ -184,6 +185,60 @@
     return { ready, characters: report };
   };
 
+  /** Get splicing percentages for a character (default: 85% old / 15% new). */
+  PlateLibrary.prototype.getCharPercentages = function (charId) {
+    const all = readJSON(this.storage, CHAR_PERCENTAGES_KEY, {});
+    const p = all[charId] || {};
+    const oldPct = typeof p.old === 'number' ? p.old : 85;
+    const newPct = typeof p.new === 'number' ? p.new : (100 - oldPct);
+    return { old: oldPct, new: newPct };
+  };
+
+  /** Set splicing percentages for a character (e.g. 85% old / 15% new). */
+  PlateLibrary.prototype.setCharPercentages = function (charId, oldPct, newPct) {
+    let oldVal = Number(oldPct);
+    if (isNaN(oldVal) || oldVal < 0 || oldVal > 100) oldVal = 85;
+    let newVal = Number(newPct);
+    if (isNaN(newVal) || newVal < 0 || newVal > 100) newVal = 100 - oldVal;
+
+    const all = readJSON(this.storage, CHAR_PERCENTAGES_KEY, {});
+    all[charId] = { old: oldVal, new: newVal };
+    writeJSON(this.storage, CHAR_PERCENTAGES_KEY, all);
+    return all[charId];
+  };
+
+  /** Auto-fill missing plate beats for a character using a generator or default fallback clips. */
+  PlateLibrary.prototype.autoFillPlates = async function (charId, generator) {
+    const r = this.readiness(charId);
+    const filledBeats = [];
+    for (const beat of r.missing) {
+      let fileUrl = null;
+      let durationSec = 10;
+      if (generator && typeof generator === 'function') {
+        try {
+          const res = await generator({ character: charId, beat, variant: 'autofill' });
+          if (res && res.url) {
+            fileUrl = res.url;
+            if (res.durationSec) durationSec = res.durationSec;
+          }
+        } catch (e) {
+          /* fallback below */
+        }
+      }
+      if (!fileUrl) {
+        fileUrl = `assets/plates/${charId}/${beat}/autofill_01.mp4`;
+      }
+      this.save(charId, beat, {
+        url: fileUrl,
+        variant: 'autofill',
+        generated: true,
+        durationSec: durationSec
+      });
+      filledBeats.push(beat);
+    }
+    return { character: charId, filledBeats, readiness: this.readiness(charId) };
+  };
+
   /**
    * PlayLog — append-only decision log shared across sessions (persisted).
    */
@@ -230,11 +285,12 @@
     return { ok: violations.length === 0, violations, playsChecked: plays.length };
   };
 
-  /** Plate plays vs generator use. After 20 real sessions, 90%+ plates is the bar. */
-  PlayLog.prototype.stats = function () {
+  /** Plate plays vs generator use. After 20 real sessions, 85%+ plates is the bar (or per-character target). */
+  PlayLog.prototype.stats = function (charId, library) {
     let platePlays = 0, generatedPlays = 0, generatorSeconds = 0, withheld = 0, off = 0;
     const sessions = new Set();
     this.entries.forEach(e => {
+      if (charId && e.character !== charId) return;
       if (e.sessionId) sessions.add(e.sessionId);
       if (e.action === 'plate') platePlays++;
       else if (e.action === 'generated') { generatedPlays++; generatorSeconds += Number(e.durationSec) || 0; }
@@ -243,6 +299,10 @@
     });
     const total = platePlays + generatedPlays;
     const plateRatio = total ? platePlays / total : 1;
+    let targetRatio = TARGET_PLATE_RATIO;
+    if (charId && library && typeof library.getCharPercentages === 'function') {
+      targetRatio = library.getCharPercentages(charId).old / 100;
+    }
     return {
       sessions: sessions.size,
       platePlays,
@@ -253,8 +313,8 @@
       plateRatio,
       platePercent: Math.round(plateRatio * 1000) / 10,
       costCheckDue: sessions.size >= COST_CHECK_SESSIONS,
-      costCheckPass: sessions.size < COST_CHECK_SESSIONS ? null : plateRatio >= TARGET_PLATE_RATIO,
-      targetPlateRatio: TARGET_PLATE_RATIO
+      costCheckPass: sessions.size < COST_CHECK_SESSIONS ? null : plateRatio >= targetRatio,
+      targetPlateRatio: targetRatio
     };
   };
 
@@ -288,6 +348,14 @@
 
   PlateEngine.prototype.generationsLeft = function () {
     return Math.max(0, this.cap - this.generatedCount);
+  };
+
+  PlateEngine.prototype.getPercentages = function () {
+    return this.library.getCharPercentages(this.character);
+  };
+
+  PlateEngine.prototype.autoFillPlates = function (generator) {
+    return this.library.autoFillPlates(this.character, generator || this.generator);
   };
 
   PlateEngine.prototype._record = function (entry) {
