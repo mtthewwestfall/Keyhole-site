@@ -212,6 +212,23 @@ test('Log, shuffle check and cost check', async (t) => {
     assert.equal(stats.generatorMinutes, 20);
     assert.equal(stats.costCheckDue, true);
     assert.equal(stats.costCheckPass, true);
-    assert.ok(stats.plateRatio >= 0.9);
+    assert.ok(stats.plateRatio >= 0.85);
+    assert.equal(stats.targetPlateRatio, 0.85);
+  });
+
+  await t.test('per-character percentage controls and plate auto-filling', async () => {
+    const lib = new PlateLibrary({ manifest });
+    // Default percentages are 85% old / 15% new
+    assert.deepEqual(lib.getCharPercentages('chloe'), { old: 85, new: 15 });
+
+    // Custom percentages
+    lib.setCharPercentages('chloe', 80, 20);
+    assert.deepEqual(lib.getCharPercentages('chloe'), { old: 80, new: 20 });
+
+    // Auto-fill missing plates for Bailey
+    assert.equal(lib.readiness('bailey').ready, false);
+    const res = await lib.autoFillPlates('bailey', async ({ beat }) => ({ url: `auto_${beat}.mp4`, durationSec: 10 }));
+    assert.deepEqual(res.filledBeats, ['tease', 'stop', 'presence']);
+    assert.equal(lib.readiness('bailey').ready, true);
   });
 });

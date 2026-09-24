@@ -68,18 +68,18 @@ test('Keyhole Application HTML & Architecture Integrity', async (t) => {
     assert.ok(indexHtml.includes('src="assets/IMG_3543.jpeg"'), 'Bailey door uses a real photo');
     const characters = new Function(`return ${indexHtml.match(/const CHARACTERS = ({[\s\S]*?});\n\n    const CONFIG/)[1]};`)();
     assert.equal(characters.chloe.avatar, 'assets/IMG_3542.jpeg');
-    assert.equal(characters.chloe.livingRoomMedia.fallbackImage, 'assets/IMG_3542.jpeg');
-    assert.equal(characters.chloe.bedroomMedia.fallbackImage, 'assets/IMG_3548.jpeg');
+    assert.equal(characters.chloe.livingRoomMedia.fallbackImage, 'assets/chloe-room.png');
+    assert.equal(characters.chloe.bedroomMedia.fallbackImage, 'assets/chloe-room.png');
     assert.equal(characters.chloe.livingRoomMedia.idleVideo, '');
     assert.equal(characters.bailey.avatar, 'assets/IMG_3543.jpeg');
-    assert.equal(characters.bailey.livingRoomMedia.fallbackImage, 'assets/IMG_3543.jpeg');
-    assert.equal(characters.bailey.bedroomMedia.fallbackImage, 'assets/IMG_3547.jpeg');
+    assert.equal(characters.bailey.livingRoomMedia.fallbackImage, 'assets/bailey-room.jpg');
+    assert.equal(characters.bailey.bedroomMedia.fallbackImage, 'assets/bailey-room.jpg');
     assert.equal(characters.bailey.livingRoomMedia.idleVideo, '');
     assert.equal(characters.bailey.bedroomMedia.idleVideo, '');
     for (const id of Object.keys(characters)) {
       const char = characters[id];
       for (const url of [char.avatar, char.roomReferences.primaryWebcamView, char.livingRoomMedia.fallbackImage, char.bedroomMedia.fallbackImage]) {
-        assert.match(url, /^assets\/IMG_/, `${id} image is a repo photo, not a placeholder`);
+        assert.match(url, /^assets\/(IMG_|chloe-room|bailey-room)/, `${id} image is a repo photo, not a placeholder`);
       }
     }
   });

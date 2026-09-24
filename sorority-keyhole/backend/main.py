@@ -3880,6 +3880,7 @@ class CompanionCreateIn(BaseModel):
 
 class AuditIn(BaseModel):
     girl: str
+    show_length: bool = False
 
 
 class SetTierIn(BaseModel):
@@ -6201,6 +6202,9 @@ def audit(body: AuditIn, user=Depends(current_user)):
                         "\n\nROLLING MEMORY:\n" + (rel["summary"] or "(none yet)") +
                         "\n\nRECENT EXCHANGES:\n" + ("\n".join(record) if record else "(none)"))
 
+        if body.show_length:
+            full_context += f"\n\nCONVERSATION LENGTH & DURATION:\n- Messages in recent history: {len(recent)}\n- Days in current stage: {rel_days_in_stage(rel)}\n- Time to M4 estimate: {eta}"
+
         messages = [{"role": "system", "content": audit_instruction_for(girl)},
                     {"role": "user", "content": full_context}]
         # thinking ON for audits (deep analysis). Same model unless AUDIT_MODEL is separate.
@@ -6238,10 +6242,18 @@ def audit(body: AuditIn, user=Depends(current_user)):
     except Exception as e:
         print(f"[audit] total_audits_used bump failed for {user['user_id']}: {e}", flush=True)
 
-    return {"ok": True, "audit": report,
-            "audit_count": int(user["total_audits_used"]) + 1,
-            "free_left": free_left, "paid_left": paid_left,
-            "price_usd": AUDIT_PRICE_USD}
+    res = {"ok": True, "audit": report,
+           "audit_count": int(user["total_audits_used"]) + 1,
+           "free_left": free_left, "paid_left": paid_left,
+           "price_usd": AUDIT_PRICE_USD}
+    if body.show_length:
+        res["conversation_length"] = {
+            "messages_analyzed": len(recent),
+            "days_in_stage": rel_days_in_stage(rel),
+            "milestone": cur_ms,
+            "eta_to_m4": eta
+        }
+    return res
 
 
 @app.post("/admin/persona")
