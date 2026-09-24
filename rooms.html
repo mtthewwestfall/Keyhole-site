@@ -186,6 +186,30 @@
     .door-card:hover .door-image {
       transform: scale(1.03);
     }
+    /* Door photo marquee: character pictures run across the screen */
+    .door-marquee {
+      display: flex;
+      height: 100%;
+      width: max-content;
+      animation: door-marquee-scroll 45s linear infinite;
+    }
+    .door-marquee img {
+      height: 100%;
+      aspect-ratio: 3/4;
+      object-fit: cover;
+      object-position: center 20%;
+      flex-shrink: 0;
+    }
+    .door-card:hover .door-marquee {
+      animation-play-state: paused;
+    }
+    @keyframes door-marquee-scroll {
+      from { transform: translateX(0); }
+      to { transform: translateX(-50%); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .door-marquee { animation: none; }
+    }
     .door-label {
       padding: 20px;
       font-family: Georgia, serif;
@@ -601,59 +625,6 @@
       border-color: var(--gold);
       color: var(--ink);
     }
-    .stage-skin-overlay {
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-      border-radius: 8px;
-      box-sizing: border-box;
-      transition: all 0.3s ease;
-      z-index: 10;
-    }
-    /* Stage skin overlays */
-    .skin-neon-cyber {
-      border: 2px solid var(--gold);
-      box-shadow: 0 0 15px rgba(196, 165, 116, 0.3);
-    }
-    .skin-glass-vignette {
-      box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.8);
-    }
-    .skin-streamer-vip {
-      border: 2px solid var(--cream);
-      box-shadow: 0 0 20px rgba(232, 220, 200, 0.4);
-    }
-    /* Face+hair lock badge only — never stamp the full skin pose */
-    .skin-chloe-girl,
-    .skin-bailey-girl {
-      background: none;
-    }
-    .skin-chloe-girl::after,
-    .skin-bailey-girl::after {
-      content: '';
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      width: 56px;
-      height: 56px;
-      border-radius: 50%;
-      border: 2px solid rgba(255, 255, 255, 0.75);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
-      pointer-events: none;
-    }
-    .skin-chloe-girl::after {
-      background: url('assets/chloe-skin.jpg') center 18% / cover no-repeat;
-    }
-    .skin-bailey-girl::after {
-      background: url('assets/bailey-skin.jpg') center 18% / cover no-repeat;
-    }
-    .skin-none {
-      background: none;
-      border: none;
-    }
-    .skin-none::after {
-      content: none;
-    }
-
     /* Footer */
     .site-footer {
       padding: 28px 20px;
@@ -686,7 +657,24 @@
         <!-- Door 1: Chloe -->
         <div class="door-card" data-id="chloe" id="door-chloe">
           <div class="door-image-wrap">
-            <img class="door-image" src="assets/IMG_3542.jpeg" alt="Chloe" />
+            <div class="door-marquee" aria-label="Chloe photos">
+              <img src="assets/chloe-1.jpg" alt="Chloe" />
+              <img src="assets/chloe-2.jpg" alt="Chloe" />
+              <img src="assets/chloe-3.jpg" alt="Chloe" />
+              <img src="assets/chloe-4.jpg" alt="Chloe" />
+              <img src="assets/chloe-5.jpg" alt="Chloe" />
+              <img src="assets/chloe-6.jpg" alt="Chloe" />
+              <img src="assets/chloe-7.jpg" alt="Chloe" />
+              <img src="assets/chloe-8.jpg" alt="Chloe" />
+              <img src="assets/chloe-1.jpg" alt="" aria-hidden="true" />
+              <img src="assets/chloe-2.jpg" alt="" aria-hidden="true" />
+              <img src="assets/chloe-3.jpg" alt="" aria-hidden="true" />
+              <img src="assets/chloe-4.jpg" alt="" aria-hidden="true" />
+              <img src="assets/chloe-5.jpg" alt="" aria-hidden="true" />
+              <img src="assets/chloe-6.jpg" alt="" aria-hidden="true" />
+              <img src="assets/chloe-7.jpg" alt="" aria-hidden="true" />
+              <img src="assets/chloe-8.jpg" alt="" aria-hidden="true" />
+            </div>
           </div>
           <div class="door-label">Chloe</div>
         </div>
@@ -694,7 +682,18 @@
         <!-- Door 2: Bailey -->
         <div class="door-card" data-id="bailey" id="door-bailey">
           <div class="door-image-wrap">
-            <img class="door-image" src="assets/IMG_3543.jpeg" alt="Bailey" />
+            <div class="door-marquee" aria-label="Bailey photos" style="animation-duration: 32s;">
+              <img src="assets/bailey-1.jpg" alt="Bailey" />
+              <img src="assets/bailey-2.jpg" alt="Bailey" />
+              <img src="assets/bailey-3.jpg" alt="Bailey" />
+              <img src="assets/bailey-4.jpg" alt="Bailey" />
+              <img src="assets/bailey-5.jpg" alt="Bailey" />
+              <img src="assets/bailey-1.jpg" alt="" aria-hidden="true" />
+              <img src="assets/bailey-2.jpg" alt="" aria-hidden="true" />
+              <img src="assets/bailey-3.jpg" alt="" aria-hidden="true" />
+              <img src="assets/bailey-4.jpg" alt="" aria-hidden="true" />
+              <img src="assets/bailey-5.jpg" alt="" aria-hidden="true" />
+            </div>
           </div>
           <div class="door-label">Bailey</div>
         </div>
@@ -776,7 +775,6 @@
         <div class="stage-media-wrap" id="stage-media-wrap">
           <video id="stage-video" class="stage-video" autoplay loop muted playsinline style="display:none;"></video>
           <img id="stage-fallback-img" class="stage-fallback-img" src="" alt="Webcam Feed" />
-          <div id="stage-skin-overlay" class="stage-skin-overlay skin-chloe-girl"></div>
           <div class="stage-watermark">KEYHOLE</div>
         </div>
       </div>
@@ -870,15 +868,15 @@
         title: 'Dirty-blonde, navy room, city window',
         vibe: 'Dirty-blonde · Navy room · City window',
         bio: 'Dirty-blonde, black tank, navy room, city window.',
-        avatar: 'assets/IMG_3542.jpeg',
-        styleSheet: 'assets/IMG_3542.jpeg',
+        avatar: 'assets/chloe-1.jpg',
+        styleSheet: 'assets/chloe-1.jpg',
         roomReferences: {
-          primaryWebcamView: 'assets/IMG_3542.jpeg',
+          primaryWebcamView: 'assets/chloe-1.jpg',
           sideAngleRef: '[INTERNAL CONSISTENCY REF ONLY - DO NOT EXPOSE TO CUSTOMER]',
           depthRef: '[INTERNAL CONSISTENCY REF ONLY - DO NOT EXPOSE TO CUSTOMER]'
         },
-        livingRoomMedia: { idleVideo: '', reactionVideos: [], fallbackImage: 'assets/chloe-room.png', roomImage: 'assets/chloe-room.png' },
-        bedroomMedia: { idleVideo: '', reactionVideos: [], fallbackImage: 'assets/chloe-room.png', roomImage: 'assets/chloe-room.png' },
+        livingRoomMedia: { idleVideo: '', reactionVideos: [], fallbackImage: 'assets/chloe-1.jpg', roomImage: 'assets/chloe-1.jpg' },
+        bedroomMedia: { idleVideo: '', reactionVideos: [], fallbackImage: 'assets/chloe-3.jpg', roomImage: 'assets/chloe-3.jpg' },
         dialogue: {
           greeting: "Welcome in. I'm glad you're here.",
           freePreviewResponses: [
@@ -898,15 +896,15 @@
         title: 'Dark hair, her room only',
         vibe: 'Dark hair · Her room only',
         bio: 'Dark hair, her room only.',
-        avatar: 'assets/IMG_3543.jpeg',
-        styleSheet: 'assets/IMG_3543.jpeg',
+        avatar: 'assets/bailey-1.jpg',
+        styleSheet: 'assets/bailey-1.jpg',
         roomReferences: {
-          primaryWebcamView: 'assets/IMG_3543.jpeg',
+          primaryWebcamView: 'assets/bailey-1.jpg',
           sideAngleRef: '[INTERNAL CONSISTENCY REF ONLY - DO NOT EXPOSE TO CUSTOMER]',
           depthRef: '[INTERNAL CONSISTENCY REF ONLY - DO NOT EXPOSE TO CUSTOMER]'
         },
-        livingRoomMedia: { idleVideo: '', reactionVideos: [], fallbackImage: 'assets/bailey-room.jpg', roomImage: 'assets/bailey-room.jpg' },
-        bedroomMedia: { idleVideo: '', reactionVideos: [], fallbackImage: 'assets/bailey-room.jpg', roomImage: 'assets/bailey-room.jpg' },
+        livingRoomMedia: { idleVideo: '', reactionVideos: [], fallbackImage: 'assets/bailey-1.jpg', roomImage: 'assets/bailey-1.jpg' },
+        bedroomMedia: { idleVideo: '', reactionVideos: [], fallbackImage: 'assets/bailey-4.jpg', roomImage: 'assets/bailey-4.jpg' },
         dialogue: {
           greeting: "Hey. I'm glad you came in.",
           freePreviewResponses: [
@@ -1457,7 +1455,8 @@
 
       elStageFallbackImg.onerror = () => {
         elStageFallbackImg.onerror = null;
-        elStageFallbackImg.src = 'assets/chloe-room.png';
+        const char = CHARACTERS[state.activeCharId];
+        elStageFallbackImg.src = (char && char.avatar) ? char.avatar : mediaGroup.fallbackImage;
       };
     }
 

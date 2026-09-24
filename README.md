@@ -55,12 +55,7 @@ npx netlify functions:serve
 
 Default example presets: Chaturbate, Flirt4Free, Stripchat, BongaCams, CamSoda, LiveJasmin (editable; bot-blocking sites fail per-URL without failing the whole request).
 
-## Dual-skin stage recorder
+## Stage recorder
 
-Stage Control records the stage feed (webcam or plate/media) and composites **exactly two** region skins:
-
-1. **Face + hair** (Skin 1) — upper elliptical crop only
-2. **Breasts** (Skin 2) — mid-chest oval only
-
-No torso, legs, or full-body overlays. Uses existing Chloe/Bailey skin photos under `assets/`.
+Stage Control records the stage feed (webcam or plate/media) as-is — no overlays are composited onto the recording.
 

@@ -272,86 +272,6 @@
       letter-spacing: 0.1em;
       text-transform: uppercase;
     }
-    .stage-skin-overlay {
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-      border-radius: 10px;
-      transition: all 0.3s ease;
-      z-index: 10;
-    }
-    /* Face+hair lock badge only — never stamp the full skin pose over the stage */
-    .skin-chloe-girl,
-    .skin-bailey-girl {
-      background: none;
-      background-color: transparent;
-    }
-    .skin-chloe-girl::after,
-    .skin-bailey-girl::after {
-      content: '';
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      width: 56px;
-      height: 56px;
-      border-radius: 50%;
-      border: 2px solid rgba(255, 255, 255, 0.75);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
-      pointer-events: none;
-    }
-    .skin-chloe-girl::after {
-      background: url('assets/chloe-skin.jpg') center 18% / cover no-repeat;
-    }
-    .skin-bailey-girl::after {
-      background: url('assets/bailey-skin.jpg') center 18% / cover no-repeat;
-    }
-    .skin-none {
-      background: none;
-      border: none;
-      box-shadow: none;
-    }
-    .skin-none::after {
-      content: none;
-    }
-
-    /* Dual-skin regions: ONLY face+hair and breasts — never torso/legs/full-body */
-    .skin-region {
-      position: absolute;
-      pointer-events: none;
-      z-index: 11;
-      background-repeat: no-repeat;
-      opacity: 0.92;
-      transition: opacity 0.2s;
-    }
-    .skin-region.is-off { display: none; }
-    .skin-region-facehair {
-      /* Upper head/hair band — elliptical crop, no torso */
-      top: 2%;
-      left: 28%;
-      width: 44%;
-      height: 28%;
-      border-radius: 50% 50% 42% 42%;
-      background-size: 160% auto;
-      background-position: center 8%;
-      -webkit-mask-image: radial-gradient(ellipse 70% 75% at 50% 40%, #000 55%, transparent 78%);
-      mask-image: radial-gradient(ellipse 70% 75% at 50% 40%, #000 55%, transparent 78%);
-      box-shadow: inset 0 0 0 1px rgba(246,239,223,0.12);
-    }
-    .skin-region-breasts {
-      /* Bust only — mid chest oval, stops above waist */
-      top: 30%;
-      left: 30%;
-      width: 40%;
-      height: 22%;
-      border-radius: 45% 45% 50% 50%;
-      background-size: 180% auto;
-      background-position: center 42%;
-      -webkit-mask-image: radial-gradient(ellipse 75% 70% at 50% 45%, #000 50%, transparent 78%);
-      mask-image: radial-gradient(ellipse 75% 70% at 50% 45%, #000 50%, transparent 78%);
-      box-shadow: inset 0 0 0 1px rgba(246,239,223,0.1);
-    }
-    .skin-src-chloe { background-image: url('assets/chloe-skin.jpg'); }
-    .skin-src-bailey { background-image: url('assets/bailey-skin.jpg'); }
 
     .record-bar {
       display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
@@ -622,9 +542,6 @@
           <div class="stage-monitor" id="admin-stage-monitor">
             <video id="admin-stage-video" class="stage-media" autoplay loop muted playsinline style="display:none;"></video>
             <img id="admin-stage-img" class="stage-media" src="" alt="Webcam Feed" />
-            <div id="admin-stage-skin" class="stage-skin-overlay skin-none" title="Legacy badge (off when dual regions active)"></div>
-            <div id="admin-stage-skin-facehair" class="skin-region skin-region-facehair skin-src-chloe" title="Skin 1: face + hair only"></div>
-            <div id="admin-stage-skin-breasts" class="skin-region skin-region-breasts skin-src-bailey" title="Skin 2: breasts only"></div>
             <canvas id="admin-stage-record-canvas" style="display:none;" aria-hidden="true"></canvas>
             <div class="stage-watermark">KEYHOLE LIVE FEED</div>
           </div>
@@ -650,27 +567,6 @@
               </select>
             </div>
 
-            <div style="flex:1; min-width:160px;">
-              <label class="form-label" for="stage-skin-facehair">Skin 1 — Face + hair only</label>
-              <select id="stage-skin-facehair" class="form-select">
-                <option value="chloe" selected>Chloe (face + hair)</option>
-                <option value="bailey">Bailey (face + hair)</option>
-                <option value="none">Off</option>
-              </select>
-            </div>
-            <div style="flex:1; min-width:160px;">
-              <label class="form-label" for="stage-skin-breasts">Skin 2 — Breasts only</label>
-              <select id="stage-skin-breasts" class="form-select">
-                <option value="bailey" selected>Bailey (breasts)</option>
-                <option value="chloe">Chloe (breasts)</option>
-                <option value="none">Off</option>
-              </select>
-            </div>
-            <select id="stage-skin-select" class="form-select" style="display:none;" aria-hidden="true">
-              <option value="chloe_girl" selected>Chloe</option>
-              <option value="bailey_girl">Bailey</option>
-              <option value="none">None</option>
-            </select>
           </div>
 
           <div class="record-bar">
@@ -681,7 +577,6 @@
             <button type="button" id="btn-stage-record-stop" class="btn btn-secondary" disabled>Stop</button>
             <a id="stage-record-download" class="btn btn-teal" style="display:none; text-decoration:none;" download="keyhole-stage-recording.webm">Download</a>
           </div>
-          <p class="card-subtitle" style="margin-top:8px; margin-bottom:0;">Recording composites the stage feed with exactly two region skins: <strong>face + hair</strong> and <strong>breasts</strong>. No torso, legs, or full-body overlays.</p>
           <video id="stage-record-preview" controls playsinline style="display:none; width:100%; max-height:180px; margin-top:10px; border-radius:8px; border:1px solid var(--line); background:var(--bg);"></video>
         </div>
 
@@ -810,10 +705,9 @@
           <div class="form-group">
             <label class="form-label" for="gen-who">Who in the picture</label>
             <select id="gen-who" class="form-select">
-              <option value="chloe" selected>Chloe — your skin (face + hair + bust)</option>
-              <option value="bailey">Bailey — your skin (face + hair + bust)</option>
+              <option value="chloe" selected>Chloe</option>
+              <option value="bailey">Bailey</option>
             </select>
-            <span style="font-size:0.75rem; color:var(--muted); display:block; margin-top:4px;">Only Chloe or Bailey. Uses your locked skin photos — not anyone else’s uploads.</span>
           </div>
 
           <div class="form-group">
@@ -854,11 +748,6 @@
               <option value="6">6 seconds</option>
               <option value="8" selected>8 seconds</option>
             </select>
-          </div>
-
-          <div class="form-group" style="display:none;">
-            <label class="form-label" for="gen-skin-asset">Skin (unused — owner lock)</label>
-            <select id="gen-skin-asset" class="form-select"><option value="">Owner locked skin</option></select>
           </div>
 
           <div class="form-group">
@@ -1091,7 +980,7 @@
           </div>
 
           <div class="form-group">
-            <label class="form-label" for="media-file-input">Or upload a file from this device (skins: tag <code>skin</code>; plates: tag the beat)</label>
+            <label class="form-label" for="media-file-input">Or upload a file from this device (plates: tag the beat)</label>
             <input type="file" id="media-file-input" class="form-input" accept="video/*,image/*" />
           </div>
 
@@ -1146,27 +1035,6 @@
               <tbody id="plate-readiness-body"></tbody>
             </table>
           </div>
-          <div style="margin-top:12px; display:flex; gap:10px; align-items:center;">
-            <button id="btn-plate-autofill" class="btn btn-teal">Auto-Fill Missing Plates with Generated Data</button>
-            <span id="plate-autofill-feedback" class="feedback-msg" style="display:none; margin:0;"></span>
-          </div>
-        </div>
-
-        <div class="admin-card" style="grid-column: span 2;">
-          <div class="card-title">Character Splicing Percentages</div>
-          <p class="card-subtitle">Configure per-character splicing ratio for old plates vs new generated clips (default: 85% old / 15% new).</p>
-          <div class="admin-table-wrap">
-            <table class="admin-table">
-              <thead>
-                <tr><th>Companion</th><th>Old (Plates) %</th><th>New (Generated) %</th></tr>
-              </thead>
-              <tbody id="char-percentages-body"></tbody>
-            </table>
-          </div>
-          <div style="margin-top:12px; display:flex; gap:10px; align-items:center;">
-            <button id="btn-save-char-percentages" class="btn btn-teal">Save Character Percentages</button>
-            <span id="char-percentages-feedback" class="feedback-msg" style="display:none; margin:0;"></span>
-          </div>
         </div>
 
         <div class="admin-card">
@@ -1183,7 +1051,7 @@
 
         <div class="admin-card">
           <div class="card-title">Plate vs Generator (cost check)</div>
-          <p class="card-subtitle">Target: 85%+ plates (15% generated). Cost check is judged after 20 real sessions.</p>
+          <p class="card-subtitle">Target: 90%+ plates. Cost check is judged after 20 real sessions.</p>
           <div class="form-group"><label class="form-label">Sessions logged</label><input id="plate-stat-sessions" class="form-input" readonly /></div>
           <div class="form-group"><label class="form-label">Plate plays / Generated cuts</label><input id="plate-stat-plays" class="form-input" readonly /></div>
           <div class="form-group"><label class="form-label">Plate share / Generator minutes</label><input id="plate-stat-ratio" class="form-input" readonly /></div>
@@ -1257,7 +1125,7 @@
       <button type="button" id="gemini-modal-close-btn" class="modal-close" aria-label="Close">&times;</button>
       <h2 class="modal-title">Gemini AI Studio & Room Editor</h2>
       <p class="modal-desc">
-        Admin only. Configure Gemini generation, Sims furniture, and the webcam skin, then apply them to the live stage.
+        Admin only. Configure Gemini generation and Sims furniture, then apply them to the live stage.
       </p>
 
       <div class="studio-grid">
@@ -1302,14 +1170,6 @@
             </div>
           </div>
 
-          <div class="studio-section">
-            <div class="studio-sec-title">Face + hair + bust lock (identity from your skin photos — not pose)</div>
-            <select id="webcam-skin-select" class="form-select">
-              <option value="chloe_girl" selected>Chloe — face + hair + bust (your skin photo)</option>
-              <option value="bailey_girl">Bailey — face + hair + bust (your skin photo)</option>
-              <option value="none">No face lock</option>
-            </select>
-          </div>
         </div>
 
         <div style="display:flex; flex-direction:column; gap:12px;">
@@ -1376,7 +1236,6 @@
               <div id="studio-disp-fruit-code" style="display:none;">chloe:idle</div>
               <div style="margin-top:10px; width:100%; aspect-ratio:16/9; background:var(--paper-2); border:1px solid var(--line); border-radius:6px; overflow:hidden; position:relative;">
                 <img id="studio-fruit-preview-img" alt="Plate Beat Display" style="width:100%; height:100%; object-fit:cover;" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='225' viewBox='0 0 400 225'><rect width='400' height='225' fill='%23071720'/><text x='200' y='115' font-family='sans-serif' font-size='14' fill='%23d9ad58' text-anchor='middle'>PLATE BEAT READY</text></svg>" />
-                <div id="studio-fruit-skin-overlay" class="stage-skin-overlay skin-chloe-girl"></div>
               </div>
             </div>
           </div>
@@ -1483,11 +1342,7 @@
     let adminState = {
       authenticated: false,
       activeCharId: 'bailey',
-      roomMode: 'living_room',
-      overlaySkin: 'chloe_girl',
-      /* Exactly two region skins — face+hair and breasts only */
-      skinFaceHair: 'chloe',
-      skinBreasts: 'bailey'
+      roomMode: 'living_room'
     };
 
     const TAGLINE_URLS_KEY = 'keyhole.taglineScout.urls';
@@ -1514,15 +1369,9 @@
 
     const elStageVideo = document.getElementById('admin-stage-video');
     const elStageImg = document.getElementById('admin-stage-img');
-    const elStageSkin = document.getElementById('admin-stage-skin');
-    const elStageSkinFaceHair = document.getElementById('admin-stage-skin-facehair');
-    const elStageSkinBreasts = document.getElementById('admin-stage-skin-breasts');
     const elStageRecordCanvas = document.getElementById('admin-stage-record-canvas');
     const elStageCharSelect = document.getElementById('stage-char-select');
     const elStageRoomSelect = document.getElementById('stage-room-select');
-    const elStageSkinSelect = document.getElementById('stage-skin-select');
-    const elStageSkinFaceHairSelect = document.getElementById('stage-skin-facehair');
-    const elStageSkinBreastsSelect = document.getElementById('stage-skin-breasts');
 
     const elDispCharId = document.getElementById('disp-active-char-id');
     const elDispRoomMode = document.getElementById('disp-active-room-mode');
@@ -1533,7 +1382,6 @@
       setupEventListeners();
       setupTaglineScout();
       setupStageRecorder();
-      applyDualRegionSkins();
       checkAuthentication();
       await initPlateEngine();
       renderStageMonitor();
@@ -1568,7 +1416,6 @@
         console.warn('media unavailable:', e.message);
       }
       renderMediaTable();
-      renderSkinOptions();
     }
 
     // Server plates: enabled media_assets tagged with a beat, grouped per character (GET /keyhole/plates).
@@ -1648,32 +1495,7 @@
       document.getElementById('plate-stat-ratio').value = `${stats.platePercent}% plates / ${stats.generatorMinutes} generator min`;
       document.getElementById('plate-stat-cost').value = stats.costCheckPass === null
         ? 'Not yet judged'
-        : (stats.costCheckPass ? 'PASS — 85%+ plates' : 'FAIL — you are running a live renderer, not a webcam');
-
-      const charPctBody = document.getElementById('char-percentages-body');
-      if (charPctBody) {
-        charPctBody.innerHTML = '';
-        Object.keys(ADMIN_CHARACTERS).forEach(charId => {
-          const p = plateLibrary.getCharPercentages(charId);
-          const tr = document.createElement('tr');
-          tr.innerHTML = `
-            <td><strong>${ADMIN_CHARACTERS[charId].name}</strong></td>
-            <td><input type="number" min="0" max="100" class="form-input char-pct-old" data-char="${charId}" value="${p.old}" style="width:90px;" /></td>
-            <td><input type="number" min="0" max="100" class="form-input char-pct-new" data-char="${charId}" value="${p.new}" style="width:90px;" /></td>
-          `;
-          charPctBody.appendChild(tr);
-        });
-
-        // Auto-balance New % when Old % changes
-        charPctBody.querySelectorAll('.char-pct-old').forEach(inp => {
-          inp.addEventListener('input', (e) => {
-            const cId = e.target.dataset.char;
-            const newInp = charPctBody.querySelector(`.char-pct-new[data-char="${cId}"]`);
-            const val = Math.max(0, Math.min(100, parseInt(e.target.value, 10) || 0));
-            if (newInp) newInp.value = 100 - val;
-          });
-        });
-      }
+        : (stats.costCheckPass ? 'PASS — 90%+ plates' : 'FAIL — you are running a live renderer, not a webcam');
 
       const shuffle = plateLog.shuffleReport();
       const shuffleBadge = document.getElementById('plate-shuffle-badge');
@@ -1776,11 +1598,6 @@
       elDispCharId.value = adminState.activeCharId;
       elDispRoomMode.value = adminState.roomMode;
       elDispMediaUrl.value = url || '[Fallback Standard Image]';
-
-      // Update Skin
-      // Legacy badge stays off; dual region skins own face+hair / breasts
-      if (elStageSkin) elStageSkin.className = 'stage-skin-overlay skin-none';
-      applyDualRegionSkins();
 
       if (plateEngine && plateEngine.character !== adminState.activeCharId) startPlateSession(adminState.activeCharId);
       if (plateEngine && plateEngine.library.beatEnabled(adminState.activeCharId, 'idle')) {
@@ -1900,33 +1717,10 @@
 
     /* GEMINI PROMPT GENERATOR */
 
-    function faceLockPromptLines(skinKey) {
-      const key = (skinKey || 'none').toString();
-      if (key === 'none' || !key) {
-        return [
-          '- Face + hair + bust lock: none',
-          '- Do not apply Chloe or Bailey identity to people in frame.'
-        ];
-      }
-      const isChloe = key.indexOf('chloe') !== -1;
-      const name = isChloe ? 'Chloe' : 'Bailey';
-      const ref = isChloe ? 'assets/chloe-skin.jpg' : 'assets/bailey-skin.jpg';
-      return [
-        `- Face + hair + bust lock: ${name}`,
-        `- Identity reference photo: ${ref}`,
-        `- IDENTITY LOCK: transfer ${name}'s face, hair, and bust (chest/breast shape) from the reference photo onto people in the scene.`,
-        `- Keep the live scene pose — arms, hands, stance, camera angle, and body position stay from the webcam/scene, not from the skin photo.`,
-        `- Do NOT paste the reference photo's exact pose, clothing outfit, room, or full-body stamp.`,
-        `- Clothing can follow the scene, but bust shape under it should match ${name}'s reference.`,
-        '- This is NOT a HUD border and NOT a full-body paste of the skin photo.'
-      ];
-    }
-
     function buildMasterPrompt() {
       const whoEl = document.getElementById('gen-who');
       const who = (whoEl && whoEl.value) || adminState.activeCharId || 'chloe';
       const charName = (ADMIN_CHARACTERS[who] || ADMIN_CHARACTERS.chloe).name;
-      const lockKey = who === 'bailey' ? 'bailey_girl' : 'chloe_girl';
       const isMulti = document.getElementById('gen-rule-multiangle').checked;
       const isPrimary = document.getElementById('gen-rule-primaryview').checked;
       const motion = document.getElementById('gen-motion-mode').value;
@@ -1952,7 +1746,6 @@
 
       prompt += `[OUTPUT SPECS]:\n`;
       prompt += `- Format: ${motion === 'live_webcam' ? 'Live Dynamic Webcam Video Clip' : 'Static High-Res Render'}\n`;
-      faceLockPromptLines(lockKey).forEach(line => { prompt += line + '\n'; });
       prompt += `- Outfit for this render: ${selectedOutfit()}\n`;
 
       return prompt;
@@ -2045,7 +1838,6 @@
       const multi = document.getElementById('rule-multiangle-check');
       const primary = document.getElementById('rule-primaryview-check');
       const motion = document.getElementById('gemini-motion-select');
-      const skin = document.getElementById('webcam-skin-select');
 
       let prompt = `GEMINI MULTI-ANGLE ROOM GENERATION MASTER PROMPT\n`;
       prompt += `--------------------------------------------------\n`;
@@ -2064,20 +1856,12 @@
       prompt += `- Furniture Removals / Clean Items: ${removes.length ? removes.join(', ') : 'None specified'}\n\n`;
       prompt += `[WEBCAM OVERLAY & RENDER OUTPUT]:\n`;
       prompt += `- Motion Format: ${motion && motion.value === 'static_render' ? 'Static High-Res Reference Render' : 'Live Webcam Stream (Dynamic Motion Video)'}\n`;
-      faceLockPromptLines(skin ? skin.value : adminState.overlaySkin).forEach(line => { prompt += line + '\n'; });
       return prompt;
     }
 
     function updateGeminiStudioPromptUI() {
       const out = document.getElementById('gemini-prompt-output');
       if (out) out.value = buildGeminiMasterPrompt();
-    }
-
-    function syncStudioSkinPreview() {
-      const skinSelect = document.getElementById('webcam-skin-select');
-      const overlay = document.getElementById('studio-fruit-skin-overlay');
-      if (!skinSelect || !overlay) return;
-      overlay.className = `stage-skin-overlay skin-${(skinSelect.value || 'chloe_girl').replace('_', '-')}`;
     }
 
     function mirrorStudioRulesToGenerator() {
@@ -2102,9 +1886,6 @@
 
     function openGeminiStudioModal() {
       if (!requireAdminOffice()) return;
-      const skinSelect = document.getElementById('webcam-skin-select');
-      if (skinSelect) skinSelect.value = adminState.overlaySkin || 'chloe_girl';
-      syncStudioSkinPreview();
       updateGeminiStudioPromptUI();
       document.getElementById('gemini-studio-modal').classList.add('active');
     }
@@ -2116,16 +1897,12 @@
 
     function applyGeminiRoomToStage() {
       if (!requireAdminOffice()) return;
-      const skinSelect = document.getElementById('webcam-skin-select');
-      adminState.overlaySkin = (skinSelect && skinSelect.value) || 'chloe_girl';
-      if (elStageSkinSelect) elStageSkinSelect.value = adminState.overlaySkin;
       mirrorStudioRulesToGenerator();
-      syncStudioSkinPreview();
       renderStageMonitor();
       updateGeminiPrompt();
       updateGeminiStudioPromptUI();
       const adds = document.querySelectorAll('.furniture-add-check:checked').length;
-      studioStatus(`Gemini room model, ${adds} furniture items, and ${adminState.overlaySkin} skin applied to the active stage.`);
+      studioStatus(`Gemini room model and ${adds} furniture items applied to the active stage.`);
       setTimeout(() => studioStatus(''), 3000);
     }
 
@@ -2169,7 +1946,6 @@
       set('studio-disp-surroundings-context', isExpand ? 'Outpainted extended background surroundings' : 'Standard focus framing');
       set('studio-disp-loop-config', isLoop ? `Loop video after ${delaySecs}s extended duration` : `Play once with ${delaySecs}s delay`);
       set('studio-disp-fruit-code', `${who}:${beat}`);
-      syncStudioSkinPreview();
 
       if (fileInput.files && fileInput.files[0]) {
         const reader = new FileReader();
@@ -2197,7 +1973,7 @@
       tbody.innerHTML = '';
 
       if (!mediaAssetsData.length) {
-        tbody.innerHTML = '<tr><td colspan="8" style="color:var(--muted);">No media in the library yet. Upload a skin (tag <code>skin</code>) and generate or upload plates tagged with a beat.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" style="color:var(--muted);">No media in the library yet. Generate or upload plates tagged with a beat.</td></tr>';
         return;
       }
       mediaAssetsData.forEach(asset => {
@@ -2228,19 +2004,6 @@
       } catch (e) { alert(`Delete failed: ${e.message}`); return; }
       await loadMedia();
       await reloadServerPlates();
-    }
-
-    function skinAssets(charId) {
-      return mediaAssetsData.filter(a => a.character_id === charId && a.media_type === 'image' && a.is_enabled !== false &&
-        (Array.isArray(a.tags) ? a.tags : []).some(t => t === 'skin' || t === 'reference'));
-    }
-
-    function renderSkinOptions() {
-      const sel = document.getElementById('gen-skin-asset');
-      const skins = skinAssets(adminState.activeCharId);
-      sel.innerHTML = skins.length
-        ? skins.map(a => `<option value="${Number(a.id)}">#${Number(a.id)} ${esc(a.title || 'skin')}</option>`).join('')
-        : '<option value="">No skin uploaded for this companion — generation runs without her face</option>';
     }
 
     /* GENERATORS (backend: Gemini image, Sogni image, Veo webcam clip — every output is saved as her tagged plate) */
@@ -2279,12 +2042,6 @@
       adminState.activeCharId = who;
       const stage = document.getElementById('stage-char-select');
       if (stage && [...stage.options].some(o => o.value === who)) stage.value = who;
-      adminState.overlaySkin = who === 'bailey' ? 'bailey_girl' : 'chloe_girl';
-      const stageSkin = document.getElementById('stage-skin-select');
-      if (stageSkin) stageSkin.value = adminState.overlaySkin;
-      const webcamSkin = document.getElementById('webcam-skin-select');
-      if (webcamSkin) webcamSkin.value = adminState.overlaySkin;
-      if (typeof renderSkinOptions === 'function') renderSkinOptions();
       if (typeof updateGeminiPrompt === 'function') updateGeminiPrompt();
     }
 
@@ -2306,8 +2063,8 @@
       const g = generatorInputs();
       if (!KeyholePlateEngine.REQUIRED_CHARACTERS.includes(g.character)) { genFeedback('Generators are wired for Bailey and Chloe only.', false); return; }
       const prompt = engine === 'secondary'
-        ? `${ADMIN_CHARACTERS[g.character].name}, face hair and bust locked to her skin photo, wearing ${g.outfit}. ${document.getElementById('sec-gen-prompt').value.trim()} ${g.scene}`.trim()
-        : `${buildMasterPrompt()}\n[WHO]: ${ADMIN_CHARACTERS[g.character].name} — face+hair+bust locked to your skin photo\n[OUTFIT]: ${g.outfit}\n[SCENE]: ${g.scene || 'natural webcam moment'}`;
+        ? `${ADMIN_CHARACTERS[g.character].name}, wearing ${g.outfit}. ${document.getElementById('sec-gen-prompt').value.trim()} ${g.scene}`.trim()
+        : `${buildMasterPrompt()}\n[WHO]: ${ADMIN_CHARACTERS[g.character].name}\n[OUTFIT]: ${g.outfit}\n[SCENE]: ${g.scene || 'natural webcam moment'}`;
       const status = engine === 'secondary' ? document.getElementById('sec-gen-status') : null;
       if (status) { status.style.display = 'block'; status.className = 'feedback-msg feedback-success'; status.textContent = 'Generating with Sogni…'; }
       genFeedback(`Generating ${g.beat} image for ${ADMIN_CHARACTERS[g.character].name} (${engine === 'secondary' ? 'Sogni' : 'Gemini'})…`, true);
@@ -2375,69 +2132,6 @@
     }
 
 
-    /* ===== DUAL REGION SKINS (face+hair + breasts only) ===== */
-    function skinSrcClass(key) {
-      if (key === 'bailey') return 'skin-src-bailey';
-      if (key === 'chloe') return 'skin-src-chloe';
-      return '';
-    }
-
-    function applyDualRegionSkins() {
-      const fh = adminState.skinFaceHair || 'none';
-      const br = adminState.skinBreasts || 'none';
-      if (elStageSkinFaceHair) {
-        elStageSkinFaceHair.className = 'skin-region skin-region-facehair ' + (fh === 'none' ? 'is-off' : skinSrcClass(fh));
-      }
-      if (elStageSkinBreasts) {
-        elStageSkinBreasts.className = 'skin-region skin-region-breasts ' + (br === 'none' ? 'is-off' : skinSrcClass(br));
-      }
-      // Keep legacy select roughly in sync for studio prompts
-      if (elStageSkinSelect) {
-        if (fh === 'bailey' || br === 'bailey') elStageSkinSelect.value = 'bailey_girl';
-        else if (fh === 'chloe' || br === 'chloe') elStageSkinSelect.value = 'chloe_girl';
-        else elStageSkinSelect.value = 'none';
-        adminState.overlaySkin = elStageSkinSelect.value;
-      }
-    }
-
-    function loadSkinImage(key) {
-      return new Promise((resolve) => {
-        if (!key || key === 'none') { resolve(null); return; }
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        img.onload = () => resolve(img);
-        img.onerror = () => resolve(null);
-        img.src = key === 'bailey' ? 'assets/bailey-skin.jpg' : 'assets/chloe-skin.jpg';
-      });
-    }
-
-    /** Draw ONLY face+hair and breasts region layers onto a canvas over the stage frame. */
-    function compositeDualSkins(ctx, w, h, faceImg, breastImg) {
-      // Face + hair: top elliptical region
-      if (faceImg) {
-        const rw = w * 0.44, rh = h * 0.28, rx = w * 0.28, ry = h * 0.02;
-        ctx.save();
-        ctx.beginPath();
-        ctx.ellipse(rx + rw / 2, ry + rh * 0.4, rw * 0.35, rh * 0.38, 0, 0, Math.PI * 2);
-        ctx.clip();
-        // Source crop: upper portion of skin photo (face/hair)
-        const sw = faceImg.naturalWidth, sh = faceImg.naturalHeight;
-        ctx.drawImage(faceImg, 0, 0, sw, sh * 0.45, rx, ry, rw, rh);
-        ctx.restore();
-      }
-      // Breasts only: mid-chest oval — no torso/legs
-      if (breastImg) {
-        const rw = w * 0.4, rh = h * 0.22, rx = w * 0.3, ry = h * 0.3;
-        ctx.save();
-        ctx.beginPath();
-        ctx.ellipse(rx + rw / 2, ry + rh * 0.45, rw * 0.38, rh * 0.35, 0, 0, Math.PI * 2);
-        ctx.clip();
-        const sw = breastImg.naturalWidth, sh = breastImg.naturalHeight;
-        ctx.drawImage(breastImg, 0, sh * 0.28, sw, sh * 0.35, rx, ry, rw, rh);
-        ctx.restore();
-      }
-    }
-
     /* ===== STAGE WEBCAM + RECORDER ===== */
     function setRecordStatus(msg, live) {
       const st = document.getElementById('stage-record-status');
@@ -2460,7 +2154,7 @@
         elStageVideo.style.display = 'block';
         elStageImg.style.display = 'none';
         await elStageVideo.play().catch(() => {});
-        setRecordStatus('Webcam live — dual skins on preview', false);
+        setRecordStatus('Webcam live', false);
       } catch (err) {
         setRecordStatus('Webcam error: ' + (err.message || err), false);
       }
@@ -2478,9 +2172,6 @@
       elStageRecordCanvas.width = w;
       elStageRecordCanvas.height = h;
       const ctx = elStageRecordCanvas.getContext('2d');
-      const faceImg = await loadSkinImage(adminState.skinFaceHair);
-      const breastImg = await loadSkinImage(adminState.skinBreasts);
-
       const drawFrame = () => {
         ctx.fillStyle = '#000';
         ctx.fillRect(0, 0, w, h);
@@ -2490,7 +2181,6 @@
         if (src) {
           try { ctx.drawImage(src, 0, 0, w, h); } catch (_) { /* tainted / not ready */ }
         }
-        compositeDualSkins(ctx, w, h, faceImg, breastImg);
         stageRecordRaf = requestAnimationFrame(drawFrame);
       };
       drawFrame();
@@ -2521,7 +2211,7 @@
         document.getElementById('btn-stage-record-stop').disabled = true;
       };
       stageRecorder.start(250);
-      setRecordStatus('Recording… (face+hair + breasts skins)', true);
+      setRecordStatus('Recording…', true);
       document.getElementById('btn-stage-record-start').disabled = true;
       document.getElementById('btn-stage-record-stop').disabled = false;
       const dl = document.getElementById('stage-record-download');
@@ -2540,20 +2230,6 @@
       if (btnCam) btnCam.addEventListener('click', startStageWebcam);
       if (btnStart) btnStart.addEventListener('click', startStageRecording);
       if (btnStop) btnStop.addEventListener('click', stopStageRecording);
-      if (elStageSkinFaceHairSelect) {
-        elStageSkinFaceHairSelect.value = adminState.skinFaceHair;
-        elStageSkinFaceHairSelect.addEventListener('change', (e) => {
-          adminState.skinFaceHair = e.target.value;
-          applyDualRegionSkins();
-        });
-      }
-      if (elStageSkinBreastsSelect) {
-        elStageSkinBreastsSelect.value = adminState.skinBreasts;
-        elStageSkinBreastsSelect.addEventListener('change', (e) => {
-          adminState.skinBreasts = e.target.value;
-          applyDualRegionSkins();
-        });
-      }
     }
 
     /* ===== TAGLINE SCOUT ===== */
@@ -2718,9 +2394,8 @@
       document.getElementById('btn-apply-gemini-stage').addEventListener('click', applyGeminiRoomToStage);
       document.getElementById('btn-generate-translate').addEventListener('click', handleGenerateAndTranslate);
       document.getElementById('reset-session-btn').addEventListener('click', resetSessionState);
-      ['rule-multiangle-check', 'rule-primaryview-check', 'gemini-motion-select', 'webcam-skin-select'].forEach(id => {
+      ['rule-multiangle-check', 'rule-primaryview-check', 'gemini-motion-select'].forEach(id => {
         document.getElementById(id).addEventListener('change', () => {
-          syncStudioSkinPreview();
           updateGeminiStudioPromptUI();
         });
       });
@@ -2732,7 +2407,6 @@
         adminState.activeCharId = e.target.value;
         startPlateSession(adminState.activeCharId);
         renderStageMonitor();
-        renderSkinOptions();
         updateGeminiPrompt();
       });
 
@@ -2745,61 +2419,8 @@
         if (plateLog) { plateLog.clear(); renderPlatePanel(); }
       });
 
-      const btnAutoFill = document.getElementById('btn-plate-autofill');
-      if (btnAutoFill) {
-        btnAutoFill.addEventListener('click', async () => {
-          if (!plateLibrary) return;
-          btnAutoFill.disabled = true;
-          btnAutoFill.textContent = 'Auto-filling plates…';
-          const fb = document.getElementById('plate-autofill-feedback');
-          fb.style.display = 'block';
-          fb.className = 'feedback-msg feedback-success';
-          fb.textContent = 'Generating data to auto-fill missing plates...';
-
-          for (const charId of Object.keys(ADMIN_CHARACTERS)) {
-            await plateLibrary.autoFillPlates(charId);
-          }
-          await reloadServerPlates();
-          renderPlatePanel();
-
-          btnAutoFill.disabled = false;
-          btnAutoFill.textContent = 'Auto-Fill Missing Plates with Generated Data';
-          fb.textContent = 'Plates auto-filled successfully! All character beat folders are ready.';
-        });
-      }
-
-      const btnSavePercentages = document.getElementById('btn-save-char-percentages');
-      if (btnSavePercentages) {
-        btnSavePercentages.addEventListener('click', () => {
-          if (!plateLibrary) return;
-          const charPctBody = document.getElementById('char-percentages-body');
-          if (!charPctBody) return;
-          charPctBody.querySelectorAll('.char-pct-old').forEach(inp => {
-            const charId = inp.dataset.char;
-            const oldPct = parseInt(inp.value, 10) || 85;
-            const newInp = charPctBody.querySelector(`.char-pct-new[data-char="${charId}"]`);
-            const newPct = newInp ? (parseInt(newInp.value, 10) || (100 - oldPct)) : (100 - oldPct);
-            plateLibrary.setCharPercentages(charId, oldPct, newPct);
-          });
-          const fb = document.getElementById('char-percentages-feedback');
-          if (fb) {
-            fb.style.display = 'block';
-            fb.className = 'feedback-msg feedback-success';
-            fb.textContent = 'Splicing percentages saved successfully!';
-            setTimeout(() => { fb.style.display = 'none'; }, 3000);
-          }
-          renderPlatePanel();
-        });
-      }
-
       elStageRoomSelect.addEventListener('change', (e) => {
         adminState.roomMode = e.target.value;
-        renderStageMonitor();
-        updateGeminiPrompt();
-      });
-
-      elStageSkinSelect.addEventListener('change', (e) => {
-        adminState.overlaySkin = e.target.value;
         renderStageMonitor();
         updateGeminiPrompt();
       });
@@ -2900,7 +2521,7 @@
         renderStageMonitor();
         const fb = document.getElementById('gen-feedback');
         fb.style.display = 'block';
-        fb.textContent = 'Applied Gemini config & skin to live stage!';
+        fb.textContent = 'Applied Gemini config to live stage!';
         setTimeout(() => fb.style.display = 'none', 2000);
       });
 
@@ -2926,7 +2547,7 @@
         const beats = (asset.tags || []).filter(t => KeyholePlateEngine.BEATS.includes(t));
         mediaFeedback(beats.length
           ? `${verb} #${asset.id} and saved to ${asset.character_id}'s plate folder(s): ${beats.join(', ')}`
-          : `${verb} #${asset.id}${(asset.tags || []).includes('skin') ? ' as a skin' : ''}.`, true);
+          : `${verb} #${asset.id}.`, true);
         await loadMedia();
         await reloadServerPlates();
       }

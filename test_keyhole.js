@@ -64,22 +64,27 @@ test('Keyhole Application HTML & Architecture Integrity', async (t) => {
     assert.ok(!indexHtml.includes('data:image/svg+xml'), 'Customer room has no embedded SVG graphics');
     assert.ok(!coverHtml.includes('data:image/svg+xml'), 'Cover page has no embedded SVG graphics');
     assert.ok(!indexHtml.includes('commondatastorage.googleapis.com'), 'Customer stage does not play stock sample videos');
-    assert.ok(indexHtml.includes('src="assets/IMG_3542.jpeg"'), 'Chloe door uses a real photo');
-    assert.ok(indexHtml.includes('src="assets/IMG_3543.jpeg"'), 'Bailey door uses a real photo');
+    assert.ok(indexHtml.includes('src="assets/chloe-1.jpg"'), 'Chloe door uses a real photo');
+    assert.ok(indexHtml.includes('src="assets/bailey-1.jpg"'), 'Bailey door uses a real photo');
+    assert.ok(indexHtml.includes('door-marquee'), 'Door photos run across the screen in a marquee');
+    assert.ok(!indexHtml.includes('src="assets/IMG_3542.jpeg"'), 'Chloe empty-room grid photo removed from door');
+    assert.ok(!indexHtml.includes('src="assets/IMG_3543.jpeg"'), 'Bailey empty-room grid photo removed from door');
+    for (let i = 1; i <= 8; i++) assert.ok(indexHtml.includes(`src="assets/chloe-${i}.jpg"`), `Chloe door marquee includes chloe-${i}.jpg`);
+    for (let i = 1; i <= 5; i++) assert.ok(indexHtml.includes(`src="assets/bailey-${i}.jpg"`), `Bailey door marquee includes bailey-${i}.jpg`);
     const characters = new Function(`return ${indexHtml.match(/const CHARACTERS = ({[\s\S]*?});\n\n    const CONFIG/)[1]};`)();
-    assert.equal(characters.chloe.avatar, 'assets/IMG_3542.jpeg');
-    assert.equal(characters.chloe.livingRoomMedia.fallbackImage, 'assets/chloe-room.png');
-    assert.equal(characters.chloe.bedroomMedia.fallbackImage, 'assets/chloe-room.png');
+    assert.equal(characters.chloe.avatar, 'assets/chloe-1.jpg');
+    assert.equal(characters.chloe.livingRoomMedia.fallbackImage, 'assets/chloe-1.jpg');
+    assert.equal(characters.chloe.bedroomMedia.fallbackImage, 'assets/chloe-3.jpg');
     assert.equal(characters.chloe.livingRoomMedia.idleVideo, '');
-    assert.equal(characters.bailey.avatar, 'assets/IMG_3543.jpeg');
-    assert.equal(characters.bailey.livingRoomMedia.fallbackImage, 'assets/bailey-room.jpg');
-    assert.equal(characters.bailey.bedroomMedia.fallbackImage, 'assets/bailey-room.jpg');
+    assert.equal(characters.bailey.avatar, 'assets/bailey-1.jpg');
+    assert.equal(characters.bailey.livingRoomMedia.fallbackImage, 'assets/bailey-1.jpg');
+    assert.equal(characters.bailey.bedroomMedia.fallbackImage, 'assets/bailey-4.jpg');
     assert.equal(characters.bailey.livingRoomMedia.idleVideo, '');
     assert.equal(characters.bailey.bedroomMedia.idleVideo, '');
     for (const id of Object.keys(characters)) {
       const char = characters[id];
       for (const url of [char.avatar, char.roomReferences.primaryWebcamView, char.livingRoomMedia.fallbackImage, char.bedroomMedia.fallbackImage]) {
-        assert.match(url, /^assets\/(IMG_|chloe-room|bailey-room)/, `${id} image is a repo photo, not a placeholder`);
+        assert.match(url, /^assets\//, `${id} image is a repo photo, not a placeholder`);
       }
     }
   });
@@ -139,14 +144,17 @@ test('Keyhole Application HTML & Architecture Integrity', async (t) => {
     assert.ok(adminHtml.includes('Show Manager'), 'Show Manager stays on admin.html');
     assert.ok(adminHtml.includes('Content & Gemini Generator'), 'Content generator stays on admin.html');
     assert.ok(adminHtml.includes('id="fruit-code-input"'), 'Extended display generator stays on admin.html');
-    assert.ok(indexHtml.includes('id="stage-skin-overlay"'), 'Customer stage keeps its passive frame');
+    assert.ok(!indexHtml.includes('id="stage-skin-overlay"'), 'Customer stage has no skin overlay element');
   });
 
-  await t.test('Webcam frame skins remain defined for the customer stage', () => {
-    assert.ok(indexHtml.includes('skin-neon-cyber'), 'Neon Cyber webcam skin CSS defined');
-    assert.ok(indexHtml.includes('skin-chloe-girl'), 'Chloe face+hair lock skin CSS defined');
-    assert.ok(indexHtml.includes('skin-glass-vignette'), 'Minimalist Glass Vignette webcam skin CSS defined');
-    assert.ok(indexHtml.includes('skin-streamer-vip'), 'Streamer VIP webcam skin CSS defined');
+  await t.test('Skin system is fully removed from the customer stage', () => {
+    assert.ok(!indexHtml.includes('skin-neon-cyber'), 'Neon Cyber webcam skin CSS removed');
+    assert.ok(!indexHtml.includes('skin-chloe-girl'), 'Chloe face+hair lock skin CSS removed');
+    assert.ok(!indexHtml.includes('skin-bailey-girl'), 'Bailey face+hair lock skin CSS removed');
+    assert.ok(!indexHtml.includes('skin-glass-vignette'), 'Minimalist Glass Vignette webcam skin CSS removed');
+    assert.ok(!indexHtml.includes('skin-streamer-vip'), 'Streamer VIP webcam skin CSS removed');
+    assert.ok(!indexHtml.includes('chloe-skin.jpg'), 'Chloe skin photo reference removed');
+    assert.ok(!indexHtml.includes('bailey-skin.jpg'), 'Bailey skin photo reference removed');
   });
 
   await t.test('Private room unlock requires a paid backend entitlement', () => {
@@ -220,7 +228,11 @@ test('Keyhole WebCam Admin Portal Integrity', async (t) => {
       assert.ok(adminHtml.includes(`value="${c}"`), `Companion ${c} option present in admin stage switcher`);
     });
     assert.ok(adminHtml.includes('id="admin-stage-video"'), 'Admin stage video element present');
-    assert.ok(adminHtml.includes('id="admin-stage-skin"'), 'Admin stage skin overlay element present');
+    assert.ok(!adminHtml.includes('id="admin-stage-skin"'), 'Admin stage skin overlay element removed');
+    assert.ok(!adminHtml.includes('webcam-skin-select'), 'Admin webcam skin select removed');
+    assert.ok(!adminHtml.includes('applyDualRegionSkins'), 'Admin dual-region skin function removed');
+    assert.ok(!adminHtml.includes('chloe-skin.jpg'), 'Admin Chloe skin photo reference removed');
+    assert.ok(!adminHtml.includes('bailey-skin.jpg'), 'Admin Bailey skin photo reference removed');
     assert.ok(adminHtml.includes('function renderStageMonitor()'), 'renderStageMonitor function defined');
   });
 
