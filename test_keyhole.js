@@ -299,3 +299,63 @@ test('Keyhole WebCam Admin Portal Integrity', async (t) => {
     assert.ok(adminHtml.includes('function renderMediaTable()'), 'renderMediaTable function defined');
   });
 });
+
+test('Keyhole Booking Flow & Admin Lives Tab', async (t) => {
+  await t.test('booking modal builds offset-aware ISO from local datetime', () => {
+    assert.ok(indexHtml.includes('function bookingLocalToISO'), 'bookingLocalToISO helper defined');
+    const m = indexHtml.match(/function bookingLocalToISO\([\s\S]*?\n    \}/);
+    assert.ok(m, 'bookingLocalToISO body found');
+    assert.ok(m[0].includes('.toISOString()'), 'booking modal emits offset-aware ISO (toISOString)');
+    assert.ok(indexHtml.includes('id="booking-time"'), 'datetime-local input present in booking modal');
+  });
+
+  await t.test('book-a-show button and booking API wiring present', () => {
+    assert.ok(indexHtml.includes('id="book-show-btn"'), 'Book a Private Show button present');
+    assert.ok(indexHtml.includes('id="booking-modal"'), 'Booking modal present');
+    assert.ok(indexHtml.includes('/keyhole/booking-packages'), 'booking packages endpoint called');
+    assert.ok(indexHtml.includes('/keyhole/bookings'), 'bookings endpoint called');
+    assert.ok(indexHtml.includes('/keyhole/bookings/mine'), 'my-bookings endpoint called');
+    assert.ok(indexHtml.includes('kh_pending_booking'), 'pending booking tracked in localStorage');
+    assert.ok(indexHtml.includes('window.location = res.payment_url'), 'redirects to Stripe payment_url');
+  });
+
+  await t.test('my-shows renders the three booking states', () => {
+    assert.ok(indexHtml.includes('id="my-shows-list"'), 'My shows list container present');
+    assert.ok(indexHtml.includes('function renderMyShows'), 'renderMyShows defined');
+    assert.ok(indexHtml.includes('PAYMENT_PENDING'), 'payment-pending state handled');
+    assert.ok(indexHtml.includes('Complete payment'), 'complete-payment action rendered');
+    assert.ok(indexHtml.includes('LIVE NOW'), 'live-now state rendered');
+    assert.ok(indexHtml.includes('starts in'), 'upcoming countdown rendered');
+  });
+
+  await t.test('payment poll watches pending booking until webhook confirms', () => {
+    assert.ok(indexHtml.includes('function maybeStartPendingBookingPoll'), 'pending booking poll defined');
+    assert.ok(indexHtml.includes('setInterval(async () => {'), 'poll uses setInterval');
+    assert.ok(indexHtml.includes('90000'), 'poll gives up after 90s');
+    assert.ok(indexHtml.includes('Payment confirmed'), 'payment-confirmed notice rendered');
+  });
+
+  await t.test('live overlay reuses the existing stage, no fake video elements', () => {
+    assert.ok(indexHtml.includes('id="stage-live-overlay"'), 'stage live overlay present');
+    assert.ok(indexHtml.includes('function updateLiveOverlay'), 'updateLiveOverlay defined');
+    assert.ok(indexHtml.includes('Your private show ends in'), 'live countdown text present');
+    assert.ok(!indexHtml.includes('id="stage-live-video"'), 'no extra fake video element added');
+  });
+
+  await t.test('logged-out users are prompted to sign in before booking', () => {
+    const m = indexHtml.match(/function openBookingModal\(\)[\s\S]*?\n    \}/);
+    assert.ok(m, 'openBookingModal body found');
+    assert.ok(m[0].includes("openAccountModal('login')"), 'booking prompts login when no token');
+  });
+
+  await t.test('admin lives tab calls the live-shows endpoint with admin auth', () => {
+    assert.ok(adminHtml.includes('data-tab="tab-lives"'), 'Lives tab button present');
+    assert.ok(adminHtml.includes('id="tab-lives"'), 'Lives tab section present');
+    assert.ok(adminHtml.includes('id="lives-live-body"'), 'live-now table body present');
+    assert.ok(adminHtml.includes('id="lives-upcoming-body"'), 'upcoming table body present');
+    assert.ok(adminHtml.includes("'/admin/keyhole/shows/live'"), 'lives tab calls /admin/keyhole/shows/live');
+    assert.ok(adminHtml.includes('function loadLives'), 'loadLives defined');
+    assert.ok(adminHtml.includes('setInterval(loadLives, 30000)'), 'lives auto-refresh every 30s');
+    assert.ok(adminHtml.includes('onTabActivated'), 'tab activation hook stops/starts lives refresh');
+  });
+});

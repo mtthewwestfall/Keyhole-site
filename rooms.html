@@ -285,6 +285,164 @@
       text-decoration: none;
     }
     .session-tier-buy:hover { opacity: 0.92; }
+    /* Booking: schedule a private show */
+    .book-show-wrap {
+      text-align: center;
+      margin-top: 30px;
+    }
+    .btn-book-show {
+      display: inline-block;
+      padding: 14px 34px;
+      background-color: var(--cream);
+      color: var(--bg-charcoal);
+      border: none;
+      border-radius: 4px;
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+    }
+    .btn-book-show:hover { opacity: 0.92; }
+    .book-show-note {
+      margin-top: 10px;
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+    /* My Shows (booked private shows) */
+    .my-shows {
+      margin-top: 40px;
+      padding-top: 36px;
+      border-top: 1px solid var(--line);
+    }
+    .my-shows-list {
+      display: grid;
+      gap: 12px;
+      max-width: 720px;
+      margin: 0 auto;
+    }
+    .my-show-card {
+      background: var(--panel-dark);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 16px 18px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .my-show-card.is-live {
+      border-color: var(--gold);
+    }
+    .my-show-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--ink);
+    }
+    .my-show-sub {
+      font-size: 0.82rem;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+    .my-show-live-label {
+      color: #ff6b6b;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+    }
+    .btn-complete-payment {
+      padding: 10px 18px;
+      background-color: var(--cream);
+      color: var(--bg-charcoal);
+      border: none;
+      border-radius: 4px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .btn-complete-payment:hover { opacity: 0.92; }
+    .booking-notice {
+      max-width: 720px;
+      margin: 0 auto 14px;
+      padding: 12px 16px;
+      border: 1px solid var(--gold);
+      border-radius: 8px;
+      color: var(--cream);
+      font-size: 0.9rem;
+      background: rgba(212, 175, 55, 0.08);
+    }
+    /* Booking modal widgets */
+    .booking-char-picker {
+      display: flex;
+      gap: 10px;
+    }
+    .booking-char-chip {
+      flex: 1;
+      padding: 12px;
+      background: var(--bg-charcoal);
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      color: var(--ink);
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .booking-char-chip.selected {
+      border-color: var(--gold);
+      color: var(--cream);
+    }
+    .booking-package-list {
+      display: grid;
+      gap: 8px;
+    }
+    .booking-package-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 14px;
+      background: var(--bg-charcoal);
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .booking-package-card.selected {
+      border-color: var(--gold);
+    }
+    .booking-package-name {
+      font-weight: 600;
+      color: var(--ink);
+      font-size: 0.92rem;
+    }
+    .booking-package-price {
+      font-family: Georgia, serif;
+      color: var(--cream);
+      font-size: 1.05rem;
+    }
+    /* Live private-show overlay on the existing stage */
+    .stage-live-overlay {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      z-index: 5;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 14px;
+      background: rgba(10, 8, 6, 0.78);
+      border: 1px solid #e55353;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      color: var(--ink);
+    }
+    .stage-live-dot {
+      display: inline-block;
+      padding: 3px 10px;
+      background: #e55353;
+      color: #fff;
+      border-radius: 4px;
+      font-weight: 700;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+    }
     @media (max-width: 680px) {
       .session-tier-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
@@ -747,6 +905,17 @@
             <div class="session-tier-messages">100 messages</div>
           </div>
         </div>
+        <div class="book-show-wrap">
+          <button id="book-show-btn" class="btn-book-show">Book a Private Show</button>
+          <p class="book-show-note">Pick a time and a character — check out through Stripe and her webcam goes live for you.</p>
+        </div>
+      </section>
+
+      <section class="my-shows" id="my-shows-section" aria-labelledby="my-shows-title">
+        <h2 class="session-pricing-title" id="my-shows-title">My Shows</h2>
+        <p id="my-shows-notice" class="booking-notice" style="display:none;"></p>
+        <div class="my-shows-list" id="my-shows-list"></div>
+        <p id="my-shows-empty" class="book-show-note" style="display:none; text-align:center;">No shows booked yet — tap “Book a Private Show” to schedule one.</p>
       </section>
     </div>
   </section>
@@ -776,6 +945,10 @@
           <video id="stage-video" class="stage-video" autoplay loop muted playsinline style="display:none;"></video>
           <img id="stage-fallback-img" class="stage-fallback-img" src="" alt="Webcam Feed" />
           <div class="stage-watermark">KEYHOLE</div>
+          <div id="stage-live-overlay" class="stage-live-overlay" style="display:none;">
+            <span class="stage-live-dot">LIVE</span>
+            <span id="stage-live-text">Your private show</span>
+          </div>
         </div>
       </div>
 
@@ -846,6 +1019,38 @@
       <div id="modal-error" class="modal-error">Invalid passcode. Please try again.</div>
 
       <button id="verify-member-btn" class="btn-verify">Verify Passcode &amp; Unlock</button>
+    </div>
+  </div>
+
+  <!-- BOOKING MODAL -->
+  <div id="booking-modal" class="modal-backdrop">
+    <div class="modal-card" style="max-width:560px;">
+      <button id="booking-close-btn" class="modal-close">&times;</button>
+      <h2 class="modal-title">Book a Private Show</h2>
+      <p class="modal-desc">Pick a character, a package, and a time. You’ll check out through Stripe — her webcam goes live for you at showtime.</p>
+
+      <div class="gate-input-group">
+        <label class="gate-label">Character</label>
+        <div id="booking-char-picker" class="booking-char-picker">
+          <button class="booking-char-chip" data-char="chloe">Chloe</button>
+          <button class="booking-char-chip" data-char="bailey">Bailey</button>
+        </div>
+      </div>
+
+      <div class="gate-input-group">
+        <label class="gate-label">Package</label>
+        <div id="booking-package-list" class="booking-package-list">
+          <div class="book-show-note">Loading packages…</div>
+        </div>
+      </div>
+
+      <div class="gate-input-group">
+        <label class="gate-label" for="booking-time">Show time</label>
+        <input type="datetime-local" id="booking-time" class="gate-input" />
+      </div>
+
+      <div id="booking-error" class="modal-error"></div>
+      <button id="booking-submit-btn" class="btn-verify">Continue to Payment</button>
     </div>
   </div>
 
@@ -1176,7 +1381,21 @@
         return api('/keyhole/session/start', {});
       }
 
-      return { token, me: () => me, refresh, login, signup, resendVerification, logout, packages, createCryptoInvoice, claimFreePreview, startSession };
+      async function bookingPackages() {
+        const data = await api('/keyhole/booking-packages');
+        return data.packages || [];
+      }
+
+      async function createBooking(characterId, pkg, startAt) {
+        return api('/keyhole/bookings', { character_id: characterId, package: pkg, start_at: startAt });
+      }
+
+      async function myBookings() {
+        const data = await api('/keyhole/bookings/mine');
+        return data.bookings || [];
+      }
+
+      return { token, me: () => me, refresh, login, signup, resendVerification, logout, packages, createCryptoInvoice, claimFreePreview, startSession, bookingPackages, createBooking, myBookings };
     })();
 
     /* UI ELEMENTS */
@@ -1211,6 +1430,20 @@
     const elModalError = document.getElementById('modal-error');
     const elVerifyMemberBtn = document.getElementById('verify-member-btn');
 
+    const elBookShowBtn = document.getElementById('book-show-btn');
+    const elBookingModal = document.getElementById('booking-modal');
+    const elBookingCloseBtn = document.getElementById('booking-close-btn');
+    const elBookingCharPicker = document.getElementById('booking-char-picker');
+    const elBookingPackageList = document.getElementById('booking-package-list');
+    const elBookingTime = document.getElementById('booking-time');
+    const elBookingError = document.getElementById('booking-error');
+    const elBookingSubmit = document.getElementById('booking-submit-btn');
+    const elMyShowsList = document.getElementById('my-shows-list');
+    const elMyShowsEmpty = document.getElementById('my-shows-empty');
+    const elMyShowsNotice = document.getElementById('my-shows-notice');
+    const elStageLiveOverlay = document.getElementById('stage-live-overlay');
+    const elStageLiveText = document.getElementById('stage-live-text');
+
     async function initApp() {
       loadSessionState();
       renderSelectionGrid();
@@ -1222,6 +1455,10 @@
       } else {
         showSelectionView();
         await syncAccountEntitlement();
+      }
+      await loadMyBookings();
+      if (!liveBadgeTimer) {
+        liveBadgeTimer = setInterval(() => { renderMyShows(); updateLiveOverlay(); }, 30000);
       }
     }
 
@@ -1351,6 +1588,7 @@
 
       renderChatMessages();
       renderMessageCredits();
+      updateLiveOverlay();
     }
 
     function messagesRemaining() {
@@ -1803,6 +2041,218 @@
       }
     }
 
+    /* BOOKING: private show scheduling + Stripe checkout */
+    const PENDING_BOOKING_KEY = 'kh_pending_booking';
+    let bookingChar = 'chloe';
+    let bookingPkg = null;
+    let bookingPkgList = [];
+    let myBookingsData = [];
+    let pendingBookingTimer = null;
+    let pendingBookingDeadline = 0;
+    let liveBadgeTimer = null;
+
+    // datetime-local carries no offset: interpret in the customer's local zone, emit offset-aware ISO.
+    function bookingLocalToISO(localValue) {
+      return new Date(localValue).toISOString();
+    }
+
+    function bookingLocalMinValue() {
+      const d = new Date(Date.now() + 5 * 60000);
+      const p = n => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+    }
+
+    function showBookingError(msg) {
+      elBookingError.textContent = msg;
+      elBookingError.style.display = 'block';
+    }
+
+    function openBookingModal() {
+      if (!KeyholeAccount.token()) { openAccountModal('login'); return; }
+      bookingChar = (state.activeCharId && CHARACTERS[state.activeCharId]) ? state.activeCharId : 'chloe';
+      bookingPkg = null;
+      bookingPkgList = [];
+      renderBookingCharPicker();
+      renderBookingPackages([]);
+      if (elBookingTime) elBookingTime.min = bookingLocalMinValue();
+      if (elBookingTime) elBookingTime.value = '';
+      elBookingError.style.display = 'none';
+      elBookingModal.classList.add('active');
+      loadBookingPackages();
+    }
+
+    function closeBookingModal() { elBookingModal.classList.remove('active'); }
+
+    function renderBookingCharPicker() {
+      elBookingCharPicker.querySelectorAll('.booking-char-chip').forEach(chip => {
+        chip.classList.toggle('selected', chip.dataset.char === bookingChar);
+      });
+    }
+
+    async function loadBookingPackages() {
+      try {
+        bookingPkgList = await KeyholeAccount.bookingPackages();
+      } catch (err) {
+        bookingPkgList = [];
+        elBookingPackageList.innerHTML = '<div class="book-show-note">Could not load packages. Try again.</div>';
+        return;
+      }
+      renderBookingPackages(bookingPkgList);
+    }
+
+    function renderBookingPackages(pkgs) {
+      elBookingPackageList.innerHTML = '';
+      pkgs.forEach(pkg => {
+        const card = document.createElement('div');
+        card.className = 'booking-package-card' + (bookingPkg === pkg.package ? ' selected' : '');
+        card.dataset.package = pkg.package;
+        card.innerHTML = `<span class="booking-package-name">${pkg.webcam_minutes} minute private show</span><span class="booking-package-price">$${Number(pkg.price).toFixed(2)}</span>`;
+        card.addEventListener('click', () => {
+          bookingPkg = pkg.package;
+          elBookingPackageList.querySelectorAll('.booking-package-card').forEach(c => c.classList.toggle('selected', c.dataset.package === bookingPkg));
+        });
+        elBookingPackageList.appendChild(card);
+      });
+    }
+
+    async function handleBookingSubmit() {
+      elBookingError.style.display = 'none';
+      if (!bookingPkg) { showBookingError('Pick a package first.'); return; }
+      const val = elBookingTime.value;
+      if (!val) { showBookingError('Pick a show time.'); return; }
+      const startAt = bookingLocalToISO(val);
+      if (new Date(startAt).getTime() <= Date.now()) { showBookingError('Pick a time in the future.'); return; }
+      elBookingSubmit.disabled = true;
+      try {
+        const res = await KeyholeAccount.createBooking(bookingChar, bookingPkg, startAt);
+        if (!res.payment_url) throw new Error('No payment link returned — try again.');
+        try { localStorage.setItem(PENDING_BOOKING_KEY, res.show_id); } catch (_) {}
+        window.location = res.payment_url;
+      } catch (err) {
+        showBookingError(err.message || 'Booking failed.');
+      } finally {
+        elBookingSubmit.disabled = false;
+      }
+    }
+
+    /* MY SHOWS: booked private shows */
+    function bookingCharName(id) {
+      const c = CHARACTERS[id];
+      return c ? c.name : id;
+    }
+
+    function fmtMinutes(ms) {
+      return Math.max(0, Math.round(ms / 60000));
+    }
+
+    async function loadMyBookings() {
+      if (!KeyholeAccount.token()) return;
+      try {
+        myBookingsData = await KeyholeAccount.myBookings();
+      } catch (_) {
+        myBookingsData = [];
+      }
+      renderMyShows();
+      maybeStartPendingBookingPoll();
+      updateLiveOverlay();
+    }
+
+    function renderMyShows() {
+      if (!elMyShowsList) return;
+      elMyShowsList.innerHTML = '';
+      elMyShowsEmpty.style.display = myBookingsData.length ? 'none' : 'block';
+      const now = Date.now();
+      myBookingsData.forEach(b => {
+        const card = document.createElement('div');
+        card.className = 'my-show-card';
+        const title = `${bookingCharName(b.character_id)} · ${b.duration_minutes} min · $${Number(b.price).toFixed(2)}`;
+        let sub = '';
+        let action = '';
+        if (b.status === 'PAYMENT_PENDING') {
+          const when = b.scheduled_at ? new Date(b.scheduled_at).toLocaleString() : '';
+          sub = `Awaiting payment — ${when}`;
+          action = `<button class="btn-complete-payment" data-char="${b.character_id}" data-pkg="${b.package}" data-start="${b.scheduled_at || ''}">Complete payment</button>`;
+        } else if (b.live_now) {
+          card.classList.add('is-live');
+          const endsMs = b.ends_at ? new Date(b.ends_at).getTime() - now : (b.ends_in_seconds || 0) * 1000;
+          sub = `<span class="my-show-live-label">LIVE NOW</span> — ends in ${fmtMinutes(endsMs)} min`;
+        } else {
+          const when = b.scheduled_at ? new Date(b.scheduled_at).toLocaleString() : '';
+          const startsMs = b.scheduled_at ? new Date(b.scheduled_at).getTime() - now : (b.starts_in_seconds || 0) * 1000;
+          sub = `Booked — ${when} · starts in ${fmtMinutes(startsMs)} min`;
+        }
+        card.innerHTML = `<div><div class="my-show-title">${title}</div><div class="my-show-sub">${sub}</div></div><div>${action}</div>`;
+        elMyShowsList.appendChild(card);
+      });
+    }
+
+    async function completePendingPayment(btn) {
+      const { char, pkg, start } = btn.dataset;
+      if (!char || !pkg || !start) return;
+      btn.disabled = true;
+      try {
+        // Backend dedupes on the same user/character/package/start minute and returns the existing payment_url.
+        const res = await KeyholeAccount.createBooking(char, pkg, start);
+        if (!res.payment_url) throw new Error('No payment link returned — try again.');
+        try { localStorage.setItem(PENDING_BOOKING_KEY, res.show_id); } catch (_) {}
+        window.location = res.payment_url;
+      } catch (err) {
+        btn.disabled = false;
+        showMyShowsNotice(err.message || 'Could not resume payment.');
+      }
+    }
+
+    function showMyShowsNotice(msg) {
+      elMyShowsNotice.textContent = msg;
+      elMyShowsNotice.style.display = 'block';
+    }
+
+    /* Pending booking: after Stripe redirects back, poll until the webhook confirms payment. */
+    function maybeStartPendingBookingPoll() {
+      let pendingId = null;
+      try { pendingId = localStorage.getItem(PENDING_BOOKING_KEY); } catch (_) {}
+      if (!pendingId) return;
+      stopPendingBookingPoll();
+      pendingBookingDeadline = Date.now() + 90000;
+      pendingBookingTimer = setInterval(async () => {
+        if (Date.now() > pendingBookingDeadline) {
+          stopPendingBookingPoll();
+          try { localStorage.removeItem(PENDING_BOOKING_KEY); } catch (_) {}
+          return;
+        }
+        try {
+          const bookings = await KeyholeAccount.myBookings();
+          myBookingsData = bookings;
+          const b = bookings.find(x => x.show_id === pendingId);
+          if (b && b.status !== 'PAYMENT_PENDING') {
+            stopPendingBookingPoll();
+            try { localStorage.removeItem(PENDING_BOOKING_KEY); } catch (_) {}
+            const when = b.scheduled_at ? new Date(b.scheduled_at).toLocaleString() : '';
+            showMyShowsNotice(`Payment confirmed — your show is booked for ${when}.`);
+          }
+          renderMyShows();
+          updateLiveOverlay();
+        } catch (_) {}
+      }, 5000);
+    }
+
+    function stopPendingBookingPoll() {
+      if (pendingBookingTimer) { clearInterval(pendingBookingTimer); pendingBookingTimer = null; }
+    }
+
+    /* Live badge: reuse the existing stage — overlay a red LIVE badge + countdown when this room's character is live now. */
+    function updateLiveOverlay() {
+      if (!elStageLiveOverlay) return;
+      const live = myBookingsData.find(b => b.live_now && b.character_id === state.activeCharId);
+      if (live && state.view === 'room') {
+        const endsMs = live.ends_at ? new Date(live.ends_at).getTime() - Date.now() : (live.ends_in_seconds || 0) * 1000;
+        elStageLiveText.textContent = `Your private show ends in ${fmtMinutes(endsMs)} min`;
+        elStageLiveOverlay.style.display = 'flex';
+      } else {
+        elStageLiveOverlay.style.display = 'none';
+      }
+    }
+
     function setupEventListeners() {
       elAccountBtn.addEventListener('click', () => {
         if (KeyholeAccount.token()) { KeyholeAccount.logout(); renderAccountStatus(); location.replace('index.html'); }
@@ -1836,6 +2286,18 @@
           if (e.key === 'Enter') handleVerifyMembership();
         });
       }
+
+      if (elBookShowBtn) elBookShowBtn.addEventListener('click', openBookingModal);
+      elBookingCloseBtn.addEventListener('click', closeBookingModal);
+      elBookingSubmit.addEventListener('click', handleBookingSubmit);
+      elBookingCharPicker.addEventListener('click', (e) => {
+        const chip = e.target.closest('.booking-char-chip');
+        if (chip) { bookingChar = chip.dataset.char; renderBookingCharPicker(); }
+      });
+      elMyShowsList.addEventListener('click', (e) => {
+        const btn = e.target.closest('.btn-complete-payment');
+        if (btn) completePendingPayment(btn);
+      });
     }
 
     document.addEventListener('DOMContentLoaded', async () => {

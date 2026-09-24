@@ -515,6 +515,7 @@
     <nav class="admin-nav">
       <button class="nav-btn active" data-tab="tab-stage">Stage Control</button>
       <button class="nav-btn" data-tab="tab-shows">Show Manager</button>
+      <button class="nav-btn" data-tab="tab-lives">Lives</button>
       <button class="nav-btn" data-tab="tab-generator">Content & Gemini Generator</button>
       <button class="nav-btn" data-tab="tab-fruit">Plate Beats</button>
       <button class="nav-btn" data-tab="tab-media">Media Asset Library</button>
@@ -673,6 +674,58 @@
             </div>
           </div>
           <button id="btn-create-pub-show" class="btn" style="margin-top:14px;">Create Public Show</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB: LIVES (booked private shows — live now & upcoming) -->
+    <section id="tab-lives" class="tab-section">
+      <div class="admin-card">
+        <div class="card-title">
+          <span>Live &amp; Upcoming WebCam Shows</span>
+          <span style="display:flex; gap:10px; align-items:center;">
+            <span id="lives-updated-badge" class="admin-badge">not loaded</span>
+            <button id="btn-lives-refresh" class="btn btn-secondary" style="padding:4px 10px; font-size:0.75rem;">Refresh</button>
+          </span>
+        </div>
+        <p class="card-subtitle">Booked private shows that are live right now or coming up. Auto-refreshes every 30 seconds while this tab is open.</p>
+
+        <div class="card-title" style="font-size:1.05rem; margin-bottom:10px;">Live now</div>
+        <div class="admin-table-wrap" style="margin-bottom:20px;">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Character</th>
+                <th>Customer</th>
+                <th>Package</th>
+                <th>Started</th>
+                <th>Ends in</th>
+                <th>Show ID</th>
+              </tr>
+            </thead>
+            <tbody id="lives-live-body">
+              <!-- Rendered dynamically -->
+            </tbody>
+          </table>
+        </div>
+
+        <div class="card-title" style="font-size:1.05rem; margin-bottom:10px;">Upcoming</div>
+        <div class="admin-table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Character</th>
+                <th>Customer</th>
+                <th>Package</th>
+                <th>Scheduled for</th>
+                <th>In</th>
+                <th>Show ID</th>
+              </tr>
+            </thead>
+            <tbody id="lives-upcoming-body">
+              <!-- Rendered dynamically -->
+            </tbody>
+          </table>
         </div>
       </div>
     </section>
@@ -1586,6 +1639,7 @@
             sec.classList.remove('active');
           });
           document.getElementById(tabId).classList.add('active');
+          onTabActivated(tabId);
         });
       });
     }
@@ -1713,6 +1767,75 @@
         const d = await api(`/admin/keyhole/shows/${encodeURIComponent(id)}/publish-preview`, { method: 'POST' });
         replaceShow(d.show);
       } catch (e) { alert(`Publish failed: ${e.message}`); }
+    }
+
+    /* LIVES TAB — booked private shows currently live or coming up */
+    let livesRefreshTimer = null;
+
+    function livesMinutesLabel(iso, isEnd) {
+      if (!iso) return '—';
+      const ms = new Date(iso).getTime() - Date.now();
+      if (isEnd) return ms <= 0 ? 'ending' : `${Math.max(1, Math.round(ms / 60000))} min`;
+      return ms <= 0 ? 'now' : `${Math.max(1, Math.round(ms / 60000))} min`;
+    }
+
+    function renderLivesRows(tbody, rows, isLive) {
+      tbody.innerHTML = '';
+      if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="6" style="color:var(--muted);">None</td></tr>';
+        return;
+      }
+      rows.forEach(s => {
+        const tr = document.createElement('tr');
+        const charName = (s.character_id || '').charAt(0).toUpperCase() + (s.character_id || '').slice(1);
+        const when = s.scheduled_at ? new Date(s.scheduled_at).toLocaleString() : '—';
+        const countdown = isLive ? livesMinutesLabel(s.ends_at, true) : livesMinutesLabel(s.scheduled_at, false);
+        const price = s.price != null ? `$${Number(s.price).toFixed(2)}` : '';
+        tr.innerHTML = `
+          <td><strong>${charName}</strong></td>
+          <td>${s.customer_email || s.customer_id || '—'}</td>
+          <td>${s.package || '—'} · ${s.duration_minutes || '—'} min · ${price}</td>
+          <td>${when}</td>
+          <td>${countdown}</td>
+          <td style="font-family:monospace; font-size:0.72rem;">${s.show_id || ''}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function loadLives() {
+      const liveBody = document.getElementById('lives-live-body');
+      const upBody = document.getElementById('lives-upcoming-body');
+      const badge = document.getElementById('lives-updated-badge');
+      if (!liveBody || !upBody) return;
+      try {
+        const d = await api('/admin/keyhole/shows/live');
+        renderLivesRows(liveBody, d.live || [], true);
+        renderLivesRows(upBody, d.upcoming || [], false);
+        if (badge) badge.textContent = 'Updated ' + new Date().toLocaleTimeString();
+      } catch (e) {
+        const msg = `<tr><td colspan="6" style="color:var(--muted);">Failed to load: ${e.message}</td></tr>`;
+        liveBody.innerHTML = msg;
+        upBody.innerHTML = msg;
+        if (badge) badge.textContent = 'load failed';
+      }
+    }
+
+    function startLivesAutoRefresh() {
+      stopLivesAutoRefresh();
+      livesRefreshTimer = setInterval(loadLives, 30000);
+    }
+
+    function stopLivesAutoRefresh() {
+      if (livesRefreshTimer) { clearInterval(livesRefreshTimer); livesRefreshTimer = null; }
+    }
+
+    function onTabActivated(tabId) {
+      stopLivesAutoRefresh();
+      if (tabId === 'tab-lives') {
+        loadLives();
+        startLivesAutoRefresh();
+      }
     }
 
     /* GEMINI PROMPT GENERATOR */
@@ -2443,6 +2566,8 @@
           replaceShow(d.show);
         } catch (e) { alert(`Create show failed: ${e.message}`); }
       });
+
+      document.getElementById('btn-lives-refresh').addEventListener('click', loadLives);
 
       // Generator Listeners
       // Generator Selection Engine Listeners
