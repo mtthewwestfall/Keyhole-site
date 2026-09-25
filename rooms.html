@@ -884,26 +884,6 @@
             <div class="session-tier-price">$11.99</div>
             <div class="session-tier-messages">100 messages</div>
           </div>
-          <div class="session-tier" data-minutes="45" data-package="extended">
-            <div class="session-tier-time">45 minutes</div>
-            <div class="session-tier-price">$14.99</div>
-            <div class="session-tier-messages">100 messages</div>
-          </div>
-          <div class="session-tier" data-minutes="55" data-package="long" data-stripe="https://buy.stripe.com/4gM9AM46DbFda9F23vdjO03">
-            <div class="session-tier-time">55 minutes</div>
-            <div class="session-tier-price">$17.99</div>
-            <div class="session-tier-messages">100 messages</div>
-          </div>
-          <div class="session-tier featured" data-minutes="60" data-package="premium" data-stripe="https://buy.stripe.com/9B600c0UrcJh4Pl0ZrdjO07">
-            <div class="session-tier-time">60 minutes</div>
-            <div class="session-tier-price">$19.99</div>
-            <div class="session-tier-messages">100 messages</div>
-          </div>
-          <div class="session-tier" data-minutes="75" data-package="marathon" data-stripe="https://buy.stripe.com/5kQ5kw0UrfVtepVaA1djO04">
-            <div class="session-tier-time">75 minutes</div>
-            <div class="session-tier-price">$23.99</div>
-            <div class="session-tier-messages">100 messages</div>
-          </div>
         </div>
         <div class="book-show-wrap">
           <button id="book-show-btn" class="btn-book-show">Book a Private Show</button>
@@ -2441,6 +2421,7 @@
     }
 
     function renderBookingPackages(pkgs) {
+      pkgs = (pkgs || []).filter(pkg => (pkg.webcam_minutes || 0) <= 30);
       elBookingPackageList.innerHTML = '';
       pkgs.forEach(pkg => {
         const card = document.createElement('div');
