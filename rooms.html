@@ -1679,9 +1679,12 @@
 
     /* ---------------- Idle stream: webcam-style continuous feed ----------------
        Instead of looping one ~8s clip forever, the idle beat plays as a shuffled
-       stream: every clip plays once per cycle, no immediate repeats, and variants
-       of the same source never play back-to-back. Reaction clips pause the stream;
-       it resumes where it left off. */
+       stream grouped by take: clips that are variants of the same source
+       (same `variant` tag) play back-to-back so they feel like one continuous
+       shot, then the stream moves to the next take. Every clip plays once per
+       cycle, no take repeats adjacently across the cycle boundary, and each
+       cut uses a soft dip-to-black. Reaction clips pause the stream; it resumes
+       where it left off. */
     const idleStream = {
       queue: [],
       idx: -1,
@@ -1693,26 +1696,32 @@
         return (files || []).filter(f => f && f.url && !isImagePlate(f.url));
       },
 
-      _shuffled(files, avoidFirst) {
-        const pool = files.slice();
-        for (let i = pool.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          const t = pool[i]; pool[i] = pool[j]; pool[j] = t;
+      _shuffled(files, avoidTakeKey) {
+        // Group by take (variant); untagged clips are singleton takes.
+        const groups = new Map();
+        for (const f of files) {
+          const v = (f.variant && String(f.variant).trim()) || '';
+          const key = v ? 'take:' + v : 'solo:' + f.url;
+          if (!groups.has(key)) groups.set(key, []);
+          groups.get(key).push(f);
         }
-        const clashes = (a, b) => a.url === b.url || (a.variant && b.variant && a.variant === b.variant);
-        for (let i = 1; i < pool.length; i++) {
-          if (clashes(pool[i - 1], pool[i])) {
-            let k = i + 1;
-            while (k < pool.length && (clashes(pool[i - 1], pool[k]) || clashes(pool[i], pool[k]))) k++;
-            if (k < pool.length) { const t = pool[i]; pool[i] = pool[k]; pool[k] = t; }
+        const shuffleArr = (a) => {
+          for (let i = a.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            const t = a[i]; a[i] = a[j]; a[j] = t;
           }
-        }
-        if (avoidFirst && pool.length > 1 && clashes(avoidFirst, pool[0])) {
+          return a;
+        };
+        const takes = shuffleArr([...groups.entries()]);
+        // Don't open a cycle with the take that closed the last one.
+        if (avoidTakeKey && takes.length > 1 && takes[0][0] === avoidTakeKey) {
           let k = 1;
-          while (k < pool.length && clashes(avoidFirst, pool[k])) k++;
-          if (k < pool.length) { const t = pool[0]; pool[0] = pool[k]; pool[k] = t; }
+          while (k < takes.length && takes[k][0] === avoidTakeKey) k++;
+          if (k < takes.length) { const t = takes[0]; takes[0] = takes[k]; takes[k] = t; }
         }
-        return pool;
+        const out = [];
+        for (const [, clips] of takes) out.push(...shuffleArr(clips.slice()));
+        return out;
       },
 
       _preload(url) {
@@ -1734,14 +1743,30 @@
         if (!clip) { this.active = false; return; }
         reportPlatePlay(clip.url, clip.variant);
         elStageVideo.loop = false;
-        elStageVideo.src = clip.url;
-        elStageVideo.style.display = 'block';
-        elStageFallbackImg.style.display = 'none';
-        elStageVideo.onerror = () => { this._advance(); };
-        elStageVideo.onended = () => { this._advance(); };
-        elStageVideo.play().catch(() => {});
+        // Soft cut: dip to black, swap source, fade back in.
+        const swap = () => {
+          elStageVideo.src = clip.url;
+          elStageVideo.style.display = 'block';
+          elStageFallbackImg.style.display = 'none';
+          elStageVideo.onerror = () => { this._advance(); };
+          elStageVideo.onended = () => { this._advance(); };
+          elStageVideo.play().catch(() => {});
+          requestAnimationFrame(() => { elStageVideo.style.opacity = '1'; });
+        };
+        elStageVideo.style.transition = 'opacity 0.22s ease';
+        if (elStageVideo.style.opacity !== '0') {
+          elStageVideo.style.opacity = '0';
+          setTimeout(swap, 230);
+        } else {
+          swap();
+        }
         const nxt = (this.idx + 1 < this.queue.length) ? this.queue[this.idx + 1] : null;
         this._preload(nxt ? nxt.url : null);
+      },
+
+      _takeKey(clip) {
+        const v = (clip && clip.variant && String(clip.variant).trim()) || '';
+        return v ? 'take:' + v : 'solo:' + (clip ? clip.url : '');
       },
 
       _advance() {
@@ -1749,7 +1774,7 @@
         this.idx++;
         if (this.idx >= this.queue.length) {
           const last = this.queue[this.queue.length - 1];
-          this.queue = this._shuffled(this.queue, last);
+          this.queue = this._shuffled(this.queue, this._takeKey(last));
           this.idx = 0;
         }
         this._playCurrent();
@@ -1779,6 +1804,7 @@
         this.queue = [];
         this.idx = -1;
         this.charId = null;
+        try { elStageVideo.style.opacity = '1'; } catch (_) {}
       }
     };
 
