@@ -642,6 +642,14 @@
       flex-direction: column;
       gap: 14px;
     }
+    .typing-dots span {
+      animation: typingBlink 1.2s infinite;
+      font-size: 1.4rem;
+      line-height: 1;
+    }
+    .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes typingBlink { 0%, 60%, 100% { opacity: 0.2; } 30% { opacity: 1; } }
     .chat-bubble {
       max-width: 85%;
       padding: 12px 16px;
@@ -2109,7 +2117,11 @@
           bubble.innerHTML = msg.text;
         } else {
           bubble.className = `chat-bubble ${msg.sender === 'You' ? 'bubble-user' : 'bubble-model'}`;
-          bubble.textContent = msg.text;
+          if (msg.speaking) {
+            bubble.innerHTML = '<span class="typing-dots"><span>.</span><span>.</span><span>.</span></span>';
+          } else {
+            bubble.textContent = msg.text;
+          }
 
           if (msg.hasInvitation) {
             const actionWrap = document.createElement('div');
@@ -2174,30 +2186,122 @@
       }, 700);
     }
 
-    function generateCharacterResponse(char) {
-      if (!state.paidUnlocked && state.userMessageCount >= CONFIG.invitationMessageThreshold && !state.hasInvitedToBedroom && !state.isVerifiedMember) {
-        state.hasInvitedToBedroom = true;
-        state.chatLogs[state.activeCharId].push({
-          sender: char.name,
-          text: char.dialogue.bedroomInvitation,
-          timestamp: Date.now(),
-          type: 'model',
-          hasInvitation: true
-        });
-      } else {
-        const responses = char.dialogue.freePreviewResponses;
-        const responseText = responses[Math.floor(Math.random() * responses.length)];
-
-        state.chatLogs[state.activeCharId].push({
-          sender: char.name,
-          text: responseText,
-          timestamp: Date.now(),
-          type: 'model'
-        });
-      }
-
+    function pushModelMessage(char, text, extra) {
+      const msg = {
+        sender: char.name,
+        text: text,
+        timestamp: Date.now(),
+        type: 'model'
+      };
+      if (extra) Object.assign(msg, extra);
+      state.chatLogs[state.activeCharId].push(msg);
       saveSessionState();
       renderChatMessages();
+    }
+
+    function cannedResponse(char) {
+      const responses = char.dialogue.freePreviewResponses;
+      return responses[Math.floor(Math.random() * responses.length)];
+    }
+
+    const VOICE_UPSELL = "Mmm, I love when you talk to me... you know what would be even better? Hearing my voice. Pick a show and I'll talk to you the whole time.";
+    let previewReplyCount = 0;
+
+    function playChatAudio(b64wav) {
+      try {
+        const audio = new Audio('data:audio/wav;base64,' + b64wav);
+        audio.play().catch(() => {});
+        return audio;
+      } catch (_) { return null; }
+    }
+
+    function showSpeakingIndicator(char) {
+      const msg = {
+        sender: char.name,
+        text: '...',
+        timestamp: Date.now(),
+        type: 'model',
+        speaking: true
+      };
+      state.chatLogs[state.activeCharId].push(msg);
+      renderChatMessages();
+      return msg;
+    }
+
+    function replaceSpeakingIndicator(char, text) {
+      const logs = state.chatLogs[state.activeCharId] || [];
+      for (let i = logs.length - 1; i >= 0; i--) {
+        if (logs[i].speaking) {
+          logs[i].text = text;
+          delete logs[i].speaking;
+          break;
+        }
+      }
+      saveSessionState();
+      renderChatMessages();
+    }
+
+    async function generateCharacterResponse(char) {
+      // Bedroom invitation takes priority over a chat reply.
+      if (!state.paidUnlocked && state.userMessageCount >= CONFIG.invitationMessageThreshold && !state.hasInvitedToBedroom && !state.isVerifiedMember) {
+        state.hasInvitedToBedroom = true;
+        pushModelMessage(char, char.dialogue.bedroomInvitation, { hasInvitation: true });
+        return;
+      }
+
+      const authed = (typeof KeyholeAccount !== 'undefined' && KeyholeAccount.token && KeyholeAccount.token());
+      const wantVoice = !!state.paidUnlocked; // voice is for paid private/group shows
+      if (authed) {
+        try {
+          const logs = state.chatLogs[state.activeCharId] || [];
+          const history = logs
+            .filter(m => m.type === 'user' || m.type === 'model')
+            .slice(-10)
+            .map(m => ({ role: m.type === 'user' ? 'user' : 'assistant', text: m.text }));
+          const lastUser = [...logs].reverse().find(m => m.type === 'user');
+
+          if (wantVoice) {
+            // Paid show: hold the text until her voice is ready, then reveal together.
+            showSpeakingIndicator(char);
+            try {
+              const res = await KeyholeAccount.api('/keyhole/chat-reply', {
+                character: state.activeCharId,
+                message: lastUser ? lastUser.text : '',
+                history: history.slice(0, -1),
+                voice: true
+              });
+              if (res && res.reply) {
+                replaceSpeakingIndicator(char, res.reply);
+                if (res.audio) playChatAudio(res.audio);
+                return;
+              }
+            } catch (e) {
+              replaceSpeakingIndicator(char, cannedResponse(char));
+              return;
+            }
+            replaceSpeakingIndicator(char, cannedResponse(char));
+            return;
+          }
+
+          // Preview: text-only AI reply, with a voice upsell every 3rd reply.
+          const res = await KeyholeAccount.api('/keyhole/chat-reply', {
+            character: state.activeCharId,
+            message: lastUser ? lastUser.text : '',
+            history: history.slice(0, -1),
+            voice: false
+          });
+          if (res && res.reply) {
+            previewReplyCount++;
+            let text = res.reply;
+            if (previewReplyCount % 3 === 0) text += ' ' + VOICE_UPSELL;
+            pushModelMessage(char, text);
+            return;
+          }
+        } catch (e) {
+          // Fall through to canned response.
+        }
+      }
+      pushModelMessage(char, cannedResponse(char));
     }
 
     async function handleAcceptInvitation() {
