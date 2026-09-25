@@ -515,6 +515,46 @@
       position: absolute;
       inset: 0;
     }
+    /* Webcam chrome: sells the "one live camera" illusion over stitched clips. */
+    .stage-grain {
+      position: absolute;
+      inset: -40px;
+      pointer-events: none;
+      z-index: 4;
+      opacity: 0.055;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+      animation: grainshift 0.9s steps(3) infinite;
+    }
+    @keyframes grainshift {
+      0% { transform: translate(0, 0); }
+      33% { transform: translate(-14px, 9px); }
+      66% { transform: translate(11px, -13px); }
+      100% { transform: translate(0, 0); }
+    }
+    .stage-cam-tag {
+      position: absolute;
+      top: 10px;
+      right: 12px;
+      z-index: 5;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-family: ui-monospace, Menlo, Consolas, monospace;
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      color: rgba(255, 255, 255, 0.85);
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+      pointer-events: none;
+    }
+    .stage-cam-tag .cam-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #ff3b30;
+      box-shadow: 0 0 6px #ff3b30;
+      animation: camblink 1.6s ease-in-out infinite;
+    }
+    @keyframes camblink { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
     .stage-watermark {
       position: absolute;
       bottom: 12px;
@@ -928,6 +968,8 @@
         <div class="stage-media-wrap" id="stage-media-wrap">
           <video id="stage-video" class="stage-video" autoplay loop muted playsinline style="display:none;"></video>
           <video id="stage-video-b" class="stage-video" muted playsinline style="display:none;opacity:0;"></video>
+          <div class="stage-grain"></div>
+          <div class="stage-cam-tag"><span class="cam-dot"></span><span>CAM 01</span><span id="stage-cam-clock">--:--:--</span></div>
           <img id="stage-fallback-img" class="stage-fallback-img" src="" alt="Webcam Feed" />
           <div class="stage-watermark">KEYHOLE</div>
           <div id="stage-live-overlay" class="stage-live-overlay" style="display:none;">
@@ -1412,6 +1454,16 @@
     const elStageRoomLabel = document.getElementById('stage-room-label');
     const elStageVideo = document.getElementById('stage-video');
     const elStageVideoB = document.getElementById('stage-video-b');
+
+    // Webcam clock: running timestamp on the stage, part of the live-cam illusion.
+    setInterval(() => {
+      const el = document.getElementById('stage-cam-clock');
+      if (!el) return;
+      const d = new Date();
+      el.textContent =
+        d.toLocaleDateString('en-US', { month: 'short', day: '2-digit' }).toUpperCase() + ' ' +
+        d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }, 1000);
     const elStageFallbackImg = document.getElementById('stage-fallback-img');
 
     const elPreviewBanner = document.getElementById('preview-banner');
@@ -1669,9 +1721,11 @@
        (same `variant` tag) play back-to-back so they feel like one continuous
        shot, then the stream moves to the next take. Every clip plays once per
        cycle, no take repeats adjacently across the cycle boundary, and every
-       cut is a crossfade between two stacked video layers -- no dip to black --
-       so the feed reads as one uninterrupted webcam shot. Reaction clips pause
-       the stream; it resumes where it left off. */
+       cut is a hard cut between two stacked video layers -- like a multicam
+       webcam switching angles, no dip to black, no dissolve. A blinking
+       CAM 01 tag with a running timestamp and subtle animated sensor grain
+       sit over the picture to sell the single-live-camera illusion.
+       Reaction clips pause the stream; it resumes where it left off. */
     const idleStream = {
       queue: [],
       idx: -1,
@@ -1686,7 +1740,7 @@
           this.layers = [elStageVideo, elStageVideoB];
           for (const v of this.layers) {
             if (!v) continue;
-            v.style.transition = 'opacity 0.55s ease';
+            v.style.transition = 'opacity 0.12s ease'; // multicam hard cut, not a dissolve
             v.muted = true;
             v.setAttribute('playsinline', '');
           }
@@ -1747,8 +1801,8 @@
         const L = this._layers();
         const incoming = L[1 - this.vis];
         const outgoing = L[this.vis];
-        // Crossfade: the next clip dissolves in over the current one.
-        // No dip to black, so the feed reads as one continuous webcam shot.
+        // Hard cut between clips, like a multicam webcam switching angles.
+        // Dissolves read as edited video; instant cuts read as live.
         incoming.loop = false;
         incoming.onerror = () => { this._advance(); };
         incoming.onended = null;
@@ -1771,7 +1825,7 @@
             try { outgoing.removeAttribute('src'); outgoing.load(); } catch (_) {}
             this.vis = 1 - this.vis;
             incoming.onended = () => { this._advance(); };
-          }, 620);
+          }, 160);
         };
         incoming.oncanplay = begin;
         incoming.src = clip.url;
