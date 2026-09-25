@@ -1239,6 +1239,7 @@
 
     function startPlateSession(charId) {
       if (!plateLibrary) return;
+      if (typeof idleStream !== 'undefined') idleStream.stop();
       plateEngine = new KeyholePlateEngine.PlateEngine({
         character: charId,
         sessionMinutes: PLATE_SESSION_MINUTES,
@@ -1676,10 +1677,118 @@
       return /\.(jpe?g|png|webp|gif|avif)(\?|$)/i.test(String(url || ''));
     }
 
+    /* ---------------- Idle stream: webcam-style continuous feed ----------------
+       Instead of looping one ~8s clip forever, the idle beat plays as a shuffled
+       stream: every clip plays once per cycle, no immediate repeats, and variants
+       of the same source never play back-to-back. Reaction clips pause the stream;
+       it resumes where it left off. */
+    const idleStream = {
+      queue: [],
+      idx: -1,
+      charId: null,
+      active: false,
+      preloader: null,
+
+      _videoFiles(files) {
+        return (files || []).filter(f => f && f.url && !isImagePlate(f.url));
+      },
+
+      _shuffled(files, avoidFirst) {
+        const pool = files.slice();
+        for (let i = pool.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          const t = pool[i]; pool[i] = pool[j]; pool[j] = t;
+        }
+        const clashes = (a, b) => a.url === b.url || (a.variant && b.variant && a.variant === b.variant);
+        for (let i = 1; i < pool.length; i++) {
+          if (clashes(pool[i - 1], pool[i])) {
+            let k = i + 1;
+            while (k < pool.length && (clashes(pool[i - 1], pool[k]) || clashes(pool[i], pool[k]))) k++;
+            if (k < pool.length) { const t = pool[i]; pool[i] = pool[k]; pool[k] = t; }
+          }
+        }
+        if (avoidFirst && pool.length > 1 && clashes(avoidFirst, pool[0])) {
+          let k = 1;
+          while (k < pool.length && clashes(avoidFirst, pool[k])) k++;
+          if (k < pool.length) { const t = pool[0]; pool[0] = pool[k]; pool[k] = t; }
+        }
+        return pool;
+      },
+
+      _preload(url) {
+        try {
+          if (!this.preloader) {
+            this.preloader = document.createElement('video');
+            this.preloader.preload = 'auto';
+            this.preloader.muted = true;
+            this.preloader.setAttribute('playsinline', '');
+            this.preloader.style.display = 'none';
+            document.body.appendChild(this.preloader);
+          }
+          if (url) this.preloader.src = url;
+        } catch (_) { /* preload is best-effort */ }
+      },
+
+      _playCurrent() {
+        const clip = (this.idx >= 0 && this.idx < this.queue.length) ? this.queue[this.idx] : null;
+        if (!clip) { this.active = false; return; }
+        reportPlatePlay(clip.url, clip.variant);
+        elStageVideo.loop = false;
+        elStageVideo.src = clip.url;
+        elStageVideo.style.display = 'block';
+        elStageFallbackImg.style.display = 'none';
+        elStageVideo.onerror = () => { this._advance(); };
+        elStageVideo.onended = () => { this._advance(); };
+        elStageVideo.play().catch(() => {});
+        const nxt = (this.idx + 1 < this.queue.length) ? this.queue[this.idx + 1] : null;
+        this._preload(nxt ? nxt.url : null);
+      },
+
+      _advance() {
+        if (!this.active) return;
+        this.idx++;
+        if (this.idx >= this.queue.length) {
+          const last = this.queue[this.queue.length - 1];
+          this.queue = this._shuffled(this.queue, last);
+          this.idx = 0;
+        }
+        this._playCurrent();
+      },
+
+      start(charId, files) {
+        const vids = this._videoFiles(files);
+        this.stop();
+        if (vids.length < 2) return false;
+        this.charId = charId;
+        this.queue = this._shuffled(vids, null);
+        this.idx = -1;
+        this.active = true;
+        this._advance();
+        return true;
+      },
+
+      resume() {
+        if (!this.charId || !this.queue.length || this.idx < 0) return false;
+        this.active = true;
+        this._advance();
+        return true;
+      },
+
+      stop() {
+        this.active = false;
+        this.queue = [];
+        this.idx = -1;
+        this.charId = null;
+      }
+    };
+
     function setupStageMedia(mediaGroup) {
       if (!mediaGroup) return;
 
       if (plateEngine && plateEngine.library.beatEnabled(plateEngine.character, 'idle')) {
+        const files = plateEngine.library.files(plateEngine.character, 'idle');
+        if (idleStream.start(plateEngine.character, files)) return;
+        // Single clip or no video: fall through to the legacy single-loop path.
         plateEngine.next('idle').then(res => {
           if (res.action === 'plate' || res.action === 'generated') {
             reportPlatePlay(res.url, res.variant);
@@ -1756,7 +1865,7 @@
       elStageVideo.play().catch(() => {});
 
       elStageVideo.onended = () => {
-        setupStageMedia(mediaGroup);
+        if (!idleStream.resume()) setupStageMedia(mediaGroup);
       };
     }
 
