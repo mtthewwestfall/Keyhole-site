@@ -1022,6 +1022,18 @@
     </div>
   </div>
 
+  <!-- PRIVATE ROOM PAYMENT MODAL -->
+  <div id="private-payment-modal" class="modal-backdrop">
+    <div class="modal-card">
+      <button id="private-payment-close-btn" class="modal-close">&times;</button>
+      <h2 class="modal-title" id="private-payment-title">Unlock Private Room</h2>
+      <p class="modal-desc" id="private-payment-desc">Choose a session. You'll check out securely with Stripe, then come straight back to her live private room.</p>
+      <div id="private-payment-tiers" class="booking-package-list"></div>
+      <div id="private-payment-error" class="modal-error"></div>
+      <button id="private-payment-paid-btn" class="btn-verify">I've Paid — Take Me In</button>
+    </div>
+  </div>
+
   <!-- BOOKING MODAL -->
   <div id="booking-modal" class="modal-backdrop">
     <div class="modal-card" style="max-width:560px;">
@@ -1458,6 +1470,7 @@
         await syncAccountEntitlement();
       }
       await loadMyBookings();
+      maybeResumePendingPrivate();
       if (!liveBadgeTimer) {
         liveBadgeTimer = setInterval(() => { renderMyShows(); updateLiveOverlay(); }, 30000);
       }
@@ -1945,7 +1958,7 @@
       renderChatMessages();
     }
 
-    function handleAcceptInvitation() {
+    async function handleAcceptInvitation() {
       const char = CHARACTERS[state.activeCharId];
       appendSystemMessage(`You accepted ${char.name}'s invitation.`);
 
@@ -1961,7 +1974,18 @@
       saveSessionState();
       renderChatMessages();
 
-      openMembershipGateModal("Unlock Private Room", `Purchase required to enter ${char.name}'s private room.`);
+      // Already paid? Take them straight into the live private room.
+      if (KeyholeAccount.token()) {
+        try {
+          const me = await KeyholeAccount.refresh();
+          if (hasPaidBedroomAccess(me, CONFIG.freePreviewMinutes)) {
+            enterPrivateRoom(char);
+            return;
+          }
+        } catch (_) { /* fall through to payment */ }
+      }
+      // Otherwise show the payment options first.
+      openPrivateRoomPayment(char);
     }
 
     function handleDeclineInvitation() {
@@ -2030,6 +2054,117 @@
         elVerifyMemberBtn.disabled = false;
         elVerifyMemberBtn.textContent = 'Verify Passcode & Unlock';
       }
+    }
+
+    /* PRIVATE ROOM PAYMENT: Accept invitation -> Stripe checkout -> live private room. */
+    const PENDING_PRIVATE_KEY = 'kh_pending_private';
+    let pendingPrivateTimer = null;
+    const elPrivatePayModal = document.getElementById('private-payment-modal');
+    const elPrivatePayTiers = document.getElementById('private-payment-tiers');
+    const elPrivatePayError = document.getElementById('private-payment-error');
+
+    function privateRoomTiers() {
+      return Array.from(document.querySelectorAll('.session-tier[data-stripe]')).map(el => ({
+        minutes: el.dataset.minutes || '',
+        price: ((el.querySelector('.session-tier-price') || {}).textContent || '').trim(),
+        label: ((el.querySelector('.session-tier-time') || {}).textContent || '').trim(),
+        url: el.dataset.stripe,
+      })).filter(t => t.url);
+    }
+
+    function openPrivateRoomPayment(char) {
+      document.getElementById('private-payment-title').textContent = `Unlock ${char.name}'s Private Room`;
+      elPrivatePayTiers.innerHTML = '';
+      privateRoomTiers().forEach(t => {
+        const btn = document.createElement('button');
+        btn.className = 'booking-package-card';
+        btn.type = 'button';
+        btn.innerHTML = `<span class="booking-package-name">${t.label} private session</span><span class="booking-package-price">${t.price}</span>`;
+        btn.addEventListener('click', () => startPrivateRoomCheckout(t));
+        elPrivatePayTiers.appendChild(btn);
+      });
+      elPrivatePayError.style.display = 'none';
+      elPrivatePayModal.classList.add('active');
+    }
+
+    function closePrivateRoomPayment() {
+      elPrivatePayModal.classList.remove('active');
+    }
+
+    function startPrivateRoomCheckout(tier) {
+      let url = tier.url;
+      try {
+        const me = KeyholeAccount.me && KeyholeAccount.me();
+        const u = new URL(url);
+        if (me && me.user_id) u.searchParams.set('client_reference_id', me.user_id);
+        url = u.toString();
+        localStorage.setItem(PENDING_PRIVATE_KEY, JSON.stringify({
+          charId: state.activeCharId, at: Date.now(),
+        }));
+      } catch (_) {}
+      window.location = url;
+    }
+
+    function enterPrivateRoom(char) {
+      if (!char) return;
+      state.isVerifiedMember = true;
+      state.roomMode = 'bedroom';
+      saveSessionState();
+      appendSystemMessage(`You are now in ${char.name}'s private room — live.`);
+      renderRoomView();
+    }
+
+    async function checkPaidAndEnter() {
+      elPrivatePayError.style.display = 'none';
+      if (!KeyholeAccount.token()) {
+        elPrivatePayError.textContent = 'Sign in with the account you paid with, then try again.';
+        elPrivatePayError.style.display = 'block';
+        return;
+      }
+      try {
+        const me = await KeyholeAccount.refresh();
+        if (hasPaidBedroomAccess(me, CONFIG.freePreviewMinutes)) {
+          try { localStorage.removeItem(PENDING_PRIVATE_KEY); } catch (_) {}
+          closePrivateRoomPayment();
+          enterPrivateRoom(CHARACTERS[state.activeCharId]);
+        } else {
+          elPrivatePayError.textContent = 'Payment not confirmed yet — give it a moment, then try again.';
+          elPrivatePayError.style.display = 'block';
+        }
+      } catch (_) {
+        elPrivatePayError.textContent = 'Could not reach Keyhole — try again.';
+        elPrivatePayError.style.display = 'block';
+      }
+    }
+
+    function stopPendingPrivatePoll() {
+      if (pendingPrivateTimer) { clearInterval(pendingPrivateTimer); pendingPrivateTimer = null; }
+    }
+
+    /* After Stripe redirects back, poll until the webhook credits the minutes, then walk them in. */
+    function maybeResumePendingPrivate() {
+      let pending = null;
+      try { pending = JSON.parse(localStorage.getItem(PENDING_PRIVATE_KEY) || 'null'); } catch (_) {}
+      if (!pending || !pending.charId || !CHARACTERS[pending.charId]) return;
+      if (Date.now() - (pending.at || 0) > 30 * 60 * 1000) {
+        try { localStorage.removeItem(PENDING_PRIVATE_KEY); } catch (_) {}
+        return;
+      }
+      stopPendingPrivatePoll();
+      const deadline = Date.now() + 120000;
+      pendingPrivateTimer = setInterval(async () => {
+        if (Date.now() > deadline) { stopPendingPrivatePoll(); return; }
+        if (!KeyholeAccount.token()) return;
+        try {
+          const me = await KeyholeAccount.refresh();
+          if (hasPaidBedroomAccess(me, CONFIG.freePreviewMinutes)) {
+            stopPendingPrivatePoll();
+            try { localStorage.removeItem(PENDING_PRIVATE_KEY); } catch (_) {}
+            state.activeCharId = pending.charId;
+            enterPrivateRoom(CHARACTERS[pending.charId]);
+          }
+        } catch (_) {}
+      }, 5000);
     }
 
     /* ACCOUNT & CHECKOUT */
@@ -2356,6 +2491,16 @@
 
       elModalCloseBtn.addEventListener('click', closeMembershipGateModal);
       elVerifyMemberBtn.addEventListener('click', handleVerifyMembership);
+      document.getElementById('private-payment-close-btn').addEventListener('click', closePrivateRoomPayment);
+      document.getElementById('private-payment-paid-btn').addEventListener('click', checkPaidAndEnter);
+      // Session tier cards -> Stripe checkout for private-room minutes.
+      document.querySelectorAll('.session-tier[data-stripe]').forEach(card => {
+        card.style.cursor = 'pointer';
+        card.addEventListener('click', () => startPrivateRoomCheckout({
+          minutes: card.dataset.minutes || '',
+          url: card.dataset.stripe,
+        }));
+      });
       if (elMemberKeyInput) {
         elMemberKeyInput.addEventListener('keydown', (e) => {
           if (e.key === 'Enter') handleVerifyMembership();
