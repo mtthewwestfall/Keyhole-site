@@ -951,7 +951,7 @@
         <span id="preview-status-label">Free Preview Active</span> — <span id="preview-timer-text" class="preview-timer">10:00 remaining</span>
         <div id="preview-credit-note" style="font-size:0.75rem; color:var(--muted); margin-top:4px;">Verified email gets 50 free messages while this preview plays. Each purchase adds 100. Unused messages roll over.</div>
       </div>
-      <button id="banner-unlock-btn" class="btn-unlock">Unlock Bedroom Access</button>
+      <button id="banner-unlock-btn" class="btn-unlock">Unlock Private & Group Shows</button>
     </div>
 
     <div class="room-container">
@@ -963,6 +963,8 @@
             <span class="muted" id="stage-room-label">• Private Session</span>
           </div>
           <span class="badge badge-live" id="stage-status-badge">LIVE FEED</span>
+          <button id="group-shows-btn" class="btn-decline" style="margin-left:8px;">Group Shows</button>
+          <button id="leave-group-show-btn" class="btn-decline" style="margin-left:8px; display:none;">Leave show</button>
         </div>
 
         <div class="stage-media-wrap" id="stage-media-wrap">
@@ -1061,6 +1063,17 @@
     </div>
   </div>
 
+  <!-- GROUP SHOWS MODAL -->
+  <div id="group-shows-modal" class="modal-backdrop">
+    <div class="modal-card">
+      <button id="group-shows-close-btn" class="modal-close">&times;</button>
+      <h2 class="modal-title">Group Shows</h2>
+      <p class="modal-desc">Live group sessions with Chloe. A ticket is a verified payment — no passwords, ever.</p>
+      <div id="group-shows-list" class="booking-package-list"></div>
+      <div id="group-shows-error" class="modal-error"></div>
+    </div>
+  </div>
+
   <!-- BOOKING MODAL -->
   <div id="booking-modal" class="modal-backdrop">
     <div class="modal-card" style="max-width:560px;">
@@ -1129,7 +1142,7 @@
             "Tell me what you're thinking right now.",
             "I was hoping you'd turn the key."
           ],
-          bedroomInvitation: "Would you like to move into my private bedroom?",
+          bedroomInvitation: "Want to unlock my private shows? Just you and me in here.",
           acceptResponse: "I'll see you inside.",
           declineResponse: "We can stay right here.",
           freeTimeEnding: "Preview time is complete. Sign in or unlock access to continue."
@@ -1211,6 +1224,7 @@
       roomMode: 'living_room',
       previewSecondsLeft: CONFIG.defaultPreviewSeconds,
       isVerifiedMember: false,
+      paidUnlocked: false,
       userMessageCount: 0,
       hasInvitedToBedroom: false,
       chatLogs: {}
@@ -1292,7 +1306,6 @@
           pendingBedroomRestore = parsed.roomMode === 'bedroom';
           delete parsed.isVerifiedMember;
           delete parsed.geminiStudio;
-          if (parsed.roomMode === 'bedroom') parsed.roomMode = 'living_room';
           state = { ...state, ...parsed, isVerifiedMember: false };
         }
       } catch (e) {
@@ -1502,12 +1515,10 @@
       setupEventListeners();
       await initPlateLibrary();
 
-      if (state.view === 'room' && state.activeCharId && CHARACTERS[state.activeCharId]) {
-        await enterRoom(state.activeCharId, false);
-      } else {
-        showSelectionView();
-        await syncAccountEntitlement();
-      }
+      // One room: Chloe's bedroom. No character selection.
+      const resumeRoom = state.view === 'room' && state.activeCharId === 'chloe';
+      await enterRoom('chloe', !resumeRoom);
+      await syncAccountEntitlement();
       await loadMyBookings();
       maybeResumePendingPrivate();
       if (!liveBadgeTimer) {
@@ -1583,7 +1594,7 @@
       }
 
       if (isNewSelection) {
-        state.roomMode = 'living_room';
+        state.roomMode = 'bedroom';
         state.previewSecondsLeft = CONFIG.defaultPreviewSeconds;
         state.userMessageCount = 0;
         state.hasInvitedToBedroom = false;
@@ -1608,37 +1619,35 @@
 
       elSelectionView.classList.remove('active');
       elRoomView.classList.add('active');
-      elSwitchBtn.style.display = 'inline-block';
+      elSwitchBtn.style.display = 'none';
 
       elStageCharName.textContent = char.name;
       elChatHeaderTitle.textContent = `Private Session with ${char.name}`;
       elFooterCharNote.textContent = `${char.name} is a fictional AI personality.`;
 
-      if (state.roomMode === 'bedroom') {
-        elStageRoomLabel.textContent = '• Private Room';
+      // One room: her bedroom. Preview is non-explicit; payment unlocks private + group shows.
+      elStageRoomLabel.textContent = "• Chloe's Bedroom";
+      setupStageMedia(char.bedroomMedia);
+
+      const elLeaveGroupBtn = document.getElementById('leave-group-show-btn');
+      if (elLeaveGroupBtn && !state.groupShow) elLeaveGroupBtn.style.display = 'none';
+      if (state.groupShow) {
+        elNavBadge.textContent = 'Group Show • LIVE';
+        elNavBadge.className = 'badge badge-live';
+        elPreviewBanner.style.display = 'none';
+        if (elLeaveGroupBtn) elLeaveGroupBtn.style.display = '';
+      } else if (state.paidUnlocked) {
         elNavBadge.textContent = 'Unlocked';
         elNavBadge.className = 'badge badge-member';
         elPreviewBanner.style.display = 'none';
-
-        setupStageMedia(char.bedroomMedia);
       } else {
-        elStageRoomLabel.textContent = '• Free Preview';
         elNavBadge.textContent = 'Live Session';
         elNavBadge.className = 'badge badge-live';
-
-        if (state.isVerifiedMember) {
-          elPreviewBanner.style.display = 'flex';
-          document.getElementById('preview-status-label').textContent = 'Session ready';
-          elPreviewTimerText.textContent = 'Unlock to enter the private room';
-          document.getElementById('preview-credit-note').style.display = 'none';
-        } else {
-          elPreviewBanner.style.display = 'flex';
-          document.getElementById('preview-status-label').textContent = 'Free Preview Active';
-          document.getElementById('preview-credit-note').style.display = '';
-          updateTimerDisplay();
-        }
-
-        setupStageMedia(char.livingRoomMedia);
+        elPreviewBanner.style.display = 'flex';
+        document.getElementById('preview-status-label').textContent = 'Free Preview';
+        elPreviewTimerText.textContent = 'Unlock private & group shows';
+        document.getElementById('preview-credit-note').style.display = '';
+        updateTimerDisplay();
       }
 
       renderChatMessages();
@@ -1673,24 +1682,15 @@
       }
       try {
         let me = await KeyholeAccount.refresh();
-        const inPreview = state.view === 'room' && state.roomMode !== 'bedroom';
+        const inPreview = state.view === 'room' && !state.paidUnlocked;
         if (inPreview && me && me.free_preview_available) {
           try { await KeyholeAccount.claimFreePreview(); } catch (_) {}
           me = await KeyholeAccount.refresh();
         }
         const paid = hasPaidBedroomAccess(me, CONFIG.freePreviewMinutes);
         state.isVerifiedMember = !!paid;
-        if (paid && pendingBedroomRestore) {
-          try {
-            await KeyholeAccount.startSession();
-            state.roomMode = 'bedroom';
-          } catch (_) {
-            state.roomMode = 'living_room';
-          }
-        } else if (!paid && state.roomMode === 'bedroom') {
-          state.roomMode = 'living_room';
-          state.isVerifiedMember = false;
-        }
+        state.paidUnlocked = !!paid;
+        state.roomMode = 'bedroom';
         pendingBedroomRestore = false;
         saveSessionState();
         renderAccountStatus();
@@ -1701,7 +1701,7 @@
         }
       } catch (_) {
         state.isVerifiedMember = false;
-        if (state.roomMode === 'bedroom') state.roomMode = 'living_room';
+        state.paidUnlocked = false;
         pendingBedroomRestore = false;
         renderMessageCredits();
         if (state.view === 'room') {
@@ -1962,10 +1962,11 @@
       const char = CHARACTERS[state.activeCharId];
       if (!char) return;
 
-      const mediaGroup = (state.roomMode === 'bedroom') ? char.bedroomMedia : char.livingRoomMedia;
+      const mediaGroup = char.bedroomMedia;
 
       if (plateEngine) {
-        const beat = state.roomMode === 'bedroom' ? 'give' : 'tease';
+        // Explicit (give) clips play only after payment is verified — never in the preview.
+        const beat = state.paidUnlocked ? 'give' : 'tease';
         plateEngine.next(beat).then(res => {
           if (res.action === 'plate' || res.action === 'generated') return res;
           return beat === 'give' ? plateEngine.next('tease') : res;
@@ -2095,7 +2096,7 @@
       if (!char) return;
 
       appendSystemMessage(char.dialogue.freeTimeEnding);
-      openMembershipGateModal("Preview Time Expired", char.dialogue.freeTimeEnding);
+      openPrivateRoomPayment(char);
     }
 
     function renderChatMessages() {
@@ -2174,7 +2175,7 @@
     }
 
     function generateCharacterResponse(char) {
-      if (state.roomMode === 'living_room' && state.userMessageCount >= CONFIG.invitationMessageThreshold && !state.hasInvitedToBedroom && !state.isVerifiedMember) {
+      if (!state.paidUnlocked && state.userMessageCount >= CONFIG.invitationMessageThreshold && !state.hasInvitedToBedroom && !state.isVerifiedMember) {
         state.hasInvitedToBedroom = true;
         state.chatLogs[state.activeCharId].push({
           sender: char.name,
@@ -2349,9 +2350,10 @@
     function enterPrivateRoom(char) {
       if (!char) return;
       state.isVerifiedMember = true;
+      state.paidUnlocked = true;
       state.roomMode = 'bedroom';
       saveSessionState();
-      appendSystemMessage(`You are now in ${char.name}'s private room — live.`);
+      appendSystemMessage(`Payment confirmed — ${char.name}'s private shows are unlocked. No password needed, you're in.`);
       renderRoomView();
     }
 
@@ -2380,6 +2382,164 @@
 
     function stopPendingPrivatePoll() {
       if (pendingPrivateTimer) { clearInterval(pendingPrivateTimer); pendingPrivateTimer = null; }
+    }
+
+    /* GROUP SHOWS: list, ticket purchase, join live. Payment verification is the
+       only gate — tickets are claimed from a verified Stripe payment, no passwords. */
+    const PENDING_TICKET_KEY = 'kh_pending_ticket';
+    let groupShowClipTimer = null;
+
+    function getHeldTickets() {
+      try { return JSON.parse(localStorage.getItem('kh_tickets') || '{}'); }
+      catch (_) { return {}; }
+    }
+    function holdTicket(showId) {
+      const t = getHeldTickets(); t[showId] = true;
+      try { localStorage.setItem('kh_tickets', JSON.stringify(t)); } catch (_) {}
+    }
+
+    function openGroupShowsModal() {
+      document.getElementById('group-shows-modal').classList.add('active');
+      renderGroupShows();
+    }
+    function closeGroupShowsModal() {
+      document.getElementById('group-shows-modal').classList.remove('active');
+    }
+
+    async function renderGroupShows() {
+      const list = document.getElementById('group-shows-list');
+      const err = document.getElementById('group-shows-error');
+      err.style.display = 'none';
+      list.innerHTML = '<p class="book-show-note">Loading shows…</p>';
+      let shows = [];
+      try {
+        const res = await KeyholeAccount.api('/keyhole/shows');
+        shows = (res.shows || []).filter(s =>
+          (s.character_id || '').toLowerCase() === 'chloe' &&
+          (s.status === 'SCHEDULED' || s.status === 'LIVE'));
+      } catch (e) {
+        err.textContent = 'Could not load shows — try again.';
+        err.style.display = 'block';
+        list.innerHTML = '';
+        return;
+      }
+      let pending = null;
+      try { pending = JSON.parse(localStorage.getItem(PENDING_TICKET_KEY) || 'null'); } catch (_) {}
+      if (pending && pending.at && Date.now() - pending.at > 30 * 60 * 1000) {
+        try { localStorage.removeItem(PENDING_TICKET_KEY); } catch (_) {}
+        pending = null;
+      }
+      const held = getHeldTickets();
+      if (!shows.length) {
+        list.innerHTML = '<p class="book-show-note">No group shows scheduled right now — check back soon.</p>';
+        return;
+      }
+      list.innerHTML = '';
+      shows.forEach(sh => {
+        const card = document.createElement('div');
+        card.className = 'booking-package-card';
+        const price = sh.price ? String(sh.price) : '';
+        const when = sh.scheduled_at ? String(sh.scheduled_at) : '';
+        const isLive = sh.status === 'LIVE';
+        const hasTicket = !!held[sh.show_id];
+        const isPending = pending && pending.showId === sh.show_id;
+        const turl = (sh.ticket_url || '').replace(/"/g, '&quot;');
+        let btn;
+        if (isLive && hasTicket) btn = `<button class="btn-accept" data-act="join" data-id="${sh.show_id}">Join Group Show</button>`;
+        else if (hasTicket) btn = `<button class="btn-decline" disabled>Ticket held ✓</button>`;
+        else if (isPending) btn = `<button class="btn-accept" data-act="claim" data-id="${sh.show_id}">I've paid — claim my ticket</button>`;
+        else btn = `<button class="btn-accept" data-act="ticket" data-id="${sh.show_id}" data-ticket-url="${turl}">Get ticket${price ? ' — ' + price : ''}</button>`;
+        const desc = sh.description ? `<p class="book-show-note">${sh.description}</p>` : '';
+        card.innerHTML = `<span class="booking-package-name">${sh.title || 'Group Show'}${isLive ? ' • LIVE' : ''}</span>` +
+          `<span class="booking-package-price">${when}</span>` +
+          `<div style="margin-top:8px;">${btn}</div>` + desc;
+        list.appendChild(card);
+      });
+    }
+
+    function startGroupTicketCheckout(btn) {
+      let url = btn.dataset.ticketUrl || '';
+      if (!url) {
+        const tiers = privateRoomTiers();
+        url = tiers.length ? tiers[0].url : '';
+      }
+      if (!url) return;
+      try {
+        const me = KeyholeAccount.me && KeyholeAccount.me();
+        const u = new URL(url);
+        if (me && me.user_id) u.searchParams.set('client_reference_id', me.user_id);
+        url = u.toString();
+        localStorage.setItem(PENDING_TICKET_KEY, JSON.stringify({ showId: btn.dataset.id, at: Date.now() }));
+      } catch (_) {}
+      window.location = url;
+    }
+
+    async function claimGroupTicket(showId, btn) {
+      btn.disabled = true; btn.textContent = 'Verifying payment…';
+      const err = document.getElementById('group-shows-error');
+      try {
+        await KeyholeAccount.api(`/keyhole/shows/${encodeURIComponent(showId)}/claim-ticket`, {});
+        holdTicket(showId);
+        try { localStorage.removeItem(PENDING_TICKET_KEY); } catch (_) {}
+        appendSystemMessage('Group show ticket confirmed — see you there.');
+        await renderGroupShows();
+      } catch (e) {
+        btn.disabled = false; btn.textContent = "I've paid — claim my ticket";
+        err.textContent = (e && e.message) || 'Payment not confirmed yet — give it a moment, then try again.';
+        err.style.display = 'block';
+      }
+    }
+
+    async function playNextGroupShowClip() {
+      if (!state.groupShow || !plateEngine) return;
+      try {
+        const res = await plateEngine.next('give');
+        if (res && (res.action === 'plate' || res.action === 'generated')) {
+          reportPlatePlay(res.url, res.variant);
+          if (typeof idleStream !== 'undefined') idleStream.suspendForCut();
+          elStageVideo.src = res.url;
+          elStageVideo.style.display = 'block';
+          elStageFallbackImg.style.display = 'none';
+          elStageVideo.loop = false;
+          elStageVideo.play().catch(() => {});
+          elStageVideo.onended = () => { if (state.groupShow) playNextGroupShowClip(); };
+          return;
+        }
+      } catch (_) {}
+      groupShowClipTimer = setTimeout(() => { if (state.groupShow) playNextGroupShowClip(); }, 3000);
+    }
+    function startGroupShowStream() {
+      stopGroupShowStream();
+      playNextGroupShowClip();
+    }
+    function stopGroupShowStream() {
+      if (groupShowClipTimer) { clearTimeout(groupShowClipTimer); groupShowClipTimer = null; }
+    }
+
+    async function joinGroupShow(showId, btn) {
+      if (btn) { btn.disabled = true; btn.textContent = 'Joining…'; }
+      const err = document.getElementById('group-shows-error');
+      try {
+        const res = await KeyholeAccount.api(`/keyhole/shows/${encodeURIComponent(showId)}/access`);
+        if (!res.access) throw new Error(res.reason || 'Access denied');
+        state.groupShow = { show_id: showId };
+        state.paidUnlocked = true;
+        closeGroupShowsModal();
+        appendSystemMessage(`You're in the group show — live with ${CHARACTERS[state.activeCharId].name}.`);
+        renderRoomView();
+        startGroupShowStream();
+      } catch (e) {
+        if (btn) { btn.disabled = false; btn.textContent = 'Join Group Show'; }
+        err.textContent = (e && e.message) || 'Could not join the show.';
+        err.style.display = 'block';
+      }
+    }
+
+    function leaveGroupShow() {
+      state.groupShow = null;
+      stopGroupShowStream();
+      appendSystemMessage('You left the group show — back to the bedroom feed.');
+      renderRoomView();
     }
 
     /* After Stripe redirects back, poll until the webhook credits the minutes, then walk them in. */
@@ -2710,10 +2870,21 @@
       elAccountPassword.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleAccountSubmit(); });
       elAccountToggle.addEventListener('click', (e) => { e.preventDefault(); setAccountMode(accountMode === 'login' ? 'signup' : 'login'); });
 
-      elSwitchBtn.addEventListener('click', showSelectionView);
+      elSwitchBtn.addEventListener('click', () => enterRoom('chloe', false));
+      document.getElementById('group-shows-btn').addEventListener('click', openGroupShowsModal);
+      document.getElementById('group-shows-close-btn').addEventListener('click', closeGroupShowsModal);
+      document.getElementById('leave-group-show-btn').addEventListener('click', leaveGroupShow);
+      document.getElementById('group-shows-list').addEventListener('click', (e) => {
+        const btn = e.target.closest('button[data-act]');
+        if (!btn || btn.disabled) return;
+        const act = btn.dataset.act, id = btn.dataset.id;
+        if (act === 'ticket') startGroupTicketCheckout(btn);
+        else if (act === 'claim') claimGroupTicket(id, btn);
+        else if (act === 'join') joinGroupShow(id, btn);
+      });
       elLogoBtn.addEventListener('click', (e) => {
         e.preventDefault();
-        showSelectionView();
+        enterRoom('chloe', false);
       });
 
       elChatSendBtn.addEventListener('click', handleSendMessage);
@@ -2727,8 +2898,8 @@
       window.addEventListener('keydown', unlockVoiceOnce, { once: true });
 
       elBannerUnlockBtn.addEventListener('click', () => {
-        const char = CHARACTERS[state.activeCharId];
-        openMembershipGateModal("Unlock Private Room", `Purchase required to enter ${char ? char.name : ''}'s room.`);
+        // Payment verification is the only gate — no passwords, no passcodes.
+        openPrivateRoomPayment(CHARACTERS[state.activeCharId] || CHARACTERS['chloe']);
       });
 
       elModalCloseBtn.addEventListener('click', closeMembershipGateModal);
