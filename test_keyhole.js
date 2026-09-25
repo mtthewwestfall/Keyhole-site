@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import { createRequire } from 'node:module';
 
 // Read rooms.html (the Keyhole experience; index.html is the cover page) and admin.html
 const indexPath = path.resolve('rooms.html');
@@ -357,5 +358,79 @@ test('Keyhole Booking Flow & Admin Lives Tab', async (t) => {
     assert.ok(adminHtml.includes('function loadLives'), 'loadLives defined');
     assert.ok(adminHtml.includes('setInterval(loadLives, 30000)'), 'lives auto-refresh every 30s');
     assert.ok(adminHtml.includes('onTabActivated'), 'tab activation hook stops/starts lives refresh');
+  });
+});
+
+test('Voice presets: she talks over the footage', async (t) => {
+  const require = createRequire(import.meta.url);
+  const VP = require('./voice-presets.js');
+
+  await t.test('voice-presets.js exports the pure helpers', () => {
+    for (const fn of ['presetDir', 'pickIndex', 'normalizeManifest', 'nextGapDelay', 'createPlayer']) {
+      assert.equal(typeof VP[fn], 'function', fn + ' exported');
+    }
+  });
+
+  await t.test('pickIndex stays in range and avoids immediate repeats', () => {
+    assert.equal(VP.pickIndex(0, -1), -1, 'empty -> -1');
+    assert.equal(VP.pickIndex(1, 0), 0, 'single -> 0');
+    for (let n = 0; n < 200; n++) {
+      const i = VP.pickIndex(41, 7);
+      assert.ok(i >= 0 && i < 41, 'in range');
+      assert.notEqual(i, 7, 'never repeats the last index');
+    }
+  });
+
+  await t.test('normalizeManifest builds playable entries', () => {
+    const out = VP.normalizeManifest('chloe', [
+      { id: '001', text: 'hey you.', file: '001.mp3' },
+      { id: 'bad' },
+      null,
+    ]);
+    assert.equal(out.length, 1, 'drops entries without a file');
+    assert.equal(out[0].url, 'assets/audio/presets/chloe/001.mp3', 'url built from dir + file');
+    assert.deepEqual(VP.normalizeManifest('chloe', null), [], 'non-array -> []');
+  });
+
+  await t.test('nextGapDelay stays within bounds', () => {
+    for (let n = 0; n < 50; n++) {
+      const d = VP.nextGapDelay(35000, 70000);
+      assert.ok(d >= 35000 && d <= 70000, 'within 35-70s');
+    }
+  });
+
+  await t.test('chloe preset pack is complete on disk', () => {
+    const manPath = path.resolve('assets/audio/presets/chloe/presets.json');
+    assert.ok(fs.existsSync(manPath), 'presets.json exists');
+    const manifest = JSON.parse(fs.readFileSync(manPath, 'utf8'));
+    assert.equal(manifest.length, 41, '41 preset lines');
+    for (const e of manifest) {
+      assert.ok(e.text && e.text.length > 0, 'line has text: ' + e.id);
+      assert.ok(fs.existsSync(path.resolve('assets/audio/presets/chloe', e.file)), 'mp3 exists: ' + e.file);
+    }
+  });
+
+  await t.test('bailey preset pack is complete on disk', () => {
+    const manPath = path.resolve('assets/audio/presets/bailey/presets.json');
+    assert.ok(fs.existsSync(manPath), 'presets.json exists');
+    const manifest = JSON.parse(fs.readFileSync(manPath, 'utf8'));
+    assert.equal(manifest.length, 45, '45 preset lines');
+    for (const e of manifest) {
+      assert.ok(e.text && e.text.length > 0, 'line has text: ' + e.id);
+      assert.ok(fs.existsSync(path.resolve('assets/audio/presets/bailey', e.file)), 'mp3 exists: ' + e.file);
+    }
+  });
+
+  await t.test('rooms.html wires the voice layer into the room', () => {
+    assert.ok(indexHtml.includes('<script src="voice-presets.js"></script>'), 'voice-presets.js loaded');
+    assert.ok(indexHtml.includes('const voiceState'), 'voice state defined');
+    assert.ok(indexHtml.includes('function playVoicePreset(charId)'), 'playVoicePreset defined');
+    assert.ok(indexHtml.includes('function startVoiceForRoom(charId)'), 'startVoiceForRoom defined');
+    assert.ok(indexHtml.includes('function stopVoiceScheduler()'), 'stopVoiceScheduler defined');
+    assert.ok(indexHtml.includes('startVoiceForRoom(char.id)'), 'voice starts on room entry');
+    assert.ok(indexHtml.includes('stopVoiceScheduler();'), 'voice stops when leaving the room');
+    assert.ok(indexHtml.includes('playVoicePreset(state.activeCharId)'), 'a line plays when the guest types');
+    assert.ok(indexHtml.includes('unlockVoiceOnce'), 'audio unlocked on first gesture');
+    assert.ok(indexHtml.includes('35000, 70000'), 'gap filler scheduled every 35-70s');
   });
 });

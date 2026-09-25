@@ -1061,6 +1061,7 @@
   </footer>
 
   <script src="plate-engine.js"></script>
+  <script src="voice-presets.js"></script>
   <script>
     /* ==========================================================================
        KEYHOLE APP CORE & DATA ARCHITECTURE
@@ -1512,6 +1513,7 @@
       elNavBadge.textContent = 'KEYHOLE';
       elNavBadge.className = 'badge badge-member';
       if (timerInterval) clearInterval(timerInterval);
+      stopVoiceScheduler();
     }
 
     function enterRoom(charId, isNewSelection = true) {
@@ -1544,6 +1546,7 @@
       saveSessionState();
       renderRoomView();
       startPreviewTimer();
+      startVoiceForRoom(char.id);
       return syncAccountEntitlement();
     }
 
@@ -1744,9 +1747,75 @@
       };
     }
 
+    /* ---------------- Voice presets: she talks over the footage ----------------
+       Prerecorded preset lines (assets/audio/presets/<char>/) played through
+       one Audio element layered over the video plate. A scheduler fills quiet
+       stretches; she also says a line whenever the guest types. A played line
+       is an acknowledgment, not a live answer — the text reply still comes
+       from generateCharacterResponse. */
+    const voiceState = {
+      presets: {},   // charId -> [{id, text, url}]
+      lastIdx: {},   // charId -> last played index
+      player: (typeof VoicePresets !== 'undefined') ? VoicePresets.createPlayer() : null,
+      schedTimer: null,
+      greetTimer: null,
+    };
+
+    async function loadVoicePresets(charId) {
+      if (voiceState.presets[charId]) return voiceState.presets[charId];
+      voiceState.presets[charId] = [];
+      if (typeof VoicePresets === 'undefined') return voiceState.presets[charId];
+      try {
+        const res = await fetch(VoicePresets.presetDir(charId) + '/presets.json', { cache: 'no-store' });
+        if (!res.ok) return voiceState.presets[charId];
+        voiceState.presets[charId] = VoicePresets.normalizeManifest(charId, await res.json());
+      } catch (_) { /* voice stays silent; video is unaffected */ }
+      return voiceState.presets[charId];
+    }
+
+    function playVoicePreset(charId) {
+      const list = voiceState.presets[charId] || [];
+      if (!list.length || !voiceState.player || state.view !== 'room') return false;
+      if (voiceState.player.isPlaying()) return false; // never talk over herself
+      const i = VoicePresets.pickIndex(list.length, voiceState.lastIdx[charId]);
+      if (i < 0) return false;
+      voiceState.lastIdx[charId] = i;
+      return voiceState.player.play(list[i].url);
+    }
+
+    function scheduleNextVoiceLine(charId, minMs, maxMs) {
+      stopVoiceScheduler();
+      voiceState.schedTimer = setTimeout(function tick() {
+        voiceState.schedTimer = null;
+        if (state.view === 'room' && state.activeCharId === charId) {
+          playVoicePreset(charId);
+          scheduleNextVoiceLine(charId, minMs, maxMs);
+        }
+      }, VoicePresets.nextGapDelay(minMs, maxMs));
+    }
+
+    function stopVoiceScheduler() {
+      if (voiceState.schedTimer) { clearTimeout(voiceState.schedTimer); voiceState.schedTimer = null; }
+      if (voiceState.greetTimer) { clearTimeout(voiceState.greetTimer); voiceState.greetTimer = null; }
+      if (voiceState.player) voiceState.player.stop();
+    }
+
+    async function startVoiceForRoom(charId) {
+      stopVoiceScheduler();
+      if (typeof VoicePresets === 'undefined') return;
+      await loadVoicePresets(charId);
+      if (!voiceState.presets[charId].length) return;
+      // Greeting shortly after entry; the door click counts as the gesture.
+      voiceState.greetTimer = setTimeout(() => {
+        voiceState.greetTimer = null;
+        if (state.view === 'room' && state.activeCharId === charId) playVoicePreset(charId);
+      }, 2500);
+      // Gap filler: a line every 35–70s while she's on screen.
+      scheduleNextVoiceLine(charId, 35000, 70000);
+    }
+
     function startPreviewTimer() {
       if (timerInterval) clearInterval(timerInterval);
-
       if (state.roomMode === 'bedroom' || state.isVerifiedMember) {
         return;
       }
@@ -1843,6 +1912,7 @@
       renderChatMessages();
 
       triggerReactionClip();
+      playVoicePreset(state.activeCharId);
 
       setTimeout(() => {
         generateCharacterResponse(char);
@@ -2273,6 +2343,11 @@
       elChatInput.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') handleSendMessage();
       });
+
+      // Unlock voice audio on the first real gesture so later autoplay isn't blocked.
+      const unlockVoiceOnce = () => { if (voiceState.player) voiceState.player.unlock(); };
+      window.addEventListener('pointerdown', unlockVoiceOnce, { once: true });
+      window.addEventListener('keydown', unlockVoiceOnce, { once: true });
 
       elBannerUnlockBtn.addEventListener('click', () => {
         const char = CHARACTERS[state.activeCharId];
