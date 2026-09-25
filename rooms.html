@@ -2293,7 +2293,7 @@
           if (res && res.reply) {
             previewReplyCount++;
             let text = res.reply;
-            if (previewReplyCount % 3 === 0) text += ' ' + VOICE_UPSELL;
+            if (previewReplyCount % 10 === 0) text += ' ' + VOICE_UPSELL;
             pushModelMessage(char, text);
             return;
           }
