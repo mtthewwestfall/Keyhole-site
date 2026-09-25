@@ -511,6 +511,10 @@
       height: 100%;
       object-fit: cover;
     }
+    .stage-video {
+      position: absolute;
+      inset: 0;
+    }
     .stage-watermark {
       position: absolute;
       bottom: 12px;
@@ -923,6 +927,7 @@
 
         <div class="stage-media-wrap" id="stage-media-wrap">
           <video id="stage-video" class="stage-video" autoplay loop muted playsinline style="display:none;"></video>
+          <video id="stage-video-b" class="stage-video" muted playsinline style="display:none;opacity:0;"></video>
           <img id="stage-fallback-img" class="stage-fallback-img" src="" alt="Webcam Feed" />
           <div class="stage-watermark">KEYHOLE</div>
           <div id="stage-live-overlay" class="stage-live-overlay" style="display:none;">
@@ -1406,6 +1411,7 @@
     const elStageCharName = document.getElementById('stage-char-name');
     const elStageRoomLabel = document.getElementById('stage-room-label');
     const elStageVideo = document.getElementById('stage-video');
+    const elStageVideoB = document.getElementById('stage-video-b');
     const elStageFallbackImg = document.getElementById('stage-fallback-img');
 
     const elPreviewBanner = document.getElementById('preview-banner');
@@ -1662,15 +1668,31 @@
        stream grouped by take: clips that are variants of the same source
        (same `variant` tag) play back-to-back so they feel like one continuous
        shot, then the stream moves to the next take. Every clip plays once per
-       cycle, no take repeats adjacently across the cycle boundary, and each
-       cut uses a soft dip-to-black. Reaction clips pause the stream; it resumes
-       where it left off. */
+       cycle, no take repeats adjacently across the cycle boundary, and every
+       cut is a crossfade between two stacked video layers -- no dip to black --
+       so the feed reads as one uninterrupted webcam shot. Reaction clips pause
+       the stream; it resumes where it left off. */
     const idleStream = {
       queue: [],
       idx: -1,
       charId: null,
       active: false,
       preloader: null,
+      layers: null,
+      vis: 0, // index of the currently-visible crossfade layer
+
+      _layers() {
+        if (!this.layers) {
+          this.layers = [elStageVideo, elStageVideoB];
+          for (const v of this.layers) {
+            if (!v) continue;
+            v.style.transition = 'opacity 0.55s ease';
+            v.muted = true;
+            v.setAttribute('playsinline', '');
+          }
+        }
+        return this.layers;
+      },
 
       _videoFiles(files) {
         return (files || []).filter(f => f && f.url && !isImagePlate(f.url));
@@ -1722,24 +1744,39 @@
         const clip = (this.idx >= 0 && this.idx < this.queue.length) ? this.queue[this.idx] : null;
         if (!clip) { this.active = false; return; }
         reportPlatePlay(clip.url, clip.variant);
-        elStageVideo.loop = false;
-        // Soft cut: dip to black, swap source, fade back in.
-        const swap = () => {
-          elStageVideo.src = clip.url;
-          elStageVideo.style.display = 'block';
-          elStageFallbackImg.style.display = 'none';
-          elStageVideo.onerror = () => { this._advance(); };
-          elStageVideo.onended = () => { this._advance(); };
-          elStageVideo.play().catch(() => {});
-          requestAnimationFrame(() => { elStageVideo.style.opacity = '1'; });
+        const L = this._layers();
+        const incoming = L[1 - this.vis];
+        const outgoing = L[this.vis];
+        // Crossfade: the next clip dissolves in over the current one.
+        // No dip to black, so the feed reads as one continuous webcam shot.
+        incoming.loop = false;
+        incoming.onerror = () => { this._advance(); };
+        incoming.onended = null;
+        outgoing.onended = null;
+        incoming.style.display = 'block';
+        elStageFallbackImg.style.display = 'none';
+        let started = false;
+        const begin = () => {
+          if (started || !this.active) return;
+          started = true;
+          incoming.oncanplay = null;
+          incoming.play().catch(() => {});
+          requestAnimationFrame(() => { requestAnimationFrame(() => {
+            incoming.style.opacity = '1';
+            outgoing.style.opacity = '0';
+          }); });
+          setTimeout(() => {
+            if (!this.active) return;
+            outgoing.pause();
+            try { outgoing.removeAttribute('src'); outgoing.load(); } catch (_) {}
+            this.vis = 1 - this.vis;
+            incoming.onended = () => { this._advance(); };
+          }, 620);
         };
-        elStageVideo.style.transition = 'opacity 0.22s ease';
-        if (elStageVideo.style.opacity !== '0') {
-          elStageVideo.style.opacity = '0';
-          setTimeout(swap, 230);
-        } else {
-          swap();
-        }
+        incoming.oncanplay = begin;
+        incoming.src = clip.url;
+        if (incoming.readyState >= 2) begin();
+        setTimeout(begin, 2500); // failsafe: never stall on a slow load
         const nxt = (this.idx + 1 < this.queue.length) ? this.queue[this.idx + 1] : null;
         this._preload(nxt ? nxt.url : null);
       },
@@ -1779,12 +1816,38 @@
         return true;
       },
 
+      // Reaction clips take over layer A directly: collapse the crossfade,
+      // park the stream, and leave layer A as the visible surface.
+      suspendForCut() {
+        this.active = false;
+        const L = this._layers();
+        for (const v of L) { if (v) { v.onended = null; v.oncanplay = null; } }
+        const b = L[1];
+        if (b) { try { b.pause(); } catch (_) {} b.style.opacity = '0'; b.style.display = 'none'; }
+        const a = L[0];
+        if (a) { a.style.display = 'block'; a.style.opacity = '1'; }
+        this.vis = 0;
+      },
+
       stop() {
         this.active = false;
         this.queue = [];
         this.idx = -1;
         this.charId = null;
-        try { elStageVideo.style.opacity = '1'; } catch (_) {}
+        this.vis = 0;
+        try {
+          for (const v of (this.layers || [])) {
+            if (!v) continue;
+            v.pause();
+            v.onended = null;
+            v.oncanplay = null;
+          }
+          if (this.layers && this.layers[1]) {
+            this.layers[1].style.opacity = '0';
+            this.layers[1].style.display = 'none';
+          }
+          elStageVideo.style.opacity = '1';
+        } catch (_) {}
       }
     };
 
@@ -1811,6 +1874,14 @@
 
     function showStageIdle(mediaGroup) {
       elStageVideo.loop = true;
+      try {
+        if (typeof elStageVideoB !== 'undefined' && elStageVideoB) {
+          elStageVideoB.pause();
+          elStageVideoB.style.display = 'none';
+          elStageVideoB.style.opacity = '0';
+        }
+        elStageVideo.style.opacity = '1';
+      } catch (_) {}
       if (mediaGroup.idleVideo) {
         elStageVideo.src = mediaGroup.idleVideo;
         elStageVideo.style.display = 'block';
@@ -1864,6 +1935,7 @@
         setTimeout(() => setupStageMedia(mediaGroup), 6000);
         return;
       }
+      if (typeof idleStream !== 'undefined') idleStream.suspendForCut();
       elStageVideo.src = clipUrl;
       elStageVideo.style.display = 'block';
       elStageFallbackImg.style.display = 'none';
