@@ -750,6 +750,36 @@
         </div>
       </div>
 
+      <div class="admin-card" style="margin-bottom:20px;" id="card-branch-autofill">
+        <div class="card-title">
+          <span>Daily Branch Autofill</span>
+          <span id="badge-branch-autofill" class="admin-badge">Auto rotation</span>
+        </div>
+        <p class="card-subtitle">Each morning the autofill builds one whole branch for Chloe: 8 clips — one rest MAIN plus 7 action clips of a single activity. Pin an activity to override the daily rotation, or leave it on Auto.</p>
+        <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;">
+          <div class="form-group" style="flex:1; min-width:220px; margin-bottom:0;">
+            <label class="form-label" for="autofill-branch-select">Branch activity</label>
+            <select id="autofill-branch-select" class="form-select">
+              <option value="">Auto (daily rotation)</option>
+              <option value="breathing">Breathing — calm armchair rest</option>
+              <option value="coffee">Coffee — desk, steaming mug</option>
+              <option value="phone">Phone — armchair, scrolling</option>
+              <option value="reading">Reading — comfy chair, book</option>
+              <option value="typing">Typing — desk, laptop</option>
+              <option value="stretching">Stretching — standing</option>
+              <option value="hair">Hair — close-up</option>
+              <option value="window">Window — standing, gazing out</option>
+              <option value="laughing">Laughing — genuine smiles</option>
+              <option value="water">Water — armchair, bottle</option>
+              <option value="waving">Waving — hello to camera</option>
+              <option value="tidying">Tidying — around the room</option>
+            </select>
+          </div>
+          <button id="btn-autofill-branch-save" class="btn">Save</button>
+        </div>
+        <div id="autofill-branch-feedback" class="feedback-msg" style="display:none; margin-top:12px;"></div>
+      </div>
+
       <div class="admin-grid">
         <div class="admin-card" id="card-primary-generator">
           <div class="card-title">Gemini AI Studio & Spatial Rules</div>
@@ -1444,7 +1474,7 @@
     }
 
     async function loadBackendState() {
-      await Promise.all([loadShows(), loadMedia()]);
+      await Promise.all([loadShows(), loadMedia(), loadAutofillBranch()]);
       await reloadServerPlates();
       renderStageMonitor();
     }
@@ -2129,6 +2159,39 @@
       await reloadServerPlates();
     }
 
+    /* DAILY BRANCH AUTOFILL — pin the morning branch to one activity, or leave on auto rotation */
+    async function loadAutofillBranch() {
+      const sel = document.getElementById('autofill-branch-select');
+      const badge = document.getElementById('badge-branch-autofill');
+      if (!sel || !badge) return;
+      try {
+        const d = await api('/admin/autofill/branch');
+        sel.value = d.branch || '';
+        badge.textContent = d.branch ? ('Pinned: ' + d.branch) : 'Auto rotation';
+      } catch (e) {
+        badge.textContent = 'Unavailable';
+      }
+    }
+
+    async function saveAutofillBranch() {
+      const sel = document.getElementById('autofill-branch-select');
+      const badge = document.getElementById('badge-branch-autofill');
+      const fb = document.getElementById('autofill-branch-feedback');
+      try {
+        const d = await api('/admin/autofill/branch', { body: { branch: sel.value || null } });
+        badge.textContent = d.branch ? ('Pinned: ' + d.branch) : 'Auto rotation';
+        fb.style.display = 'block';
+        fb.className = 'feedback-msg feedback-success';
+        fb.textContent = d.branch
+          ? `Morning autofill pinned to "${d.branch}". It stays until you change it.`
+          : 'Morning autofill set to auto daily rotation.';
+      } catch (e) {
+        fb.style.display = 'block';
+        fb.className = 'feedback-msg feedback-error';
+        fb.textContent = 'Save failed: ' + e.message;
+      }
+    }
+
     /* GENERATORS (backend: Gemini image, Sogni image, Veo webcam clip — every output is saved as her tagged plate) */
     function genFeedback(msg, ok) {
       const fb = document.getElementById('gen-feedback');
@@ -2623,6 +2686,7 @@
       document.getElementById('gen-clip-seconds').addEventListener('change', updateGeminiPrompt);
 
       document.getElementById('btn-gen-webcam').addEventListener('click', runWebcamGenerator);
+      document.getElementById('btn-autofill-branch-save').addEventListener('click', saveAutofillBranch);
 
       document.getElementById('gen-rule-multiangle').addEventListener('change', updateGeminiPrompt);
       document.getElementById('gen-rule-primaryview').addEventListener('change', updateGeminiPrompt);
