@@ -684,6 +684,75 @@
       display: flex;
       gap: 10px;
     }
+    /* Lingerie set promo card + photo gallery (paid show finale) */
+    #lingerie-card {
+      position: fixed;
+      left: 50%;
+      bottom: 18px;
+      transform: translateX(-50%);
+      z-index: 30;
+      display: none;
+      align-items: center;
+      gap: 12px;
+      background: rgba(12, 10, 14, 0.92);
+      border: 1px solid var(--gold);
+      border-radius: 10px;
+      padding: 10px 14px;
+      cursor: pointer;
+      max-width: 92%;
+      box-shadow: 0 6px 24px rgba(0,0,0,0.5);
+    }
+    #lingerie-card .lingerie-card-text {
+      color: var(--cream);
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+    #lingerie-card .lingerie-card-sub {
+      color: var(--muted);
+      font-size: 0.75rem;
+      font-weight: 400;
+    }
+    #lingerie-card-close {
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      font-size: 1.1rem;
+      cursor: pointer;
+      padding: 4px 8px;
+    }
+    #lingerie-gallery {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: none;
+      background: rgba(5, 4, 6, 0.97);
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    #lingerie-gallery img {
+      max-width: 94vw;
+      max-height: 82vh;
+      border-radius: 8px;
+      object-fit: contain;
+    }
+    #lingerie-gallery-bar {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      margin-top: 14px;
+      color: var(--cream);
+    }
+    #lingerie-gallery-bar button {
+      background: rgba(196, 165, 116, 0.15);
+      border: 1px solid var(--gold);
+      color: var(--cream);
+      border-radius: 6px;
+      padding: 8px 16px;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+    #lingerie-gallery-count { font-size: 0.85rem; color: var(--muted); min-width: 64px; text-align: center; }
     .btn-accept {
       background: var(--cream);
       color: var(--bg-charcoal);
@@ -1007,12 +1076,30 @@
     </div>
   </section>
 
+  <!-- Lingerie set promo card + photo gallery (paid show finale) -->
+  <div id="lingerie-card">
+    <div>
+      <div class="lingerie-card-text">📸 The 25 lingerie nude set</div>
+      <div class="lingerie-card-sub">Click here for more pictures</div>
+    </div>
+    <button id="lingerie-card-close" aria-label="Dismiss">&times;</button>
+  </div>
+  <div id="lingerie-gallery">
+    <img id="lingerie-gallery-img" src="" alt="Lingerie set photo" />
+    <div id="lingerie-gallery-bar">
+      <button id="lingerie-gallery-prev">‹ Prev</button>
+      <span id="lingerie-gallery-count">1 / 25</span>
+      <button id="lingerie-gallery-next">Next ›</button>
+      <button id="lingerie-gallery-close">Done</button>
+    </div>
+  </div>
+
   <!-- CUSTOMER ACCOUNT MODAL -->
   <div id="account-modal" class="modal-backdrop">
     <div class="modal-card">
       <button id="account-close-btn" class="modal-close">&times;</button>
       <h2 class="modal-title" id="account-title">Sign In</h2>
-      <p class="modal-desc" id="account-desc">Sign in so your session minutes land on your account immediately.</p>
+      <p class="modal-desc" id="account-desc">Sign in or create an account to enter the bedroom. The bedroom is free — you only pay when you buy a show.</p>
 
       <div class="gate-input-group">
         <label class="gate-label" for="account-email">Email</label>
@@ -1230,6 +1317,8 @@
       view: 'selection',
       activeCharId: null,
       roomMode: 'living_room',
+      showMode: 'preview', // 'preview' = free bedroom rotation, 'show' = paid show
+      showMinutes: 30, // purchased show length; the give finale starts in its last 20%
       previewSecondsLeft: CONFIG.defaultPreviewSeconds,
       isVerifiedMember: false,
       paidUnlocked: false,
@@ -1588,6 +1677,11 @@
     }
 
     function enterRoom(charId, isNewSelection = true) {
+      // The bedroom is free, but sign-in is required at the door.
+      if (typeof KeyholeAccount !== 'undefined' && !KeyholeAccount.token()) {
+        openAccountModal('login');
+        return Promise.resolve(false);
+      }
       const char = CHARACTERS[charId] || CHARACTERS['chloe'];
       if (!char) return;
 
@@ -1644,9 +1738,9 @@
         elNavBadge.className = 'badge badge-live';
         elPreviewBanner.style.display = 'none';
         if (elLeaveGroupBtn) elLeaveGroupBtn.style.display = '';
-      } else if (state.paidUnlocked) {
-        elNavBadge.textContent = 'Unlocked';
-        elNavBadge.className = 'badge badge-member';
+      } else if (state.showMode === 'show' || state.paidUnlocked) {
+        elNavBadge.textContent = 'Private Show • LIVE';
+        elNavBadge.className = 'badge badge-live';
         elPreviewBanner.style.display = 'none';
       } else {
         elNavBadge.textContent = 'Live Session';
@@ -1697,7 +1791,8 @@
         }
         const paid = hasPaidBedroomAccess(me, CONFIG.freePreviewMinutes);
         state.isVerifiedMember = !!paid;
-        state.paidUnlocked = !!paid;
+        // paidUnlocked is show-scoped now: only a live paid show sets it.
+        // Minutes on the account no longer unlock the stage by themselves.
         state.roomMode = 'bedroom';
         pendingBedroomRestore = false;
         saveSessionState();
@@ -1721,6 +1816,558 @@
 
     function isImagePlate(url) {
       return /\.(jpe?g|png|webp|gif|avif)(\?|$)/i.test(String(url || ''));
+    }
+
+    /* ================= Branch scheduler (Chloe one-video) =================
+       Two modes:
+       - 'preview' (free bedroom, signed-in): clothed rotation only. Typing and
+         coffee alternate back-and-forth; typing holds are longer so there's
+         more of it. Loops forever. No tidying, no give, no nudity.
+       - 'show' (paid private/group show): typing/coffee alternate with the
+         tidying state played ONCE at the midpoint, then the give finale at the
+         last give_pct%: give bridge -> give main + actions -> lingerie card ->
+         photo gallery -> give main -> goodbye wave -> handoff to chat.
+       Clip addressing: roles resolve at runtime from the plate library by
+       `variant` (e.g. "branch-coffee-rest"). No local paths, no hardcoded URLs.
+       Her voice runs through the whole show; chat texts wait for the voice and
+       send together, falling back to text alone if voice never comes back. */
+
+    const BRANCH = {
+      enabled: true,
+      character: 'chloe',
+      give_pct: 20,           // give finale occupies the last N% of the show
+      show_length_min: 30,    // planning length; sessions may run shorter/longer
+      typing_hold_s: 150,     // typing gets more airtime than coffee
+      coffee_hold_s: 60,
+      tidying_hold_s: 30,     // tidying plays ONCE per show (the 5 folding clips, ~27s)
+      sip_interval_s: 12.5,   // coffee rest bursts between sips (C1 loop is 2.5s x5)
+      give_action_cadence_s: 90,
+      card_timeout_s: 30,     // lingerie card auto-dismisses -> show continues
+      voice_timeout_ms: 15000 // voice request timeout -> text sends by itself
+    };
+
+    /* Role -> variant key(s) in the plate library. Arrays = priority order.
+       null = intentionally unbuilt bridge (hard cut + console note, never stalls). */
+    const BRANCH_CLIPS = {
+      coffee_rest:      ['branch-coffee-rest'],    // C1 seamless loop (2.5s)
+      coffee_sip:       ['branch-coffee-sip'],     // C2 trimmed sip (4.79s)
+      typing_rest:      ['branch-typing-loop'],   // T2 seamless loop (2.33s)
+      tidy_f1:          ['branch-tidy-f1'],       // F1 folding, seamless loop (6.79s, branch-only)
+      tidy_f2:          ['tidy-f2'],              // F3 folding (3.79s, also in free rotation)
+      tidy_f3:          ['tidy-f3'],              // F4 folding (4.50s, also in free rotation)
+      tidy_f4:          ['tidy-f4'],              // F5 folding (6.21s, also in free rotation)
+      tidy_f5:          ['tidy-f5'],              // F7 hanging (5.54s, also in free rotation)
+      bridge_coffee_typing: ['branch-b1'],        // B1
+      bridge_typing_coffee: ['branch-b2'],        // B2
+      bridge_typing_tidying: null,                // D1-based B8 retired with the folding branch
+      bridge_tidying_typing: null,                // D1-based B9 retired with the folding branch
+      bridge_coffee_tidying: null,                // D1-based B10 retired with the folding branch
+      bridge_tidying_coffee: null,                // D1-based B11 retired with the folding branch
+      bridge_coffee_give:   ['branch-b6'],        // B6 (tease-lift -> give main)
+      bridge_typing_give:   ['branch-b7'],        // B7 (tease-lift -> give main)
+      bridge_tidying_give:  null,                 // D1-based B12 retired with the folding branch
+      joint_typing_coffee: ['branch-joint-typing-coffee'], // Luma: stops typing, leans back, grabs mug (5.04s, one-shot)
+      joint_coffee_typing: ['branch-joint-coffee-typing'], // Luma: sets mug down, back to keyboard (5.04s, one-shot)
+      look_a:           ['branch-look-a'],   // Luma: hands still at laptop, looks up, warm smile (5.04s, one-shot)
+      look_b:           ['branch-look-b'],   // Luma: hands still at laptop, head tilt, playful smile (5.04s, one-shot)
+      look_hold_a:      ['branch-look-hold-a'], // breathing zoom hold on her gaze (8s loop)
+      look_hold_b:      ['branch-look-hold-b'], // breathing zoom hold on her gaze (8s loop)
+      give_main:        ['branch-give-main-v2'],  // G2
+      give_knees_down:  ['branch-give-knees-down'], // G3: lie-back once + 10s still, one-shot opener
+      give_action_1:    ['branch-give-crawl'],    // crawl closer (give beat)
+      give_action_2:    ['branch-give-lift'],     // slow lift   (give beat)
+      goodbye:          ['branch-goodbye-wave'],  // seated wave, show over
+    };
+
+    /* Fallback durations (seconds) until real metadata resolves. */
+    const BRANCH_DUR_EST = {
+      coffee_rest: 2.5, coffee_sip: 4.79, typing_rest: 2.33,
+      tidy_f1: 6.79, tidy_f2: 3.79, tidy_f3: 4.5, tidy_f4: 6.21, tidy_f5: 5.54,
+      bridge_coffee_typing: 5.8, bridge_typing_coffee: 5.7,
+      joint_typing_coffee: 5.04, joint_coffee_typing: 5.04,
+      look_a: 5.04, look_b: 5.04, look_hold_a: 8, look_hold_b: 8,
+      bridge_coffee_give: 13.9, bridge_typing_give: 11.5,
+      give_main: 25.5, give_knees_down: 12, give_action_1: 5.9, give_action_2: 5.9, goodbye: 5,
+    };
+
+    const branchScheduler = {
+      clips: null, dur: null, script: [], idx: -1,
+      active: false, session: false, mode: 'preview',
+      locked: false, galleryOpen: false,
+      layers: null, vis: 0, preloader: null, _cardTimer: null,
+
+      /* ---- clip resolution ---- */
+      _find(variants, beats) {
+        for (const v of variants) {
+          for (const b of beats) {
+            const hit = plateEngine.library.files(BRANCH.character, b)
+              .find(f => f.variant === v);
+            if (hit) return { url: hit.url, variant: hit.variant };
+          }
+        }
+        return null;
+      },
+
+      _resolve(mode) {
+        const c = {}, missing = [];
+        const needPreview = ['coffee_rest', 'coffee_sip', 'typing_rest',
+                             'bridge_coffee_typing', 'bridge_typing_coffee',
+                             'joint_typing_coffee', 'joint_coffee_typing',
+                             'look_a', 'look_b', 'look_hold_a', 'look_hold_b'];
+        const needShow = needPreview.concat(['give_knees_down', 'give_main', 'goodbye']);
+        const need = (mode === 'show') ? needShow : needPreview;
+        for (const role of Object.keys(BRANCH_CLIPS)) {
+          const vs = BRANCH_CLIPS[role];
+          if (!vs) { c[role] = null; continue; }
+          c[role] = this._find(vs, ['idle', 'give']);
+          if (!c[role] && need.includes(role)) missing.push(role);
+        }
+        if (missing.length) {
+          console.info('[branch] missing required clips for ' + mode + ':', missing.join(', '));
+          return null;
+        }
+        return c;
+      },
+
+      _resolveDurations(done) {
+        const d = Object.assign({}, BRANCH_DUR_EST);
+        const roles = Object.keys(this.clips).filter(r => this.clips[r]);
+        let pending = roles.length;
+        if (!pending) return done(d);
+        roles.forEach(role => {
+          const v = document.createElement('video');
+          v.preload = 'metadata';
+          const finish = () => { pending--; if (!pending) done(d); };
+          v.onloadedmetadata = () => {
+            if (v.duration && isFinite(v.duration)) d[role] = v.duration;
+            finish();
+          };
+          v.onerror = finish;
+          v.src = this.clips[role].url;
+          setTimeout(finish, 4000);
+        });
+      },
+
+      /* ---- script construction ---- */
+      _fill(script, roles, secs) {
+        if (!roles.length) return 0;
+        let t = 0, i = 0, guard = 0;
+        while (t < secs && guard++ < 1000) {
+          const role = roles[i % roles.length];
+          script.push({ kind: 'clip', role, url: this.clips[role].url, variant: this.clips[role].variant });
+          t += this.dur[role];
+          i++;
+        }
+        return t;
+      },
+
+      _holdFor(s) {
+        return s === 'coffee' ? BRANCH.coffee_hold_s
+             : s === 'typing' ? BRANCH.typing_hold_s : BRANCH.tidying_hold_s;
+      },
+
+      _restRoles(s) {
+        if (s === 'coffee') return ['coffee_rest'];
+        if (s === 'typing') return ['typing_rest'];
+        // Tidying plays ONCE per show: the five folding clips in sequence,
+        // no internal loops (0.25s dip-to-black between clips at play time).
+        return ['tidy_f1', 'tidy_f2', 'tidy_f3', 'tidy_f4', 'tidy_f5']
+          .filter(r => this.clips[r]);
+      },
+
+      _coffeeBlock(script, hold_s) {
+        let t = 0, guard = 0;
+        // Short seamless rest bursts with a sip between them, like the approved cut.
+        while (t < hold_s && guard++ < 200) {
+          const chunk = Math.min(BRANCH.sip_interval_s, hold_s - t);
+          t += this._fill(script, ['coffee_rest'], chunk);
+          if (t < hold_s && this.clips.coffee_sip) {
+            script.push({ kind: 'clip', role: 'coffee_sip', url: this.clips.coffee_sip.url,
+                          variant: this.clips.coffee_sip.variant });
+            t += this.dur.coffee_sip;
+          }
+        }
+        return t;
+      },
+
+      /* Pre-give state sequence: typing/coffee alternate back-and-forth
+         (typing holds are longer, so there's more of it); tidying is inserted
+         ONCE when the timeline crosses the midpoint. */
+      _stateSequence(pregiveSec, includeTidy) {
+        const seq = [];
+        let t = 0, turn = 0, tidyDone = !includeTidy;
+        const tidyAt = pregiveSec / 2;
+        let guard = 0;
+        while (t < pregiveSec && guard++ < 500) {
+          let s;
+          if (!tidyDone && t >= tidyAt) { s = 'tidying'; tidyDone = true; }
+          else { s = (turn % 2 === 0) ? 'typing' : 'coffee'; turn++; }
+          const hold = Math.min(this._holdFor(s), pregiveSec - t);
+          if (hold < 10) break;
+          seq.push({ state: s, hold });
+          t += hold;
+        }
+        return seq;
+      },
+
+      _buildSeqScript(seq, loopBridge) {
+        const script = [];
+        for (let k = 0; k < seq.length; k++) {
+          const { state, hold } = seq[k];
+          if (state === 'coffee') this._coffeeBlock(script, hold);
+          else this._fill(script, this._restRoles(state), hold);
+          const next = seq[k + 1] || (loopBridge ? seq[0] : null);
+          if (next && next.state !== state) {
+            const bRole = 'bridge_' + state + '_' + next.state;
+            if (this.clips[bRole]) {
+              script.push({ kind: 'clip', role: bRole, url: this.clips[bRole].url,
+                            variant: this.clips[bRole].variant });
+            } else {
+              console.info('[branch] no bridge for ' + state + '->' + next.state + '; hard cut');
+            }
+          }
+        }
+        return script;
+      },
+
+      _buildPreviewScript() {
+        // Free bedroom: she is in a web chat, so her typing is the permanent
+        // main. Coffee and folding appear only as event-driven branches
+        // (voice-wait, user-idle lull) -- never in the rotation.
+        const script = [];
+        this._fill(script, ['typing_rest'], 12 * 60);
+        return script;
+      },
+
+      _scriptDuration(script) {
+        return script.reduce((s, e) => s + (e.kind === 'clip' ? (this.dur[e.role] || 0) : 0), 0);
+      },
+
+      _buildShowScript() {
+        const showSec = (Number(state.showMinutes) > 0 ? Number(state.showMinutes)
+                         : BRANCH.show_length_min) * 60;
+        const giveSec = showSec * BRANCH.give_pct / 100;
+        const pregiveSec = showSec - giveSec;
+        const includeTidy = ['tidy_f1', 'tidy_f2', 'tidy_f3', 'tidy_f4', 'tidy_f5']
+          .some(r => !!this.clips[r]);
+        const seq = this._stateSequence(pregiveSec, includeTidy);
+        const script = this._buildSeqScript(seq, false);
+
+        // Give bridge in from whichever state is active.
+        const lastState = seq.length ? seq[seq.length - 1].state : 'typing';
+        const gbRole = 'bridge_' + lastState + '_give';
+        if (this.clips[gbRole]) {
+          script.push({ kind: 'clip', role: gbRole, url: this.clips[gbRole].url,
+                        variant: this.clips[gbRole].variant });
+        } else {
+          console.info('[branch] no bridge for ' + lastState + '->give; hard cut');
+        }
+
+        // Give opener: knees-down hold, played exactly once (never looped).
+        let openerSec = 0;
+        if (this.clips.give_knees_down) {
+          script.push({ kind: 'clip', role: 'give_knees_down', url: this.clips.give_knees_down.url,
+                        variant: this.clips.give_knees_down.variant });
+          openerSec = this.dur.give_knees_down || 12;
+        }
+
+        // Give body: give main looped, actions interleaved on cadence.
+        const actions = ['give_action_1', 'give_action_2'].filter(r => this.clips[r]);
+        const giveBodySec = Math.max(60, giveSec - 90 - openerSec); // reserve room for the endgame
+        let gt = 0, ai = 0, guard = 0;
+        while (gt < giveBodySec && guard++ < 500) {
+          const chunk = Math.min(BRANCH.give_action_cadence_s, giveBodySec - gt);
+          gt += this._fill(script, ['give_main'], chunk);
+          if (gt < giveBodySec && actions.length) {
+            const a = actions[ai++ % actions.length];
+            script.push({ kind: 'clip', role: a, url: this.clips[a].url, variant: this.clips[a].variant });
+            gt += this.dur[a];
+          }
+        }
+
+        // Endgame: lingerie card over the give main -> gallery -> give main
+        // -> goodbye wave -> handoff to chat.
+        script.push({ kind: 'action', name: 'lingerie_card' });
+        script.push({ kind: 'clip', role: 'give_main', url: this.clips.give_main.url,
+                      variant: this.clips.give_main.variant });
+        script.push({ kind: 'clip', role: 'goodbye', url: this.clips.goodbye.url,
+                      variant: this.clips.goodbye.variant });
+        script.push({ kind: 'action', name: 'show_over' });
+        return script;
+      },
+
+      /* ---- playback: two-layer hard-cut machinery (multicam illusion) ---- */
+      _layers() {
+        if (!this.layers) {
+          this.layers = [elStageVideo, elStageVideoB];
+          for (const v of this.layers) {
+            if (!v) continue;
+            v.style.transition = 'opacity 0.12s ease';
+            v.muted = true;
+            v.setAttribute('playsinline', '');
+          }
+        }
+        return this.layers;
+      },
+
+      _preload(url) {
+        try {
+          if (!this.preloader) {
+            this.preloader = document.createElement('video');
+            this.preloader.preload = 'auto'; this.preloader.muted = true;
+            this.preloader.setAttribute('playsinline', '');
+            this.preloader.style.display = 'none';
+            document.body.appendChild(this.preloader);
+          }
+          if (url) this.preloader.src = url;
+        } catch (_) {}
+      },
+
+      _playClip(item, onDone) {
+        reportPlatePlay(item.url, item.variant);
+        const L = this._layers();
+        const incoming = L[1 - this.vis], outgoing = L[this.vis];
+        incoming.loop = false;
+        incoming.onerror = () => { onDone(); };
+        incoming.onended = null; outgoing.onended = null;
+        incoming.style.display = 'block';
+        elStageFallbackImg.style.display = 'none';
+        let started = false;
+        const begin = () => {
+          if (started || !this.active) return;
+          started = true; incoming.oncanplay = null;
+          incoming.play().catch(() => {});
+          requestAnimationFrame(() => requestAnimationFrame(() => {
+            incoming.style.opacity = '1'; outgoing.style.opacity = '0';
+          }));
+          setTimeout(() => {
+            if (!this.active) return;
+            outgoing.pause();
+            try { outgoing.removeAttribute('src'); outgoing.load(); } catch (_) {}
+            this.vis = 1 - this.vis;
+            incoming.onended = onDone;
+          }, 160);
+        };
+        incoming.oncanplay = begin;
+        incoming.src = item.url;
+        if (incoming.readyState >= 2) begin();
+        setTimeout(begin, 2500);
+      },
+
+      _playCurrent() {
+        const item = (this.idx >= 0 && this.idx < this.script.length) ? this.script[this.idx] : null;
+        if (!item) { this._onScriptEnd(); return; }
+        if (item.kind === 'action') {
+          if (item.name === 'lingerie_card') this._lingerieCardAction();
+          else if (item.name === 'show_over') this._onShowOver();
+          else this._advance();
+          return;
+        }
+        this._playClip(item, () => this._advance());
+        const nxt = this.script[this.idx + 1];
+        this._preload(nxt && nxt.kind === 'clip' ? nxt.url : null);
+      },
+
+      _advance() {
+        if (!this.active) return;
+        this.idx++;
+        this._playCurrent();
+      },
+
+      _onScriptEnd() {
+        if (this.mode === 'preview' && this.active) {
+          // Free bedroom: rebuild the typing main and keep going.
+          this.script = this._buildPreviewScript();
+          this.idx = -1;
+          this._advance();
+          return;
+        }
+        // Show mode should always end via show_over; safety: hold the give main.
+        if (!this.active || !this.clips.give_main) { this.active = false; return; }
+        this.script.push({ kind: 'clip', role: 'give_main', url: this.clips.give_main.url,
+                           variant: this.clips.give_main.variant });
+        this._advance();
+      },
+
+      /* ---- lingerie card + photo gallery (give finale endgame) ---- */
+      _galleryImages() {
+        try {
+          if (!plateEngine) return [];
+          return plateEngine.library.files(BRANCH.character, 'give')
+            .filter(f => f && f.url && isImagePlate(f.url));
+        } catch (_) { return []; }
+      },
+
+      _lingerieCardAction() {
+        const imgs = this._galleryImages();
+        if (!imgs.length) { this._advance(); return; } // no photos: skip straight on
+        this.locked = true; // finale is never interrupted by reaction clips
+        const card = document.getElementById('lingerie-card');
+        const closeBtn = document.getElementById('lingerie-card-close');
+        const cleanup = () => {
+          card.style.display = 'none';
+          card.onclick = null;
+          if (closeBtn) closeBtn.onclick = null;
+          if (this._cardTimer) { clearTimeout(this._cardTimer); this._cardTimer = null; }
+        };
+        card.onclick = (e) => {
+          if (e.target && e.target.id === 'lingerie-card-close') return;
+          cleanup();
+          this._openGallery(imgs);
+        };
+        if (closeBtn) closeBtn.onclick = (e) => {
+          e.stopPropagation();
+          cleanup();
+          this.locked = false;
+          this._advance();
+        };
+        card.style.display = 'flex';
+        this._cardTimer = setTimeout(() => {
+          if (card.style.display !== 'none') {
+            cleanup();
+            this.locked = false;
+            this._advance();
+          }
+        }, BRANCH.card_timeout_s * 1000);
+        this._advance(); // non-blocking: the give main plays underneath the card
+      },
+
+      _openGallery(imgs) {
+        this.galleryOpen = true;
+        // Freeze the stage behind the gallery.
+        for (const v of this._layers()) {
+          if (!v) continue;
+          try { v.pause(); } catch (_) {}
+          v.onended = null; v.oncanplay = null;
+        }
+        const gal = document.getElementById('lingerie-gallery');
+        const img = document.getElementById('lingerie-gallery-img');
+        const count = document.getElementById('lingerie-gallery-count');
+        let i = 0;
+        const render = () => {
+          img.src = imgs[i].url;
+          count.textContent = (i + 1) + ' / ' + imgs.length;
+          [i + 1, i - 1].forEach(j => {
+            if (j >= 0 && j < imgs.length) { const p = new Image(); p.src = imgs[j].url; }
+          });
+        };
+        const close = () => {
+          gal.style.display = 'none';
+          document.getElementById('lingerie-gallery-prev').onclick = null;
+          document.getElementById('lingerie-gallery-next').onclick = null;
+          document.getElementById('lingerie-gallery-close').onclick = null;
+          this.galleryOpen = false;
+          // Back to her sitting in the give main, then the wave.
+          this._playCurrent();
+        };
+        document.getElementById('lingerie-gallery-prev').onclick = () => {
+          i = (i - 1 + imgs.length) % imgs.length; render();
+        };
+        document.getElementById('lingerie-gallery-next').onclick = () => {
+          i = (i + 1) % imgs.length; render();
+        };
+        document.getElementById('lingerie-gallery-close').onclick = close;
+        gal.style.display = 'flex';
+        render();
+      },
+
+      /* ---- show over: straight into the 100 messages ---- */
+      _onShowOver() {
+        this.active = false;
+        this.locked = false;
+        this.galleryOpen = false;
+        state.showMode = 'preview';
+        state.paidUnlocked = false;
+        state.groupShow = null;
+        try { stopGroupShowStream(); } catch (_) {}
+        const card = document.getElementById('lingerie-card');
+        if (card) card.style.display = 'none';
+        const gal = document.getElementById('lingerie-gallery');
+        if (gal) gal.style.display = 'none';
+        const char = CHARACTERS[state.activeCharId] || CHARACTERS['chloe'];
+        appendSystemMessage(`Show's over — you have ${CONFIG.purchaseMessageGrant} messages with ${char.name}. Say hi.`);
+        renderRoomView(); // restarts the scheduler in preview mode
+        renderMessageCredits();
+        setTimeout(() => {
+          const ci = document.getElementById('chat-input');
+          if (ci) ci.focus();
+        }, 800);
+      },
+
+      start(charId, mode) {
+        if (!BRANCH.enabled || charId !== BRANCH.character) return false;
+        if (typeof plateEngine === 'undefined' || !plateEngine) return false;
+        try { stopGroupShowStream(); } catch (_) {}
+        const clips = this._resolve(mode);
+        if (!clips) return false; // incomplete -> idleStream fallback
+        if (typeof idleStream !== 'undefined') idleStream.stop();
+        this.stop();
+        this.clips = clips;
+        this.mode = mode;
+        this.session = true;
+        this._resolveDurations(d => {
+          this.dur = d;
+          this.script = (mode === 'show') ? this._buildShowScript() : this._buildPreviewScript();
+          this.idx = -1;
+          this.active = true;
+          this.locked = false;
+          this.galleryOpen = false;
+          this._advance();
+        });
+        return true;
+      },
+
+      /* Reaction clips pause the scheduler; it resumes where it left off. */
+      suspendForCut() {
+        this.active = false;
+        const L = this._layers();
+        for (const v of L) { if (v) { v.onended = null; v.oncanplay = null; } }
+        const b = L[1];
+        if (b) { try { b.pause(); } catch (_) {} b.style.opacity = '0'; b.style.display = 'none'; }
+        const a = L[0];
+        if (a) { a.style.display = 'block'; a.style.opacity = '1'; }
+        this.vis = 0;
+      },
+
+      resume() {
+        if (!this.session || !this.clips || !this.script.length || this.idx < 0) return false;
+        this.active = true;
+        this._advance();
+        return true;
+      },
+
+      stop() {
+        this.active = false;
+        this.session = false;
+        this.script = []; this.idx = -1;
+        this.clips = null; this.vis = 0;
+        this.locked = false; this.galleryOpen = false;
+        if (this._cardTimer) { clearTimeout(this._cardTimer); this._cardTimer = null; }
+        try {
+          const card = document.getElementById('lingerie-card');
+          if (card) card.style.display = 'none';
+          const gal = document.getElementById('lingerie-gallery');
+          if (gal) gal.style.display = 'none';
+        } catch (_) {}
+        try {
+          for (const v of (this.layers || [])) {
+            if (!v) continue;
+            v.pause(); v.onended = null; v.oncanplay = null;
+          }
+          if (this.layers && this.layers[1]) {
+            this.layers[1].style.opacity = '0'; this.layers[1].style.display = 'none';
+          }
+          elStageVideo.style.opacity = '1';
+        } catch (_) {}
+      }
+    };
+
+    /* The player currently driving the stage: the branch scheduler when it has
+       a session, otherwise the legacy idle stream. */
+    function activePlayer() {
+      if (typeof branchScheduler !== 'undefined' && branchScheduler.session) return branchScheduler;
+      if (typeof idleStream !== 'undefined' && idleStream.charId) return idleStream;
+      return null;
     }
 
     /* ---------------- Idle stream: webcam-style continuous feed ----------------
@@ -1757,7 +2404,7 @@
       },
 
       _videoFiles(files) {
-        return (files || []).filter(f => f && f.url && !isImagePlate(f.url));
+        return (files || []).filter(f => f && f.url && !isImagePlate(f.url) && !/^branch-/.test(f.variant || ''));
       },
 
       _shuffled(files, avoidTakeKey) {
@@ -1915,10 +2562,26 @@
 
     function setupStageMedia(mediaGroup) {
       if (!mediaGroup) return;
+      try { lastUserMsgAt = Date.now(); } catch (_) {} // idle-coffee timer starts on room entry
+
+      // Branch scheduler first (Chloe): paid shows get the full scripted show,
+      // the free bedroom gets the clothed rotation. Falls back to idleStream.
+      if (typeof branchScheduler !== 'undefined' && plateEngine) {
+        const mode = (state.showMode === 'show') ? 'show' : 'preview';
+        // Don't restart a session that's already running in the right mode
+        // (e.g. entitlement syncs re-render the room mid-show).
+        if (branchScheduler.session && branchScheduler.mode === mode && branchScheduler.clips) return;
+        if (branchScheduler.start(plateEngine.character, mode)) return;
+      }
 
       if (plateEngine && plateEngine.library.beatEnabled(plateEngine.character, 'idle')) {
         const files = plateEngine.library.files(plateEngine.character, 'idle');
-        if (idleStream.start(plateEngine.character, files)) return;
+        if (idleStream.start(plateEngine.character, files)) {
+          // Warm the typing loop so the typing-sync cut is instant on first use.
+          const typeHit = (files || []).find(f => f.variant === 'branch-typing-loop');
+          if (typeHit && typeHit.url) idleStream._preload(typeHit.url);
+          return;
+        }
         // Single clip or no video: fall through to the legacy single-loop path.
         plateEngine.next('idle').then(res => {
           if (res.action === 'plate' || res.action === 'generated') {
@@ -1993,12 +2656,21 @@
     }
 
     function playStageCut(clipUrl, mediaGroup) {
+      // A directed branch moment owns the stage; don't stomp it with a generic reaction.
+      try {
+        if (typeof jointExitActive !== 'undefined' && jointExitActive) return;
+        if (typeof voiceBranchUrl !== 'undefined' && voiceBranchUrl) return;
+        if (typeof lookBeat !== 'undefined' && lookBeat) return;
+      } catch (_) {}
       if (isImagePlate(clipUrl)) {
         showStageIdle({ fallbackImage: clipUrl });
         setTimeout(() => setupStageMedia(mediaGroup), 6000);
         return;
       }
-      if (typeof idleStream !== 'undefined') idleStream.suspendForCut();
+      const p = activePlayer();
+      // Never interrupt the give finale (card, gallery, wave).
+      if (p && (p.locked || p.galleryOpen)) return;
+      if (p) p.suspendForCut();
       elStageVideo.src = clipUrl;
       elStageVideo.style.display = 'block';
       elStageFallbackImg.style.display = 'none';
@@ -2006,7 +2678,9 @@
       elStageVideo.play().catch(() => {});
 
       elStageVideo.onended = () => {
-        if (!idleStream.resume()) setupStageMedia(mediaGroup);
+        const p2 = activePlayer();
+        if (p2 && p2.resume && p2.resume()) return;
+        setupStageMedia(mediaGroup);
       };
     }
 
@@ -2178,6 +2852,7 @@
       saveSessionState();
       renderChatMessages();
 
+      noteUserMessage(); // resets the idle timer; pulls her back from coffee to the keyboard
       triggerReactionClip();
       playVoicePreset(state.activeCharId);
 
@@ -2206,6 +2881,7 @@
 
     const VOICE_UPSELL = "Mmm, I love when you talk to me... you know what would be even better? Hearing my voice. Pick a show and I'll talk to you the whole time.";
     let previewReplyCount = 0;
+    let chatVoiceSeq = 0; // guards overlapping voice replies: only the latest message wins
 
     function playChatAudio(b64wav) {
       try {
@@ -2225,10 +2901,11 @@
       };
       state.chatLogs[state.activeCharId].push(msg);
       renderChatMessages();
+      typingTakeover(char);
       return msg;
     }
 
-    function replaceSpeakingIndicator(char, text) {
+    function replaceSpeakingIndicator(char, text, opts) {
       const logs = state.chatLogs[state.activeCharId] || [];
       for (let i = logs.length - 1; i >= 0; i--) {
         if (logs[i].speaking) {
@@ -2239,7 +2916,340 @@
       }
       saveSessionState();
       renderChatMessages();
+      const stillTyping = logs.some(m => m.speaking);
+      if (!stillTyping) {
+        endTypingTakeover();
+        // Her reply landed: she looks up at the camera and holds his gaze
+        // until he replies. Voice path skips this and chains via endVoiceWaitBranch.
+        if (!opts || !opts.skipLook) onReplyLanded();
+      }
     }
+
+    /* Idle typing-sync: in the free bedroom she is only shown typing while a
+       reply is actually being composed. When the dots go up, the idle stream
+       parks and the seamless typing loop takes the stage; when the reply
+       lands, the stream resumes. Hard multicam-style cut, no dissolve. */
+    let typingTakeoverUntil = 0;
+    function typingTakeover(char) {
+      if (typingTakeoverUntil) return; // already on her
+      if (jointExitActive) return; // a return joint owns the stage; it chains back here
+      endLookBeat(); // composing beats gazing: a new reply is on the way
+      if (state.showMode === 'show' || state.groupShow) return; // paid show: scheduler owns the video
+      if (typeof idleStream === 'undefined' || !idleStream.active) return;
+      if (typeof plateEngine === 'undefined' || !plateEngine.library) return;
+      let hit = null;
+      try {
+        const files = plateEngine.library.files(plateEngine.character, 'idle') || [];
+        hit = files.find(f => f.variant === 'branch-typing-loop');
+      } catch (_) { /* fall through */ }
+      if (!hit || !hit.url) return;
+      idleStream.suspendForCut();
+      elStageVideo.loop = true;
+      elStageVideo.onended = null;
+      elStageVideo.style.display = 'block';
+      elStageVideo.style.opacity = '1';
+      elStageFallbackImg.style.display = 'none';
+      elStageVideo.src = hit.url;
+      elStageVideo.play().catch(() => {});
+      typingTakeoverUntil = Date.now() + 45000; // safety: never stuck on typing
+    }
+    function endTypingTakeover() {
+      if (!typingTakeoverUntil) return;
+      typingTakeoverUntil = 0;
+      try { elStageVideo.pause(); } catch (_) {}
+      if (typeof idleStream !== 'undefined') idleStream.resume();
+    }
+    setInterval(() => {
+      if (typingTakeoverUntil && Date.now() > typingTakeoverUntil) endTypingTakeover();
+    }, 5000);
+
+    /* ---------------- Web-chat main: typing is the stage ----------------
+       The free bedroom is a web chat, so her typing loop is the permanent
+       main -- coffee never appears in the rotation anymore. Two event-driven
+       branches cut away and back with hard multicam cuts:
+       - voice wait: while her voice reply is generating she does something
+         with her hands -- alternating between folding clothes and sipping
+         coffee -- then back to typing when the reply lands.
+       - user idle: no message from the guest for a while -> she leans back
+         with her coffee; his next message brings her back to the keyboard.
+       Paid shows are untouched: the show scheduler owns the stage there. */
+    let voiceBranchUrl = null;
+    let voiceBranchLeg = null; // 'coffee' | 'folding'
+    let voiceBranchFlip = false;
+    let idleBranchUrl = null;
+    let idleBranchPhase = null; // 'joint_out' | 'rest'
+    let lastUserMsgAt = Date.now();
+    const USER_IDLE_MS = 75000;
+
+    /* Post-reply gaze beat: after her reply lands she looks up at the camera
+       (alternating A/B), then holds a slow breathing zoom on her gaze until
+       he replies and she's back to typing. If he takes too long she drifts
+       back to the typing main so the feed never looks stuck. */
+    let lookBeat = null; // {variant:'a'|'b', url, hold}
+    let lookFlip = false;
+    let lookFallbackTimer = 0;
+    const LOOK_HOLD_MAX_MS = 125000; // ~5s look + ~120s of held gaze
+
+    /* A one-shot transition joint owns the stage; queued work chains after it. */
+    let jointExitActive = false;
+    let pendLookBeat = false;
+
+    function findBranchClipUrl(p, role) {
+      try {
+        if (p && p.clips && p.clips[role] && p.clips[role].url) return p.clips[role].url;
+      } catch (_) {}
+      try {
+        const variants = (typeof BRANCH_CLIPS !== 'undefined' && BRANCH_CLIPS[role]) || [];
+        const files = plateEngine.library.files(plateEngine.character, 'idle') || [];
+        for (const v of variants) {
+          const hit = files.find(f => f.variant === v);
+          if (hit && hit.url) return hit.url;
+        }
+      } catch (_) {}
+      return null;
+    }
+
+    function hardCutToClip(url) {
+      elStageVideo.loop = true;
+      elStageVideo.onended = null;
+      elStageVideo.style.display = 'block';
+      elStageVideo.style.opacity = '1';
+      elStageFallbackImg.style.display = 'none';
+      elStageVideo.src = url;
+      elStageVideo.play().catch(() => {});
+    }
+
+    /* Play a clip once, then run next. Never stalls: a load error advances too. */
+    function playOnceThen(url, next) {
+      elStageVideo.loop = false;
+      elStageVideo.onended = null;
+      elStageVideo.onerror = null;
+      elStageVideo.style.display = 'block';
+      elStageVideo.style.opacity = '1';
+      elStageFallbackImg.style.display = 'none';
+      elStageVideo.src = url;
+      const done = () => {
+        elStageVideo.onended = null;
+        elStageVideo.onerror = null;
+        try { if (next) next(); } catch (_) {}
+      };
+      elStageVideo.onended = done;
+      elStageVideo.onerror = done;
+      elStageVideo.play().catch(() => {});
+    }
+
+    /* elStageVideo.src reads back absolute; clip urls are relative. */
+    function stageShows(url) {
+      if (!url) return false;
+      try {
+        const cur = elStageVideo.currentSrc || elStageVideo.src || '';
+        if (!cur) return false;
+        return cur === url || cur.endsWith(url);
+      } catch (_) { return false; }
+    }
+
+    function previewBranchAllowed() {
+      if (state.showMode === 'show' || state.groupShow) return false; // shows: scheduler owns it
+      if (state.view !== 'room') return false;
+      const p = (typeof activePlayer === 'function') ? activePlayer() : null;
+      if (!p || !p.suspendForCut) return false;
+      if (p.locked || p.galleryOpen) return false; // never interrupt the give finale
+      return true;
+    }
+
+    function startLookBeat() {
+      if (lookBeat) return true;
+      if (jointExitActive) return false;
+      if (!previewBranchAllowed()) return false;
+      if (voiceBranchUrl || idleBranchUrl || typingTakeoverUntil) return false;
+      const p = (typeof activePlayer === 'function') ? activePlayer() : null;
+      if (!p) return false;
+      lookFlip = !lookFlip;
+      const v = lookFlip ? 'a' : 'b';
+      const lookUrl = findBranchClipUrl(p, v === 'a' ? 'look_a' : 'look_b');
+      if (!lookUrl) return false;
+      p.suspendForCut();
+      lookBeat = { variant: v, url: lookUrl, hold: false };
+      playOnceThen(lookUrl, () => {
+        if (!lookBeat || lookBeat.variant !== v) return; // superseded
+        const q = (typeof activePlayer === 'function') ? activePlayer() : null;
+        const holdUrl = q ? findBranchClipUrl(q, v === 'a' ? 'look_hold_a' : 'look_hold_b') : null;
+        if (holdUrl && previewBranchAllowed()) {
+          lookBeat.url = holdUrl;
+          lookBeat.hold = true;
+          hardCutToClip(holdUrl);
+        } else {
+          endLookBeat();
+        }
+      });
+      clearTimeout(lookFallbackTimer);
+      lookFallbackTimer = setTimeout(() => { endLookBeat(); }, LOOK_HOLD_MAX_MS);
+      return true;
+    }
+    function endLookBeat() {
+      if (!lookBeat) return;
+      lookBeat = null;
+      clearTimeout(lookFallbackTimer);
+      lookFallbackTimer = 0;
+      const p = (typeof activePlayer === 'function') ? activePlayer() : null;
+      try { elStageVideo.pause(); } catch (_) {}
+      if (p && p.resume) p.resume();
+    }
+    /* A reply landed with no more composing: queue or start the gaze beat. */
+    function onReplyLanded() {
+      if (jointExitActive) { pendLookBeat = true; return; }
+      startLookBeat();
+    }
+    /* A transition joint finished: gaze beat, typing, or stream — in that order. */
+    function onJointExitDone() {
+      jointExitActive = false;
+      const lookQueued = pendLookBeat;
+      pendLookBeat = false;
+      let stillComposing = false;
+      try { stillComposing = (state.chatLogs[state.activeCharId] || []).some(m => m.speaking); } catch (_) {}
+      if (stillComposing) {
+        try { typingTakeover(CHARACTERS[state.activeCharId]); } catch (_) {}
+        return;
+      }
+      if (lookQueued) {
+        if (!startLookBeat()) {
+          const p = (typeof activePlayer === 'function') ? activePlayer() : null;
+          try { elStageVideo.pause(); } catch (_) {}
+          if (p && p.resume) p.resume();
+        }
+        return;
+      }
+      const p = (typeof activePlayer === 'function') ? activePlayer() : null;
+      try { elStageVideo.pause(); } catch (_) {}
+      if (p && p.resume) p.resume();
+    }
+
+    /* Voice-wait branch: folding clothes sometimes, coffee sip sometimes.
+       The coffee leg rides the Luma joints both ways; the folding leg cuts. */
+    function voiceWaitTakeover() {
+      if (voiceBranchUrl) return true;
+      if (!previewBranchAllowed()) return false;
+      endLookBeat();
+      const p = activePlayer();
+      if (!p) return false;
+      // If the legacy typing-sync grabbed the stage, let it go quietly.
+      if (typeof typingTakeoverUntil !== 'undefined' && typingTakeoverUntil) {
+        typingTakeoverUntil = 0;
+        try { elStageVideo.pause(); } catch (_) {}
+      }
+      if (idleBranchUrl) { idleBranchUrl = null; idleBranchPhase = null; } // superseded
+      voiceBranchFlip = !voiceBranchFlip;
+      const leg = voiceBranchFlip ? 'folding' : 'coffee';
+      p.suspendForCut();
+      if (leg === 'coffee') {
+        const j = findBranchClipUrl(p, 'joint_typing_coffee');
+        if (j) {
+          voiceBranchLeg = 'coffee';
+          voiceBranchUrl = j;
+          playOnceThen(j, () => {
+            if (voiceBranchUrl !== j) return; // ended mid-joint; the exit owns the stage now
+            const q = (typeof activePlayer === 'function') ? activePlayer() : null;
+            const s = q ? findBranchClipUrl(q, 'coffee_sip') : null;
+            if (s) {
+              voiceBranchUrl = s;
+              hardCutToClip(s);
+            } else {
+              voiceBranchUrl = null;
+              voiceBranchLeg = null;
+            }
+          });
+          return true;
+        }
+        // joint missing: fall through to a plain sip
+      }
+      const role = leg === 'folding' ? 'tidy_f1' : 'coffee_sip';
+      const url = findBranchClipUrl(p, role) || findBranchClipUrl(p, leg === 'folding' ? 'coffee_sip' : 'tidy_f1');
+      if (!url) { voiceBranchLeg = null; return false; }
+      voiceBranchLeg = leg;
+      voiceBranchUrl = url;
+      hardCutToClip(url);
+      return true;
+    }
+    /* The reply landed: coffee leg rides the return joint, folding cuts,
+       then her gaze beat takes the stage. Returns false when no branch ran. */
+    function endVoiceWaitBranch() {
+      if (!voiceBranchUrl) return false;
+      const leg = voiceBranchLeg;
+      const url = voiceBranchUrl;
+      voiceBranchUrl = null;
+      voiceBranchLeg = null;
+      if (!stageShows(url)) return true; // stage moved on; don't stomp it
+      try { elStageVideo.pause(); } catch (_) {}
+      const p = (typeof activePlayer === 'function') ? activePlayer() : null;
+      const j = (leg === 'coffee' && p) ? findBranchClipUrl(p, 'joint_coffee_typing') : null;
+      if (j && previewBranchAllowed()) {
+        jointExitActive = true;
+        pendLookBeat = true; // her reply landed; the gaze beat follows the joint
+        playOnceThen(j, onJointExitDone);
+      } else if (!startLookBeat()) {
+        if (p && p.resume) p.resume();
+      }
+      return true;
+    }
+
+    /* User-idle branch: joint into leaning back with her coffee; his message
+       plays the return joint, then typing (or the gaze beat) takes over. */
+    function clearIdleBranch() {
+      if (!idleBranchUrl) return;
+      const oldUrl = idleBranchUrl;
+      idleBranchUrl = null;
+      idleBranchPhase = null;
+      if (!stageShows(oldUrl)) return; // stage moved on; nothing to unwind
+      const p = (typeof activePlayer === 'function') ? activePlayer() : null;
+      const j = p ? findBranchClipUrl(p, 'joint_coffee_typing') : null;
+      if (j && previewBranchAllowed()) {
+        jointExitActive = true;
+        playOnceThen(j, onJointExitDone);
+      } else {
+        try { elStageVideo.pause(); } catch (_) {}
+        if (p && p.resume) p.resume();
+      }
+    }
+    function noteUserMessage() {
+      lastUserMsgAt = Date.now();
+      endLookBeat();
+      if (voiceBranchUrl) return; // her reply is still generating; the voice branch owns the stage
+      clearIdleBranch();
+    }
+    setInterval(() => {
+      if (idleBranchUrl || voiceBranchUrl || lookBeat || jointExitActive) return;
+      if (Date.now() - lastUserMsgAt < USER_IDLE_MS) return;
+      if (!previewBranchAllowed()) return;
+      const p = activePlayer();
+      if (!p) return;
+      const j = findBranchClipUrl(p, 'joint_typing_coffee');
+      p.suspendForCut();
+      if (j) {
+        idleBranchUrl = j;
+        idleBranchPhase = 'joint_out';
+        playOnceThen(j, () => {
+          if (idleBranchPhase !== 'joint_out') return; // he messaged mid-joint; the exit handled it
+          const q = (typeof activePlayer === 'function') ? activePlayer() : null;
+          const r = q ? findBranchClipUrl(q, 'coffee_rest') : null;
+          if (r && previewBranchAllowed()) {
+            idleBranchUrl = r;
+            idleBranchPhase = 'rest';
+            hardCutToClip(r);
+          } else {
+            idleBranchUrl = null;
+            idleBranchPhase = null;
+            try { elStageVideo.pause(); } catch (_) {}
+            if (q && q.resume) q.resume();
+          }
+        });
+      } else {
+        const r = findBranchClipUrl(p, 'coffee_rest');
+        if (!r) return;
+        idleBranchUrl = r;
+        idleBranchPhase = 'rest';
+        hardCutToClip(r);
+      }
+    }, 5000);
 
     async function generateCharacterResponse(char) {
       // Bedroom invitation takes priority over a chat reply.
@@ -2261,44 +3271,63 @@
           const lastUser = [...logs].reverse().find(m => m.type === 'user');
 
           if (wantVoice) {
-            // Paid show: hold the text until her voice is ready, then reveal together.
+            // Paid show: hold the text until her voice is ready, then send
+            // text + voice at the same time. If the voice never comes back,
+            // send the text by itself — the next message tries voice fresh.
+            // While the voice generates she does something with her hands:
+            // folding clothes sometimes, coffee sip sometimes.
             showSpeakingIndicator(char);
+            voiceWaitTakeover();
+            const mySeq = ++chatVoiceSeq;
+            let res = null;
             try {
-              const res = await KeyholeAccount.api('/keyhole/chat-reply', {
+              const req = KeyholeAccount.api('/keyhole/chat-reply', {
                 character: state.activeCharId,
                 message: lastUser ? lastUser.text : '',
                 history: history.slice(0, -1),
                 voice: true
               });
-              if (res && res.reply) {
-                replaceSpeakingIndicator(char, res.reply);
-                if (res.audio) playChatAudio(res.audio);
-                return;
-              }
-            } catch (e) {
-              replaceSpeakingIndicator(char, cannedResponse(char));
-              return;
+              const timeout = new Promise(resolve => setTimeout(() => resolve(null), BRANCH.voice_timeout_ms));
+              res = await Promise.race([req, timeout]);
+            } catch (e) { res = null; }
+            if (mySeq !== chatVoiceSeq) return; // a newer message took over; drop this one
+            if (res && res.reply) {
+              replaceSpeakingIndicator(char, res.reply, { skipLook: true });
+              if (!endVoiceWaitBranch()) startLookBeat(); // no branch ran; still do the gaze beat
+              if (res.audio) playChatAudio(res.audio);
+            } else {
+              replaceSpeakingIndicator(char, cannedResponse(char), { skipLook: true });
+              if (!endVoiceWaitBranch()) startLookBeat();
             }
-            replaceSpeakingIndicator(char, cannedResponse(char));
             return;
           }
 
           // Preview: text-only AI reply, with a voice upsell every 3rd reply.
-          const res = await KeyholeAccount.api('/keyhole/chat-reply', {
-            character: state.activeCharId,
-            message: lastUser ? lastUser.text : '',
-            history: history.slice(0, -1),
-            voice: false
-          });
+          // She visibly types while the reply is being composed.
+          showSpeakingIndicator(char);
+          let res = null;
+          try {
+            res = await KeyholeAccount.api('/keyhole/chat-reply', {
+              character: state.activeCharId,
+              message: lastUser ? lastUser.text : '',
+              history: history.slice(0, -1),
+              voice: false
+            });
+          } catch (e) { /* fall through to canned response */ }
           if (res && res.reply) {
             previewReplyCount++;
             let text = res.reply;
             if (previewReplyCount % 10 === 0) text += ' ' + VOICE_UPSELL;
-            pushModelMessage(char, text);
-            return;
+            replaceSpeakingIndicator(char, text);
+          } else {
+            replaceSpeakingIndicator(char, cannedResponse(char));
           }
+          return;
         } catch (e) {
-          // Fall through to canned response.
+          // Safety net: never leave her stuck typing (or on a branch clip).
+          try { endVoiceWaitBranch(); } catch (_) {}
+          try { replaceSpeakingIndicator(char, cannedResponse(char)); } catch (_) {}
+          return;
         }
       }
       pushModelMessage(char, cannedResponse(char));
@@ -2446,18 +3475,21 @@
         url = u.toString();
         localStorage.setItem(PENDING_PRIVATE_KEY, JSON.stringify({
           charId: state.activeCharId, at: Date.now(),
+          minutes: Number(tier.minutes) > 0 ? Number(tier.minutes) : 30,
         }));
       } catch (_) {}
       window.location = url;
     }
 
-    function enterPrivateRoom(char) {
+    function enterPrivateRoom(char, minutes) {
       if (!char) return;
       state.isVerifiedMember = true;
       state.paidUnlocked = true;
+      state.showMode = 'show'; // paid show: full scripted show with the give finale
+      state.showMinutes = Number(minutes) > 0 ? Number(minutes) : 30; // 10/15/30-min packages
       state.roomMode = 'bedroom';
       saveSessionState();
-      appendSystemMessage(`Payment confirmed — ${char.name}'s private shows are unlocked. No password needed, you're in.`);
+      appendSystemMessage(`Payment confirmed — ${char.name}'s private show is starting.`);
       renderRoomView();
     }
 
@@ -2628,10 +3660,10 @@
         if (!res.access) throw new Error(res.reason || 'Access denied');
         state.groupShow = { show_id: showId };
         state.paidUnlocked = true;
+        state.showMode = 'show'; // group show: full scripted show with the give finale
         closeGroupShowsModal();
         appendSystemMessage(`You're in the group show — live with ${CHARACTERS[state.activeCharId].name}.`);
         renderRoomView();
-        startGroupShowStream();
       } catch (e) {
         if (btn) { btn.disabled = false; btn.textContent = 'Join Group Show'; }
         err.textContent = (e && e.message) || 'Could not join the show.';
@@ -2641,6 +3673,8 @@
 
     function leaveGroupShow() {
       state.groupShow = null;
+      state.showMode = 'preview';
+      state.paidUnlocked = false;
       stopGroupShowStream();
       appendSystemMessage('You left the group show — back to the bedroom feed.');
       renderRoomView();
@@ -2666,7 +3700,7 @@
             stopPendingPrivatePoll();
             try { localStorage.removeItem(PENDING_PRIVATE_KEY); } catch (_) {}
             state.activeCharId = pending.charId;
-            enterPrivateRoom(CHARACTERS[pending.charId]);
+            enterPrivateRoom(CHARACTERS[pending.charId], pending.minutes);
           }
         } catch (_) {}
       }, 5000);
@@ -2744,6 +3778,8 @@
         await KeyholeAccount.login(email, password);
         await syncAccountEntitlement();
         closeAccountModal();
+        // Signed in at the door: walk them into the bedroom if they're not in yet.
+        if (state.view !== 'room') await enterRoom('chloe', true);
       } catch (err) {
         showAccountError(err.message || 'Could not sign in.');
       } finally {
