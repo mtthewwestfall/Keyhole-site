@@ -3313,14 +3313,26 @@
               history: history.slice(0, -1),
               voice: false
             });
-          } catch (e) { /* fall through to canned response */ }
+          } catch (e) {
+            // The live character must never silently fall back to canned dialogue.
+            // Retry once so a transient network/model failure does not turn Chloe
+            // into the generic three-line preview.
+            try {
+              res = await KeyholeAccount.api('/keyhole/chat-reply', {
+                character: state.activeCharId,
+                message: lastUser ? lastUser.text : '',
+                history: history.slice(0, -1),
+                voice: false
+              });
+            } catch (_) { res = null; }
+          }
           if (res && res.reply) {
             previewReplyCount++;
             let text = res.reply;
             if (previewReplyCount % 10 === 0) text += ' ' + VOICE_UPSELL;
             replaceSpeakingIndicator(char, text);
           } else {
-            replaceSpeakingIndicator(char, cannedResponse(char));
+            replaceSpeakingIndicator(char, "Give me a second—I want to answer you properly.");
           }
           return;
         } catch (e) {
