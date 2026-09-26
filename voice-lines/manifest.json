@@ -1,0 +1,578 @@
+[
+ {
+  "id": "b1_01",
+  "text": "Well hey, stranger. You finally made it back to me.",
+  "moment": "greeting",
+  "file": "voice-lines/b1_01.mp3"
+ },
+ {
+  "id": "b1_02",
+  "text": "There you are. I was starting to think you'd forgotten about me.",
+  "moment": "greeting",
+  "file": "voice-lines/b1_02.mp3"
+ },
+ {
+  "id": "b1_03",
+  "text": "Hey you. Come here often? ...Kidding. I know you do.",
+  "moment": "greeting",
+  "file": "voice-lines/b1_03.mp3"
+ },
+ {
+  "id": "b1_04",
+  "text": "Oh good, you're here. It was getting boring without you.",
+  "moment": "greeting",
+  "file": "voice-lines/b1_04.mp3"
+ },
+ {
+  "id": "b1_05",
+  "text": "Look who showed up. My day just got better. So tell me everything. Don't skip the good parts.",
+  "moment": "greeting",
+  "file": "voice-lines/b1_05.mp3"
+ },
+ {
+  "id": "b1_06",
+  "text": "Mm, that's interesting. Keep talking, I like the sound of that.",
+  "moment": "idle",
+  "file": "voice-lines/b1_06.mp3"
+ },
+ {
+  "id": "b1_07",
+  "text": "You're funny when you're nervous, you know that?",
+  "moment": "idle",
+  "file": "voice-lines/b1_07.mp3"
+ },
+ {
+  "id": "b1_08",
+  "text": "Okay wait, back up. I need the full story on that one.",
+  "moment": "idle",
+  "file": "voice-lines/b1_08.mp3"
+ },
+ {
+  "id": "b1_09",
+  "text": "Hmm. Say that again, slower. I wanna make sure I heard you right.",
+  "moment": "idle",
+  "file": "voice-lines/b1_09.mp3"
+ },
+ {
+  "id": "b1_10",
+  "text": "You're easy to talk to, you know that? Don't let it go to your head. Careful. Keep looking at me like that and I'll start charging extra.",
+  "moment": "idle",
+  "file": "voice-lines/b1_10.mp3"
+ },
+ {
+  "id": "b1_11",
+  "text": "You're trouble. I could tell in about four seconds.",
+  "moment": "idle",
+  "file": "voice-lines/b1_11.mp3"
+ },
+ {
+  "id": "b1_12",
+  "text": "If you keep flattering me I'm gonna have to pretend I don't love it.",
+  "moment": "idle",
+  "file": "voice-lines/b1_12.mp3"
+ },
+ {
+  "id": "b1_13",
+  "text": "Is that your best line? ...Because it's working a little.",
+  "moment": "idle",
+  "file": "voice-lines/b1_13.mp3"
+ },
+ {
+  "id": "b1_14",
+  "text": "Oh my god, stoppp. You're gonna make me blush on camera.",
+  "moment": "idle",
+  "file": "voice-lines/b1_14.mp3"
+ },
+ {
+  "id": "b1_15",
+  "text": "You're cute when you're trying to impress me. Keep going. Just so you know, my time's the one thing I don't give away free.",
+  "moment": "idle",
+  "file": "voice-lines/b1_15.mp3"
+ },
+ {
+  "id": "b1_16",
+  "text": "Stay as long as you like \u2014 the clock's the only thing that'll rush you here.",
+  "moment": "upsell",
+  "file": "voice-lines/b1_16.mp3"
+ },
+ {
+  "id": "b1_17",
+  "text": "Private's where the real fun starts. Just saying.",
+  "moment": "upsell",
+  "file": "voice-lines/b1_17.mp3"
+ },
+ {
+  "id": "b1_18",
+  "text": "I like you, so I'll tell you straight: the good stuff isn't out here.",
+  "moment": "upsell",
+  "file": "voice-lines/b1_18.mp3"
+ },
+ {
+  "id": "b1_19",
+  "text": "You don't have to decide now. But the meter's the meter, baby.",
+  "moment": "upsell",
+  "file": "voice-lines/b1_19.mp3"
+ },
+ {
+  "id": "b1_20",
+  "text": "Ohhh, I like that answer. Really? No \u2014 really? Okay, that's actually kind of hot.",
+  "moment": "reaction",
+  "file": "voice-lines/b1_20.mp3"
+ },
+ {
+  "id": "b1_21",
+  "text": "Ha! Okay, that one got me.",
+  "moment": "reaction",
+  "file": "voice-lines/b1_21.mp3"
+ },
+ {
+  "id": "b1_22",
+  "text": "Mmm, noted. I'm filing that away.",
+  "moment": "reaction",
+  "file": "voice-lines/b1_22.mp3"
+ },
+ {
+  "id": "b1_23",
+  "text": "You're gonna have to earn that information.",
+  "moment": "reaction",
+  "file": "voice-lines/b1_23.mp3"
+ },
+ {
+  "id": "b1_24",
+  "text": "It's quiet in here without you, you know.",
+  "moment": "idle",
+  "file": "voice-lines/b1_24.mp3"
+ },
+ {
+  "id": "b1_25",
+  "text": "Just hanging out, waiting on my favorite notification \u2014 you. I'm not doing much. Just thinking about who might walk in next.",
+  "moment": "idle",
+  "file": "voice-lines/b1_25.mp3"
+ },
+ {
+  "id": "b1_26",
+  "text": "Slow minute. Come keep me company?",
+  "moment": "idle",
+  "file": "voice-lines/b1_26.mp3"
+ },
+ {
+  "id": "b1_27",
+  "text": "Already? You just got here.",
+  "moment": "goodbye",
+  "file": "voice-lines/b1_27.mp3"
+ },
+ {
+  "id": "b1_28",
+  "text": "Fine, go. But I'll be right here when you come back.",
+  "moment": "goodbye",
+  "file": "voice-lines/b1_28.mp3"
+ },
+ {
+  "id": "b1_29",
+  "text": "Bye for now. Don't be a stranger \u2014 I hate that.",
+  "moment": "goodbye",
+  "file": "voice-lines/b1_29.mp3"
+ },
+ {
+  "id": "b1_30",
+  "text": "Leaving so soon? ...Worth a try. See you soon. And I mean that \u2014 come back soon.",
+  "moment": "goodbye",
+  "file": "voice-lines/b1_30.mp3"
+ },
+ {
+  "id": "b2_01",
+  "text": "Back again? I knew you couldn't stay away.",
+  "moment": "greeting",
+  "file": "voice-lines/b2_01.mp3"
+ },
+ {
+  "id": "b2_02",
+  "text": "Well well. Look who couldn't stay gone.",
+  "moment": "greeting",
+  "file": "voice-lines/b2_02.mp3"
+ },
+ {
+  "id": "b2_03",
+  "text": "You again. I like that \u2014 don't stop.",
+  "moment": "greeting",
+  "file": "voice-lines/b2_03.mp3"
+ },
+ {
+  "id": "b2_04",
+  "text": "Miss me? ...Good answer.",
+  "moment": "greeting",
+  "file": "voice-lines/b2_04.mp3"
+ },
+ {
+  "id": "b2_05",
+  "text": "Okay, real question: what did you actually do today?",
+  "moment": "banter",
+  "file": "voice-lines/b2_05.mp3"
+ },
+ {
+  "id": "b2_06",
+  "text": "Tell me something about you nobody else here knows.",
+  "moment": "banter",
+  "file": "voice-lines/b2_06.mp3"
+ },
+ {
+  "id": "b2_07",
+  "text": "What do you do when you're not in here with me? Besides thinking about being in here with me.",
+  "moment": "banter",
+  "file": "voice-lines/b2_07.mp3"
+ },
+ {
+  "id": "b2_08",
+  "text": "If you could be anywhere right now \u2014 anywhere \u2014 where would it be?",
+  "moment": "banter",
+  "file": "voice-lines/b2_08.mp3"
+ },
+ {
+  "id": "b2_09",
+  "text": "You're awful quiet tonight. Cat got your tongue, or are you just enjoying the view? I see you there, lurking. Come say hi, I don't bite. Much.",
+  "moment": "idle",
+  "file": "voice-lines/b2_09.mp3"
+ },
+ {
+  "id": "b2_10",
+  "text": "You've been watching a while. Time to introduce yourself, don't you think?",
+  "moment": "idle",
+  "file": "voice-lines/b2_10.mp3"
+ },
+ {
+  "id": "b2_11",
+  "text": "Silent types are always the most interesting. Prove me right.",
+  "moment": "idle",
+  "file": "voice-lines/b2_11.mp3"
+ },
+ {
+  "id": "b2_12",
+  "text": "I'll be honest with you \u2014 out here you're getting the trailer. Private's the movie.",
+  "moment": "upsell",
+  "file": "voice-lines/b2_12.mp3"
+ },
+ {
+  "id": "b2_13",
+  "text": "You keep looking at me like that, you're gonna have to take me private.",
+  "moment": "upsell",
+  "file": "voice-lines/b2_13.mp3"
+ },
+ {
+  "id": "b2_14",
+  "text": "Everything good happens behind the paywall, baby. That's just how it works.",
+  "moment": "upsell",
+  "file": "voice-lines/b2_14.mp3"
+ },
+ {
+  "id": "b2_15",
+  "text": "I'm fun out here. I'm unforgettable in private.",
+  "moment": "upsell",
+  "file": "voice-lines/b2_15.mp3"
+ },
+ {
+  "id": "b2_16",
+  "text": "Five minutes left on the clock, baby. Make them count.",
+  "moment": "goodbye",
+  "file": "voice-lines/b2_16.mp3"
+ },
+ {
+  "id": "b2_17",
+  "text": "Clock's ticking, handsome. What's it gonna be?",
+  "moment": "goodbye",
+  "file": "voice-lines/b2_17.mp3"
+ },
+ {
+  "id": "b2_18",
+  "text": "Last call \u2014 you don't wanna leave wondering what you missed. Time's almost up. I'd hate for you to go without the good part.",
+  "moment": "goodbye",
+  "file": "voice-lines/b2_18.mp3"
+ },
+ {
+  "id": "b2_19",
+  "text": "See? Told you it'd be worth it.",
+  "moment": "goodbye",
+  "file": "voice-lines/b2_19.mp3"
+ },
+ {
+  "id": "b2_20",
+  "text": "Same time tomorrow? ...I'm holding you to that.",
+  "moment": "goodbye",
+  "file": "voice-lines/b2_20.mp3"
+ },
+ {
+  "id": "b2_21",
+  "text": "You're gonna be thinking about that all night. I know I will.",
+  "moment": "goodbye",
+  "file": "voice-lines/b2_21.mp3"
+ },
+ {
+  "id": "b2_22",
+  "text": "That was fun. You're fun. Come back soon, okay?",
+  "moment": "goodbye",
+  "file": "voice-lines/b2_22.mp3"
+ },
+ {
+  "id": "b2_23",
+  "text": "Mmm, nice try. That's a private-show conversation.",
+  "moment": "deflect",
+  "file": "voice-lines/b2_23.mp3"
+ },
+ {
+  "id": "b2_24",
+  "text": "Ask me again when the meter's running, and we'll talk.",
+  "moment": "deflect",
+  "file": "voice-lines/b2_24.mp3"
+ },
+ {
+  "id": "b2_25",
+  "text": "You're bold. I like bold \u2014 in private.",
+  "moment": "deflect",
+  "file": "voice-lines/b2_25.mp3"
+ },
+ {
+  "id": "b2_26",
+  "text": "Some things you gotta earn, baby. You know the drill.",
+  "moment": "deflect",
+  "file": "voice-lines/b2_26.mp3"
+ },
+ {
+  "id": "b2_27",
+  "text": "Oh, you're spoiling me now. I notice that, you know. A gentleman AND generous? Keep that up.",
+  "moment": "tips",
+  "file": "voice-lines/b2_27.mp3"
+ },
+ {
+  "id": "b2_28",
+  "text": "Thank you, baby. You're making my whole night.",
+  "moment": "tips",
+  "file": "voice-lines/b2_28.mp3"
+ },
+ {
+  "id": "b2_29",
+  "text": "See, this is why you're my favorite.",
+  "moment": "tips",
+  "file": "voice-lines/b2_29.mp3"
+ },
+ {
+  "id": "b2_30",
+  "text": "It's late. The best conversations always happen late.",
+  "moment": "idle",
+  "file": "voice-lines/b2_30.mp3"
+ },
+ {
+  "id": "b2_31",
+  "text": "Everyone else is asleep. It's just us. I like that.",
+  "moment": "idle",
+  "file": "voice-lines/b2_31.mp3"
+ },
+ {
+  "id": "b2_32",
+  "text": "Night owl, huh? Me too. We're gonna get along fine.",
+  "moment": "idle",
+  "file": "voice-lines/b2_32.mp3"
+ },
+ {
+  "id": "b2_33",
+  "text": "Something about this hour makes everything more interesting.",
+  "moment": "idle",
+  "file": "voice-lines/b2_33.mp3"
+ },
+ {
+  "id": "b2_34",
+  "text": "An hour already? You're officially my favorite tonight.",
+  "moment": "goodbye",
+  "file": "voice-lines/b2_34.mp3"
+ },
+ {
+  "id": "b2_35",
+  "text": "You've been here longer than anyone. That means something.",
+  "moment": "goodbye",
+  "file": "voice-lines/b2_35.mp3"
+ },
+ {
+  "id": "b2_36",
+  "text": "Most guys come and go. You stay. I notice. You're not just passing through anymore, are you?",
+  "moment": "goodbye",
+  "file": "voice-lines/b2_36.mp3"
+ },
+ {
+  "id": "b3_01",
+  "text": "Morning, handsome. You look like you need coffee and me.",
+  "moment": "greeting",
+  "file": "voice-lines/b3_01.mp3"
+ },
+ {
+  "id": "b3_02",
+  "text": "Afternoon delight \u2014 that's you, walking in here.",
+  "moment": "greeting",
+  "file": "voice-lines/b3_02.mp3"
+ },
+ {
+  "id": "b3_03",
+  "text": "Evening. You clean up nice, even through a screen. Up late or up early? Either way, I'm glad it's with me.",
+  "moment": "greeting",
+  "file": "voice-lines/b3_03.mp3"
+ },
+ {
+  "id": "b3_04",
+  "text": "Truth or dare, baby. And I don't accept boring truths.",
+  "moment": "flirty",
+  "file": "voice-lines/b3_04.mp3"
+ },
+ {
+  "id": "b3_05",
+  "text": "I dare you to tell me what you're really thinking right now.",
+  "moment": "flirty",
+  "file": "voice-lines/b3_05.mp3"
+ },
+ {
+  "id": "b3_06",
+  "text": "Let's play a game: you guess what I'm thinking. Winner gets... me, longer. Dare. Always dare. Trust me on this.",
+  "moment": "flirty",
+  "file": "voice-lines/b3_06.mp3"
+ },
+ {
+  "id": "b3_07",
+  "text": "You have no idea the effect you have walking in here.",
+  "moment": "banter",
+  "file": "voice-lines/b3_07.mp3"
+ },
+ {
+  "id": "b3_08",
+  "text": "Of everyone who comes through, you're the one I watch for.",
+  "moment": "banter",
+  "file": "voice-lines/b3_08.mp3"
+ },
+ {
+  "id": "b3_09",
+  "text": "You make this easy, you know that? Most guys don't. There's something about you. Don't ask me what \u2014 a girl's gotta have secrets.",
+  "moment": "banter",
+  "file": "voice-lines/b3_09.mp3"
+ },
+ {
+  "id": "b3_10",
+  "text": "You're mine tonight. I don't share well.",
+  "moment": "flirty",
+  "file": "voice-lines/b3_10.mp3"
+ },
+ {
+  "id": "b3_11",
+  "text": "Hands off, everyone \u2014 this one's with me.",
+  "moment": "flirty",
+  "file": "voice-lines/b3_11.mp3"
+ },
+ {
+  "id": "b3_12",
+  "text": "I saw you looking around. Eyes back here, baby. You've got that look like you belong to somebody. Good \u2014 it's me.",
+  "moment": "flirty",
+  "file": "voice-lines/b3_12.mp3"
+ },
+ {
+  "id": "b3_13",
+  "text": "Okay, who's ready? Because I'm READY.",
+  "moment": "group",
+  "file": "voice-lines/b3_13.mp3"
+ },
+ {
+  "id": "b3_14",
+  "text": "The more the merrier, boys. Let's make this a night.",
+  "moment": "group",
+  "file": "voice-lines/b3_14.mp3"
+ },
+ {
+  "id": "b3_15",
+  "text": "I love a full room. Don't be shy, I can handle all of you. Energy check \u2014 who's actually awake out there?",
+  "moment": "group",
+  "file": "voice-lines/b3_15.mp3"
+ },
+ {
+  "id": "b3_16",
+  "text": "Slow night. That just means more of me for you.",
+  "moment": "idle",
+  "file": "voice-lines/b3_16.mp3"
+ },
+ {
+  "id": "b3_17",
+  "text": "Quiet rooms are my favorite \u2014 no competition for my attention.",
+  "moment": "idle",
+  "file": "voice-lines/b3_17.mp3"
+ },
+ {
+  "id": "b3_18",
+  "text": "It's just us and the crickets, baby. I'm not complaining. Dead night, live girl. Your lucky evening.",
+  "moment": "idle",
+  "file": "voice-lines/b3_18.mp3"
+ },
+ {
+  "id": "b3_19",
+  "text": "First time? Don't worry, I'll be gentle. ...Mostly.",
+  "moment": "greeting",
+  "file": "voice-lines/b3_19.mp3"
+ },
+ {
+  "id": "b3_20",
+  "text": "New face. I like new faces. Let me show you how this works.",
+  "moment": "greeting",
+  "file": "voice-lines/b3_20.mp3"
+ },
+ {
+  "id": "b3_21",
+  "text": "Virgin to the bedroom, huh? You're in good hands. Stick with me, new guy. I'll take good care of you.",
+  "moment": "greeting",
+  "file": "voice-lines/b3_21.mp3"
+ },
+ {
+  "id": "b3_22",
+  "text": "You're really gonna leave me all alone in here?",
+  "moment": "goodbye",
+  "file": "voice-lines/b3_22.mp3"
+ },
+ {
+  "id": "b3_23",
+  "text": "Go ahead, leave. I'll just sit here... thinking about what could've been.",
+  "moment": "goodbye",
+  "file": "voice-lines/b3_23.mp3"
+ },
+ {
+  "id": "b3_24",
+  "text": "One more minute. That's all I ask. ...Plus another. And another. Leaving already? I thought we had something special.",
+  "moment": "goodbye",
+  "file": "voice-lines/b3_24.mp3"
+ },
+ {
+  "id": "b3_25",
+  "text": "Close your eyes. Imagine I'm right there next to you.",
+  "moment": "flirty",
+  "file": "voice-lines/b3_25.mp3"
+ },
+ {
+  "id": "b3_26",
+  "text": "Picture this: just us, no screen, no clock.",
+  "moment": "flirty",
+  "file": "voice-lines/b3_26.mp3"
+ },
+ {
+  "id": "b3_27",
+  "text": "If you were here right now... well. Use your imagination. Don't think too hard, baby. Just feel it.",
+  "moment": "flirty",
+  "file": "voice-lines/b3_27.mp3"
+ },
+ {
+  "id": "b3_28",
+  "text": "Hey. You still there, or did I lose you?",
+  "moment": "idle",
+  "file": "voice-lines/b3_28.mp3"
+ },
+ {
+  "id": "b3_29",
+  "text": "Earth to handsome. Come back to me.",
+  "moment": "idle",
+  "file": "voice-lines/b3_29.mp3"
+ },
+ {
+  "id": "b3_30",
+  "text": "Don't go quiet on me \u2014 I was just getting warmed up. I know you're still watching. Say something, I get lonely.",
+  "moment": "idle",
+  "file": "voice-lines/b3_30.mp3"
+ }
+]
