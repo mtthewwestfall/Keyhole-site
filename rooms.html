@@ -1711,7 +1711,8 @@
       saveSessionState();
       renderRoomView();
       startPreviewTimer();
-      startVoiceForRoom(char.id);
+      // Chat replies now supply Chloe's live ElevenLabs voice; do not start the old preset-voice scheduler.
+      stopVoiceScheduler();
       return syncAccountEntitlement();
     }
 
@@ -2854,8 +2855,6 @@
 
       noteUserMessage(); // resets the idle timer; pulls her back from coffee to the keyboard
       triggerReactionClip();
-      playVoicePreset(state.activeCharId);
-
       setTimeout(() => {
         generateCharacterResponse(char);
       }, 700);
@@ -2879,13 +2878,12 @@
       return responses[Math.floor(Math.random() * responses.length)];
     }
 
-    const VOICE_UPSELL = "Mmm, I love when you talk to me... you know what would be even better? Hearing my voice. Pick a show and I'll talk to you the whole time.";
-    let previewReplyCount = 0;
+        let previewReplyCount = 0;
     let chatVoiceSeq = 0; // guards overlapping voice replies: only the latest message wins
 
     function playChatAudio(b64wav) {
       try {
-        const audio = new Audio('data:audio/wav;base64,' + b64wav);
+        const audio = new Audio('data:audio/mpeg;base64,' + b64wav);
         audio.play().catch(() => {});
         return audio;
       } catch (_) { return null; }
@@ -3252,15 +3250,10 @@
     }, 5000);
 
     async function generateCharacterResponse(char) {
-      // Bedroom invitation takes priority over a chat reply.
-      if (!state.paidUnlocked && state.userMessageCount >= CONFIG.invitationMessageThreshold && !state.hasInvitedToBedroom && !state.isVerifiedMember) {
-        state.hasInvitedToBedroom = true;
-        pushModelMessage(char, char.dialogue.bedroomInvitation, { hasInvitation: true });
-        return;
-      }
-
+      // The preview uses the exact same live chat + voice path as a paid show.
+      // The only thing preview does not get is the paid "give" finale; the
+      // existing show-mode scheduler keeps that separate.
       const authed = (typeof KeyholeAccount !== 'undefined' && KeyholeAccount.token && KeyholeAccount.token());
-      const wantVoice = !!state.paidUnlocked; // voice is for paid private/group shows
       if (authed) {
         try {
           const logs = state.chatLogs[state.activeCharId] || [];
@@ -3270,75 +3263,37 @@
             .map(m => ({ role: m.type === 'user' ? 'user' : 'assistant', text: m.text }));
           const lastUser = [...logs].reverse().find(m => m.type === 'user');
 
-          if (wantVoice) {
-            // Paid show: hold the text until her voice is ready, then send
-            // text + voice at the same time. If the voice never comes back,
-            // send the text by itself — the next message tries voice fresh.
-            // While the voice generates she does something with her hands:
-            // folding clothes sometimes, coffee sip sometimes.
-            showSpeakingIndicator(char);
-            voiceWaitTakeover();
-            const mySeq = ++chatVoiceSeq;
-            let res = null;
-            try {
-              const req = KeyholeAccount.api('/keyhole/chat-reply', {
-                character: state.activeCharId,
-                message: lastUser ? lastUser.text : '',
-                history: history.slice(0, -1),
-                voice: true
-              });
-              const timeout = new Promise(resolve => setTimeout(() => resolve(null), BRANCH.voice_timeout_ms));
-              res = await Promise.race([req, timeout]);
-            } catch (e) { res = null; }
-            if (mySeq !== chatVoiceSeq) return; // a newer message took over; drop this one
-            if (res && res.reply) {
-              replaceSpeakingIndicator(char, res.reply, { skipLook: true });
-              if (!endVoiceWaitBranch()) startLookBeat(); // no branch ran; still do the gaze beat
-              if (res.audio) playChatAudio(res.audio);
-            } else {
-              replaceSpeakingIndicator(char, cannedResponse(char), { skipLook: true });
-              if (!endVoiceWaitBranch()) startLookBeat();
-            }
-            return;
-          }
-
-          // Preview: text-only AI reply, with a voice upsell every 3rd reply.
-          // She visibly types while the reply is being composed.
+          // Preview and paid chat both request Chloe's real configured voice.
+          // Preview is still limited by the normal message allowance.
           showSpeakingIndicator(char);
+          voiceWaitTakeover();
+          const mySeq = ++chatVoiceSeq;
           let res = null;
           try {
-            res = await KeyholeAccount.api('/keyhole/chat-reply', {
+            const req = KeyholeAccount.api('/keyhole/chat-reply', {
               character: state.activeCharId,
               message: lastUser ? lastUser.text : '',
               history: history.slice(0, -1),
-              voice: false
+              voice: true
             });
-          } catch (e) {
-            // The live character must never silently fall back to canned dialogue.
-            // Retry once so a transient network/model failure does not turn Chloe
-            // into the generic three-line preview.
-            try {
-              res = await KeyholeAccount.api('/keyhole/chat-reply', {
-                character: state.activeCharId,
-                message: lastUser ? lastUser.text : '',
-                history: history.slice(0, -1),
-                voice: false
-              });
-            } catch (_) { res = null; }
-          }
+            const timeout = new Promise(resolve => setTimeout(() => resolve(null), BRANCH.voice_timeout_ms));
+            res = await Promise.race([req, timeout]);
+          } catch (e) { res = null; }
+
+          if (mySeq !== chatVoiceSeq) return;
+
           if (res && res.reply) {
-            previewReplyCount++;
-            let text = res.reply;
-            if (previewReplyCount % 10 === 0) text += ' ' + VOICE_UPSELL;
-            replaceSpeakingIndicator(char, text);
+            replaceSpeakingIndicator(char, res.reply, { skipLook: true });
+            if (!endVoiceWaitBranch()) startLookBeat();
+            if (res.audio) playChatAudio(res.audio);
           } else {
-            replaceSpeakingIndicator(char, "Give me a second—I want to answer you properly.");
+            replaceSpeakingIndicator(char, "Give me a second—I want to answer you properly.", { skipLook: true });
+            if (!endVoiceWaitBranch()) startLookBeat();
           }
           return;
         } catch (e) {
-          // Safety net: never leave her stuck typing (or on a branch clip).
           try { endVoiceWaitBranch(); } catch (_) {}
-          try { replaceSpeakingIndicator(char, cannedResponse(char)); } catch (_) {}
+          try { replaceSpeakingIndicator(char, "Give me a second—I want to answer you properly.", { skipLook: true }); } catch (_) {}
           return;
         }
       }
