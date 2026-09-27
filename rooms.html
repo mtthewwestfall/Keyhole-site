@@ -3054,6 +3054,32 @@
       return voiceState.player.play(list[i].url);
     }
 
+    // Pure: normalize text for voice matching (lowercase, no punctuation, collapsed whitespace).
+    function normalizeVoiceText(t) {
+      return (t || '').toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+    }
+
+    // Find a banked/preset clip whose text matches the displayed reply text.
+    function findVoiceForText(charId, text) {
+      const list = voiceState.presets[charId] || [];
+      if (!list.length || !text) return null;
+      const want = normalizeVoiceText(text);
+      if (!want) return null;
+      for (const e of list) {
+        if (normalizeVoiceText(e.text) === want) return e;
+      }
+      return null;
+    }
+
+    // Play voice ONLY if a clip's text matches. Otherwise stay silent.
+    function playVoiceForText(charId, text) {
+      if (!voiceState.player || state.view !== 'room') return false;
+      if (voiceState.player.isPlaying()) return false; // never talk over herself
+      const match = findVoiceForText(charId, text);
+      if (!match) return false;
+      return voiceState.player.play(match.url);
+    }
+
     function scheduleNextVoiceLine(charId, minMs, maxMs) {
       stopVoiceScheduler();
       voiceState.schedTimer = setTimeout(function tick() {
@@ -3076,13 +3102,7 @@
       if (typeof VoicePresets === 'undefined') return;
       await loadVoicePresets(charId);
       if (!voiceState.presets[charId].length) return;
-      // Greeting shortly after entry; the door click counts as the gesture.
-      voiceState.greetTimer = setTimeout(() => {
-        voiceState.greetTimer = null;
-        if (state.view === 'room' && state.activeCharId === charId) playVoicePreset(charId);
-      }, 2500);
-      // Gap filler: a line every 35–70s while she's on screen.
-      scheduleNextVoiceLine(charId, 35000, 70000);
+      // Voice only plays when it matches displayed text — no random greeting or gap fillers.
     }
 
     function startPreviewTimer() {
@@ -3222,7 +3242,6 @@
 
       noteUserMessage(); // resets the idle timer; pulls her back from coffee to the keyboard
       triggerReactionClip();
-      playVoicePreset(state.activeCharId);
 
       setTimeout(() => {
         generateCharacterResponse(char);
@@ -3747,6 +3766,7 @@
             let text = res.reply;
             if (previewReplyCount % 10 === 0) text += ' ' + VOICE_UPSELL;
             replaceSpeakingIndicator(char, text);
+            playVoiceForText(state.activeCharId, text);
           } else {
             replaceSpeakingIndicator(char, cannedResponse(char));
           }
