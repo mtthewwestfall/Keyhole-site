@@ -541,6 +541,10 @@
       .room-container.typing-mode .stage-live-overlay {
         display: none;
       }
+      /* PiP sits at top:70px, ~147px tall — keep messages clear of it. */
+      .room-container.typing-mode .chat-messages {
+        padding-top: 165px;
+      }
     }
     .stage-video {
       position: absolute;
