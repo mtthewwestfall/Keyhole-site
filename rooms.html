@@ -2366,6 +2366,7 @@
        a session, otherwise the legacy idle stream. */
     function activePlayer() {
       if (typeof branchScheduler !== 'undefined' && branchScheduler.session) return branchScheduler;
+      if (typeof freeBedroom !== 'undefined' && freeBedroom.session) return freeBedroom;
       if (typeof idleStream !== 'undefined' && idleStream.charId) return idleStream;
       return null;
     }
@@ -2608,9 +2609,211 @@
       }
     };
 
+    /* ---------------- Free-bedroom director: typing / activity / hold ----------------
+       Preview-only state machine. Replaces the old typing-loop-forever main:
+       - TYPING: her typing main loops, but ONLY while a reply is actually composing.
+       - ACTIVITY: when composing ends she does ONE new activity -- never the same
+         one twice in a row -- played exactly once. Every folding clip is its own
+         activity, alongside hair / stretch / look / shoulder and the look-up beats.
+       - HOLD: after the activity she settles to her smiling at the camera and holds
+         it until the next message. The hold never advances on its own.
+       Rules enforced:
+       - If composing starts mid-activity it is marked pending: she finishes the
+         activity uninterrupted, THEN cuts to typing. The chat "..." dots stay
+         hidden until the typing video is actually on stage (typingOnStage).
+       - resume() restores the beat she was on -- the SAME activity replays, or the
+         hold returns. It never advances into a new activity.
+       - Paid shows are untouched: the director never starts in show mode. */
+    const freeBedroom = {
+      session: false, charId: null,
+      state: null,               // 'typing' | 'activity' | 'hold'
+      typingLoops: [], activities: [], holds: [],
+      lastActVariant: null, holdIdx: 0, typingFlip: false,
+      pendingTyping: false,
+      _currentAct: null,
+      suspended: null,           // {state, act} snapshot while a branch owns the stage
+      locked: false, galleryOpen: false,
+
+      _lib() {
+        try {
+          if (typeof plateEngine === 'undefined' || !plateEngine || !plateEngine.library) return [];
+          return plateEngine.library.files(plateEngine.character, 'idle') || [];
+        } catch (_) { return []; }
+      },
+
+      /* Activities: authored idle-main-act-* clips plus every folding clip as its
+         own activity, plus the look-up beats. New uploads with an -act- variant
+         join the rotation with no code change. */
+      _pool() {
+        const files = this._lib().filter(f => f && f.url && !isImagePlate(f.url));
+        const V = f => String((f && f.variant) || '');
+        const loops = files.filter(f => V(f) === 'branch-typing-loop' || V(f) === 'branch-typing-alt');
+        const FOLD = ['tidy-f1', 'tidy-f2', 'tidy-f3', 'tidy-f4', 'tidy-f5'];
+        const acts = files.filter(f => V(f).indexOf('-act-') !== -1 || FOLD.indexOf(V(f)) !== -1);
+        const lookAB = files.filter(f => V(f) === 'branch-look-a' || V(f) === 'branch-look-b');
+        let holds = files.filter(f => V(f).indexOf('-still-') !== -1);
+        if (!holds.length) holds = files.filter(f => V(f) === 'branch-look-hold-a' || V(f) === 'branch-look-hold-b');
+        return { loops, acts: acts.concat(lookAB), holds };
+      },
+
+      start(charId) {
+        if (state.showMode === 'show' || state.groupShow) return false;
+        const p = this._pool();
+        if (!p.loops.length || !p.acts.length) return false;
+        this.stop();
+        this.typingLoops = p.loops;
+        this.activities = p.acts;
+        this.holds = p.holds;
+        this.charId = charId;
+        this.session = true;
+        this.lastActVariant = null;
+        this.pendingTyping = false;
+        this._toHold(); // main idle: she waits on her smile loop until his first message
+        return true;
+      },
+
+      stop() {
+        this.session = false; this.charId = null; this.state = null;
+        this.typingLoops = []; this.activities = []; this.holds = [];
+        this.lastActVariant = null; this.pendingTyping = false;
+        this._currentAct = null; this.suspended = null;
+        try { elStageVideo.onended = null; elStageVideo.onerror = null; } catch (_) {}
+      },
+
+      _nextTyping() {
+        this.typingFlip = !this.typingFlip; // alternate the two typing mains
+        const L = this.typingLoops;
+        return L[this.typingFlip ? 1 : 0] || L[0];
+      },
+
+      _toTyping() {
+        if (!this.session) return;
+        this.state = 'typing';
+        this.pendingTyping = false;
+        this._currentAct = null;
+        const t = this._nextTyping();
+        if (t && t.url) {
+          reportPlatePlay(t.url, t.variant);
+          hardCutToClip(t.url); // loops by design
+        }
+        typingOnStage = true;
+        try { renderChatMessages(); } catch (_) {}
+      },
+
+      _pickActivity() {
+        const pool = this.activities.filter(f => String(f.variant) !== String(this.lastActVariant));
+        const list = pool.length ? pool : this.activities.slice();
+        const a = list[Math.floor(Math.random() * list.length)];
+        if (a) this.lastActVariant = String(a.variant);
+        return a;
+      },
+
+      _activityDone(self) {
+        if (!self.session || self.state !== 'activity') return; // superseded
+        if (self.pendingTyping) { self._toTyping(); return; }
+        self._toHold();
+      },
+
+      _toActivity() {
+        if (!this.session) return;
+        const a = this._pickActivity();
+        if (!a || !a.url) { this._toHold(); return; }
+        this.state = 'activity';
+        this._currentAct = a;
+        reportPlatePlay(a.url, a.variant);
+        const self = this;
+        playOnceThen(a.url, function () { self._activityDone(self); });
+      },
+
+      _toHold() {
+        if (!this.session) return;
+        this.state = 'hold';
+        this._currentAct = null;
+        if (this.holds.length) {
+          const h = this.holds[this.holdIdx++ % this.holds.length];
+          if (h && h.url) { reportPlatePlay(h.url, h.variant); hardCutToClip(h.url); return; }
+        }
+        // No smile still uploaded yet: freeze on the last frame so the feed
+        // holds on her instead of looping or going black.
+        try { elStageVideo.pause(); } catch (_) {}
+      },
+
+      /* Composing started. Returns 'typing' (stage is on the typing main now),
+         'pending' (she finishes the current activity first, then typing),
+         or false (director not running). */
+      requestTyping() {
+        if (!this.session) return false;
+        if (this.suspended) this.suspended = null; // composing outranks a parked branch
+        if (this.state === 'typing') return 'typing';
+        if (this.state === 'activity') { this.pendingTyping = true; return 'pending'; }
+        this._toTyping();
+        return 'typing';
+      },
+
+      /* The reply landed and nothing is still composing: one NEW activity,
+         then she settles back to her smile. */
+      replyLanded() {
+        if (!this.session) return;
+        if (this.suspended) this.suspended = null;
+        this._toActivity();
+      },
+
+      /* A branch moment (reaction clip, idle coffee lull) takes the stage. */
+      suspendForCut() {
+        if (!this.session) return;
+        this.suspended = { state: this.state, act: this._currentAct };
+        try {
+          elStageVideo.onended = null; elStageVideo.onerror = null;
+          elStageVideo.pause();
+        } catch (_) {}
+      },
+
+      /* Resume restores the beat she was on: the SAME activity replays from its
+         start, or the hold returns. It never advances into a new activity. */
+      resume() {
+        if (!this.session || !this.suspended) return false;
+        const s = this.suspended;
+        this.suspended = null;
+        if (s.state === 'activity' && s.act && s.act.url) {
+          this.state = 'activity';
+          this._currentAct = s.act;
+          const self = this;
+          reportPlatePlay(s.act.url, s.act.variant);
+          playOnceThen(s.act.url, function () { self._activityDone(self); });
+          return true;
+        }
+        this._toHold();
+        return true;
+      }
+    };
+
+    function freeBedroomActive() {
+      return (typeof freeBedroom !== 'undefined') && !!freeBedroom.session;
+    }
+
     function setupStageMedia(mediaGroup) {
       if (!mediaGroup) return;
       try { lastUserMsgAt = Date.now(); } catch (_) {} // idle-coffee timer starts on room entry
+
+      // Free bedroom: the typing/activity/hold director owns the stage when it
+      // has the clips (typing mains + at least one activity). Paid shows keep
+      // the branch scheduler; anything else falls back to the idle stream.
+      if (state.showMode !== 'show' && typeof freeBedroom !== 'undefined' && plateEngine) {
+        if (!(freeBedroom.session && freeBedroom.charId === plateEngine.character)) {
+          try { if (typeof idleStream !== 'undefined') idleStream.stop(); } catch (_) {}
+          try { if (typeof branchScheduler !== 'undefined') branchScheduler.stop(); } catch (_) {}
+          if (freeBedroom.start(plateEngine.character)) {
+            try {
+              const files = plateEngine.library.files(plateEngine.character, 'idle') || [];
+              files.filter(f => f.variant === 'branch-typing-loop' || f.variant === 'branch-typing-alt')
+                .forEach(f => { if (f.url) idleStream._preload(f.url); });
+            } catch (_) {}
+            return;
+          }
+        } else {
+          return; // director already running for this character
+        }
+      }
 
       // Branch scheduler first (Chloe): paid shows get the full scripted show,
       // the free bedroom gets the clothed rotation. Falls back to idleStream.
@@ -2839,6 +3042,9 @@
           bubble.innerHTML = msg.text;
         } else {
           bubble.className = `chat-bubble ${msg.sender === 'You' ? 'bubble-user' : 'bubble-model'}`;
+          // The "..." dots only render while the typing video is actually on
+          // stage. If she's still finishing an activity, no dots until she is.
+          if (msg.speaking && !typingOnStage) return;
           if (msg.speaking) {
             bubble.innerHTML = '<span class="typing-dots"><span>.</span><span>.</span><span>.</span></span>';
           } else {
@@ -2977,13 +3183,33 @@
        reply is actually being composed. When the dots go up, the idle stream
        parks and the seamless typing loop takes the stage; when the reply
        lands, the stream resumes. Hard multicam-style cut, no dissolve. */
+    /* The chat "..." dots render only while the typing video is on stage.
+       typingTakeover sets this true when the stage actually cuts to typing;
+       while she finishes a pending activity it stays false and no dots show. */
+    let typingOnStage = false;
     let typingTakeoverUntil = 0;
     let typingAltFlip = false; // alternate the two typing mains (T2 <-> alt)
     function typingTakeover(char) {
-      if (typingTakeoverUntil) return; // already on her
+      if (typingTakeoverUntil) {
+        typingOnStage = true;
+        try { renderChatMessages(); } catch (_) {}
+        return; // already on her
+      }
       if (jointExitActive) return; // a return joint owns the stage; it chains back here
       endLookBeat(); // composing beats gazing: a new reply is on the way
-      if (state.showMode === 'show' || state.groupShow) return; // paid show: scheduler owns the video
+      if (state.showMode === 'show' || state.groupShow) {
+        typingOnStage = true;
+        try { renderChatMessages(); } catch (_) {}
+        return; // paid show: scheduler owns the video; dots show as before
+      }
+      // Free bedroom with the director: composing is a state, not a takeover.
+      // 'pending' means she finishes the current activity first -- the dots
+      // appear when _toTyping cuts the stage over (see freeBedroom).
+      if (freeBedroomActive()) {
+        const r = freeBedroom.requestTyping();
+        if (r) typingTakeoverUntil = Date.now() + 45000; // safety: never stuck
+        return;
+      }
       // A suspended stream still holds a live session (charId): the voice-wait
       // branch may hand the stage back mid-compose, and she goes to typing.
       const streamReady = (typeof idleStream !== 'undefined') && (idleStream.active || !!idleStream.charId);
@@ -3007,12 +3233,18 @@
       elStageFallbackImg.style.display = 'none';
       elStageVideo.src = hit.url;
       elStageVideo.play().catch(() => {});
+      typingOnStage = true;
+      try { renderChatMessages(); } catch (_) {}
       typingTakeoverUntil = Date.now() + 45000; // safety: never stuck on typing
     }
     function endTypingTakeover() {
       if (!typingTakeoverUntil) return;
       typingTakeoverUntil = 0;
+      typingOnStage = false;
       try { elStageVideo.pause(); } catch (_) {}
+      // Director: the reply landed, so she does one NEW activity, then holds
+      // her smile. resume() is never used here -- it must not advance activities.
+      if (freeBedroomActive()) { freeBedroom.replyLanded(); return; }
       if (typeof idleStream !== 'undefined') idleStream.resume();
     }
     setInterval(() => {
@@ -3115,6 +3347,7 @@
 
     function startLookBeat() {
       if (lookBeat) return true;
+      if (freeBedroomActive()) return false; // the director owns the gaze: looks are activities now
       if (jointExitActive) return false;
       if (!previewBranchAllowed()) return false;
       if (voiceBranchUrl || idleBranchUrl || typingTakeoverUntil) return false;
@@ -3382,7 +3615,7 @@
             return;
           }
 
-          // Preview: text-only AI reply, with a voice upsell every 3rd reply.
+          // Preview: text-only AI reply, with a voice upsell every 10th reply.
           // She visibly types while the reply is being composed.
           showSpeakingIndicator(char);
           let res = null;
