@@ -2955,6 +2955,50 @@
       };
     }
 
+    /* Paid show: her words and her body stay in sync. When her reply
+       describes a physical action, play the clip that shows it — matched
+       by keyword against the give library — instead of a random rotation
+       clip or a gaze hold. Returns true if a matched clip took the stage. */
+    function playActionClipForReply(text) {
+      if (state.showMode !== 'show' || state.groupShow) return false;
+      if (typeof plateEngine === 'undefined' || !plateEngine || !plateEngine.library) return false;
+      const t = String(text || '').toLowerCase().replace(/\*/g, '');
+      if (!t) return false;
+      // keyword phrases -> fragment to find in the give clip's title
+      const MAP = [
+        { k: ['top off', 'taking it off', 'take it off', 'pulling my tank', 'tank top over my head', 'shirt off', 'slipping it off'], title: 'shirt off' },
+        { k: ['crawl'], title: 'crawling' },
+        { k: ['lift tease', 'lifting my top', 'lift my top'], title: 'lift tease' },
+        { k: ['arch my back', 'arching'], title: 'arch' },
+        { k: ['over the shoulder', 'over my shoulder', 'look back'], title: 'shoulder' },
+        { k: ['body roll', 'rolling my body'], title: 'body roll' },
+        { k: ['hip sway', 'sway my hips', 'swaying my hips'], title: 'hip sway' },
+        { k: ['on the floor', 'floor'], title: 'sitting on floor' },
+        { k: ['cross-legged', 'cross legged'], title: 'cross-legged' },
+        { k: ['bed edge', 'edge of the bed'], title: 'bed edge' },
+      ];
+      for (const m of MAP) {
+        if (!m.k.some(kw => t.indexOf(kw) !== -1)) continue;
+        let hit = null;
+        try {
+          const files = plateEngine.library.files(plateEngine.character, 'give') || [];
+          hit = files.find(f => f && f.url && !isImagePlate(f.url) &&
+            String(f.title || '').toLowerCase().indexOf(m.title) !== -1);
+        } catch (_) {}
+        if (!hit) continue;
+        try {
+          const p = activePlayer();
+          if (p && (p.locked || p.galleryOpen)) return false; // never interrupt the finale
+          if (p) p.suspendForCut();
+          reportPlatePlay(hit.url, hit.variant);
+          const char = CHARACTERS[state.activeCharId];
+          playStageCut(hit.url, char ? char.bedroomMedia : null);
+          return true;
+        } catch (_) { return false; }
+      }
+      return false;
+    }
+
     function triggerReactionClip() {
       const char = CHARACTERS[state.activeCharId];
       if (!char) return;
@@ -3308,8 +3352,10 @@
       const stillTyping = logs.some(m => m.speaking);
       if (!stillTyping) {
         endTypingTakeover();
-        // Her reply landed: she looks up at the camera and holds his gaze
-        // until he replies. Voice path skips this and chains via endVoiceWaitBranch.
+        // Paid show: if her reply described a physical action, show it.
+        // Otherwise she looks up at the camera and holds his gaze until he
+        // replies. Voice path skips this and chains via endVoiceWaitBranch.
+        if (playActionClipForReply(text)) return;
         if (!opts || !opts.skipLook) onReplyLanded();
       }
     }
