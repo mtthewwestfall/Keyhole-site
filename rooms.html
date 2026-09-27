@@ -2386,6 +2386,7 @@
       idx: -1,
       charId: null,
       active: false,
+      authoredMain: false, // true when playing the idle-main activity rotation
       preloader: null,
       layers: null,
       vis: 0, // index of the currently-visible crossfade layer
@@ -2499,19 +2500,66 @@
         if (!this.active) return;
         this.idx++;
         if (this.idx >= this.queue.length) {
-          const last = this.queue[this.queue.length - 1];
-          this.queue = this._shuffled(this.queue, this._takeKey(last));
-          this.idx = 0;
+          if (this.authoredMain) {
+            // Fresh activity shuffle each cycle; never repeat the activity
+            // that closed the last cycle.
+            const acts = [...this.queue].reverse();
+            const lastAct = acts.find(f => String((f && f.variant) || '').indexOf('-act-') !== -1);
+            this.queue = this._buildIdleMainQueue(this.queue, lastAct ? String(lastAct.variant) : null);
+            this.idx = 0;
+          } else {
+            const last = this.queue[this.queue.length - 1];
+            this.queue = this._shuffled(this.queue, this._takeKey(last));
+            this.idx = 0;
+          }
         }
         this._playCurrent();
+      },
+
+      // Idle-main rotation: activities and stills interleaved --
+      // activity, still, activity, still... Activities shuffle every cycle
+      // (no repeat across the cycle boundary); stills alternate. The still
+      // is always the settle point she returns to between activities.
+      _buildIdleMainQueue(mains, avoidActKey) {
+        const key = f => String((f && f.variant) || '');
+        const acts = mains.filter(f => key(f).indexOf('-act-') !== -1);
+        const stills = mains.filter(f => key(f).indexOf('-still-') !== -1);
+        const pool = (acts.length ? acts : mains).slice();
+        for (let i = pool.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          const t = pool[i]; pool[i] = pool[j]; pool[j] = t;
+        }
+        if (avoidActKey && pool.length > 1 && key(pool[0]) === avoidActKey) {
+          const t = pool[0]; pool[0] = pool[1]; pool[1] = t;
+        }
+        const out = [];
+        pool.forEach((a, i) => {
+          out.push(a);
+          if (stills.length) out.push(stills[i % stills.length]);
+        });
+        return out;
       },
 
       start(charId, files) {
         const vids = this._videoFiles(files);
         this.stop();
-        if (vids.length < 2) return false;
-        this.charId = charId;
-        this.queue = this._shuffled(vids, null);
+        // Authored idle main: interchangeable activity clips (variants
+        // idle-main-act-*) alternating with the smiling living-still
+        // (idle-main-still-*). Every cycle shuffles the activities, so after
+        // each typing session she comes back to a new one, then settles to
+        // her smiling at the camera until the next reply. The take-shuffled
+        // rotation is the fallback when no idle-main set exists.
+        const mains = (files || [])
+          .filter(f => f && f.url && !isImagePlate(f.url) && /^idle-main(-|$)/.test(String(f.variant || '').trim()));
+        this.authoredMain = mains.length > 0;
+        if (this.authoredMain) {
+          this.charId = charId;
+          this.queue = this._buildIdleMainQueue(mains, null);
+        } else {
+          if (vids.length < 2) return false;
+          this.charId = charId;
+          this.queue = this._shuffled(vids, null);
+        }
         this.idx = -1;
         this.active = true;
         this._advance();
@@ -2577,9 +2625,9 @@
       if (plateEngine && plateEngine.library.beatEnabled(plateEngine.character, 'idle')) {
         const files = plateEngine.library.files(plateEngine.character, 'idle');
         if (idleStream.start(plateEngine.character, files)) {
-          // Warm the typing loop so the typing-sync cut is instant on first use.
-          const typeHit = (files || []).find(f => f.variant === 'branch-typing-loop');
-          if (typeHit && typeHit.url) idleStream._preload(typeHit.url);
+          // Warm both typing mains so the typing-sync cut is instant on first use.
+          (files || []).filter(f => f.variant === 'branch-typing-loop' || f.variant === 'branch-typing-alt')
+            .forEach(f => { if (f.url) idleStream._preload(f.url); });
           return;
         }
         // Single clip or no video: fall through to the legacy single-loop path.
@@ -2930,17 +2978,25 @@
        parks and the seamless typing loop takes the stage; when the reply
        lands, the stream resumes. Hard multicam-style cut, no dissolve. */
     let typingTakeoverUntil = 0;
+    let typingAltFlip = false; // alternate the two typing mains (T2 <-> alt)
     function typingTakeover(char) {
       if (typingTakeoverUntil) return; // already on her
       if (jointExitActive) return; // a return joint owns the stage; it chains back here
       endLookBeat(); // composing beats gazing: a new reply is on the way
       if (state.showMode === 'show' || state.groupShow) return; // paid show: scheduler owns the video
-      if (typeof idleStream === 'undefined' || !idleStream.active) return;
+      // A suspended stream still holds a live session (charId): the voice-wait
+      // branch may hand the stage back mid-compose, and she goes to typing.
+      const streamReady = (typeof idleStream !== 'undefined') && (idleStream.active || !!idleStream.charId);
+      if (!streamReady) return;
       if (typeof plateEngine === 'undefined' || !plateEngine.library) return;
       let hit = null;
       try {
         const files = plateEngine.library.files(plateEngine.character, 'idle') || [];
-        hit = files.find(f => f.variant === 'branch-typing-loop');
+        // Two typing mains alternate: T2 (branch-typing-loop) <-> alt (branch-typing-alt).
+        // Falls back to whichever exists if only one is uploaded.
+        const loops = files.filter(f => f.variant === 'branch-typing-loop' || f.variant === 'branch-typing-alt');
+        typingAltFlip = !typingAltFlip;
+        hit = loops[typingAltFlip ? 1 : 0] || loops[0] || null;
       } catch (_) { /* fall through */ }
       if (!hit || !hit.url) return;
       idleStream.suspendForCut();
@@ -3197,8 +3253,19 @@
         jointExitActive = true;
         pendLookBeat = true; // her reply landed; the gaze beat follows the joint
         playOnceThen(j, onJointExitDone);
-      } else if (!startLookBeat()) {
-        if (p && p.resume) p.resume();
+      } else {
+        // The fold is done but she's still composing: back to the typing main
+        // video. Typing is only ever shown there -- never mid-fold. (In a paid
+        // show the scheduler just resumes; it owns the stage there.)
+        let stillComposing = false;
+        try { stillComposing = (state.chatLogs[state.activeCharId] || []).some(m => m.speaking); } catch (_) {}
+        if (stillComposing && state.showMode !== 'show' && !state.groupShow) {
+          typingTakeoverUntil = 0; // fresh window for the takeover
+          try { elStageVideo.pause(); } catch (_) {}
+          typingTakeover(CHARACTERS[state.activeCharId]);
+        } else if (!startLookBeat()) {
+          if (p && p.resume) p.resume();
+        }
       }
       return true;
     }
