@@ -1912,6 +1912,18 @@
       renderChatMessages();
       renderMessageCredits();
       updateLiveOverlay();
+
+      // Paid show: make sure the countdown is running even if we didn't come
+      // through the payment confirmation path (e.g. admin-granted minutes,
+      // session restore). Both functions clear any existing interval first,
+      // so this is safe to call on every render.
+      if (state.showMode === 'show' && !state.groupShow) {
+        if (state.showStartedAt > 0) {
+          resumeShowTimerIfNeeded();
+        } else {
+          startShowTimer();
+        }
+      }
     }
 
     function messagesRemaining() {
