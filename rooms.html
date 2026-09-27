@@ -3067,12 +3067,11 @@
           // typing loops before it. Every other explicit clip stays give-only.
           const beat = (m.phaseAware && !giveTime) ? 'idle' : 'give';
           const variant = (m.phaseAware && !giveTime)
-            ? null // any clothed typing loop
+            ? 'branch-typing-alt' // user's pick: alt typing loop only, pre-give
             : m.variant;
           const files = plateEngine.library.files(plateEngine.character, beat) || [];
           hits = files.filter(f => f && f.url && !isImagePlate(f.url) &&
-            (variant ? f.variant === variant
-                     : (f.variant === 'branch-typing-loop' || f.variant === 'branch-typing-alt')));
+            f.variant === variant);
         } catch (_) {}
         if (!hits.length) continue;
         // Alternate when multiple takes share the variant (typing mains, etc.)
