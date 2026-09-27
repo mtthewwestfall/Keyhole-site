@@ -3339,6 +3339,7 @@
 
       const authed = (typeof KeyholeAccount !== 'undefined' && KeyholeAccount.token && KeyholeAccount.token());
       const wantVoice = !!state.paidUnlocked; // voice is for paid private/group shows
+      const chatRoom = state.groupShow ? 'group' : (wantVoice ? 'private' : 'preview'); // room type for her reply behavior
       if (authed) {
         try {
           const logs = state.chatLogs[state.activeCharId] || [];
@@ -3363,7 +3364,8 @@
                 character: state.activeCharId,
                 message: lastUser ? lastUser.text : '',
                 history: history.slice(0, -1),
-                voice: true
+                voice: true,
+                room: chatRoom
               });
               const timeout = new Promise(resolve => setTimeout(() => resolve(null), BRANCH.voice_timeout_ms));
               res = await Promise.race([req, timeout]);
@@ -3389,7 +3391,8 @@
               character: state.activeCharId,
               message: lastUser ? lastUser.text : '',
               history: history.slice(0, -1),
-              voice: false
+              voice: false,
+              room: chatRoom
             });
           } catch (e) { /* fall through to canned response */ }
           if (res && res.reply) {
