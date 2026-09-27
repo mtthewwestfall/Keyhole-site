@@ -753,6 +753,66 @@
       font-size: 0.9rem;
     }
     #lingerie-gallery-count { font-size: 0.85rem; color: var(--muted); min-width: 64px; text-align: center; }
+    /* Preview finale: lingerie tease + upsell ad (no give in preview) */
+    #preview-tease {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: none;
+      background: rgba(5, 4, 6, 0.97);
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      padding: 20px;
+    }
+    #preview-tease-photos {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      justify-content: center;
+      max-width: 94vw;
+    }
+    #preview-tease-photos img {
+      max-width: 44vw;
+      max-height: 52vh;
+      border-radius: 8px;
+      object-fit: contain;
+      border: 1px solid var(--gold);
+    }
+    #preview-tease-ad {
+      text-align: center;
+      max-width: 92vw;
+    }
+    .preview-tease-ad-text {
+      color: var(--cream);
+      font-size: 1.05rem;
+      font-weight: 600;
+      margin-bottom: 14px;
+    }
+    .preview-tease-ad-btns {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      margin-bottom: 10px;
+    }
+    .preview-tease-ad-btns button {
+      background: rgba(196, 165, 116, 0.15);
+      border: 1px solid var(--gold);
+      color: var(--cream);
+      border-radius: 6px;
+      padding: 10px 20px;
+      font-size: 0.95rem;
+      cursor: pointer;
+    }
+    #preview-tease-close {
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      font-size: 0.85rem;
+      cursor: pointer;
+      padding: 6px 12px;
+    }
     .btn-accept {
       background: var(--cream);
       color: var(--bg-charcoal);
@@ -1091,6 +1151,19 @@
       <span id="lingerie-gallery-count">1 / 25</span>
       <button id="lingerie-gallery-next">Next ›</button>
       <button id="lingerie-gallery-close">Done</button>
+    </div>
+  </div>
+
+  <!-- Preview finale: lingerie tease + upsell ad (no give in preview) -->
+  <div id="preview-tease">
+    <div id="preview-tease-photos"></div>
+    <div id="preview-tease-ad">
+      <div class="preview-tease-ad-text">Want the whole thing? Buy a private or group show now.</div>
+      <div class="preview-tease-ad-btns">
+        <button id="preview-tease-private" type="button">Book a private show</button>
+        <button id="preview-tease-group" type="button">Join a group show</button>
+      </div>
+      <button id="preview-tease-close" type="button">Not now</button>
     </div>
   </div>
 
@@ -2893,7 +2966,7 @@
           if (res.action === 'plate' || res.action === 'generated') return res;
           return beat === 'give' ? plateEngine.next('tease') : res;
         }).then(res => {
-          if (res.action === 'plate' || res.action === 'generated') {
+          if ((res.action === 'plate' || res.action === 'generated') && res.url && !isImagePlate(res.url)) {
             reportPlatePlay(res.url, res.variant);
             playStageCut(res.url, mediaGroup);
           }
@@ -3029,7 +3102,38 @@
       if (!char) return;
 
       appendSystemMessage(char.dialogue.freeTimeEnding);
-      openPrivateRoomPayment(char);
+      // Preview finale mirrors the paid arc minus the give: a couple of
+      // lingerie stills + the upsell ad, then the payment modal as before.
+      const imgs = previewTeaseImages();
+      if (!imgs.length) { openPrivateRoomPayment(char); return; }
+      const wrap = document.getElementById('preview-tease');
+      const photos = document.getElementById('preview-tease-photos');
+      photos.innerHTML = '';
+      imgs.slice(0, 2).forEach(f => {
+        const img = document.createElement('img');
+        img.src = f.url;
+        img.alt = 'Preview tease';
+        photos.appendChild(img);
+      });
+      wrap.style.display = 'flex';
+      const toPayment = () => { wrap.style.display = 'none'; openPrivateRoomPayment(char); };
+      document.getElementById('preview-tease-private').onclick = toPayment;
+      document.getElementById('preview-tease-group').onclick = () => {
+        wrap.style.display = 'none';
+        if (typeof openBookingModal === 'function') openBookingModal();
+        else openPrivateRoomPayment(char);
+      };
+      document.getElementById('preview-tease-close').onclick = toPayment;
+    }
+
+    function previewTeaseImages() {
+      try {
+        if (typeof plateEngine === 'undefined' || !plateEngine) return [];
+        const character = plateEngine.character || state.activeCharId || 'chloe';
+        return (plateEngine.library.files(character, 'tease') || [])
+          .filter(f => f && f.url && isImagePlate(f.url) &&
+                       (f.variant || '').indexOf('preview-tease') >= 0);
+      } catch (_) { return []; }
     }
 
     function renderChatMessages() {
