@@ -541,9 +541,17 @@
       .room-container.typing-mode .stage-live-overlay {
         display: none;
       }
-      /* PiP sits at top:70px, ~147px tall — keep messages clear of it. */
+      /* Typing mode: collapse history to the last message only,
+         give her video the space instead. */
       .room-container.typing-mode .chat-messages {
-        padding-top: 165px;
+        padding-top: 12px;
+      }
+      .room-container.typing-mode .chat-messages > *:not(:last-child) {
+        display: none;
+      }
+      /* Bigger PiP now that history is collapsed. */
+      .room-container.typing-mode .stage-panel {
+        width: 160px;
       }
     }
     .stage-video {
