@@ -1951,7 +1951,7 @@
     const BRANCH_CLIPS = {
       coffee_rest:      ['branch-coffee-rest'],    // C1 seamless loop (2.5s)
       coffee_sip:       ['branch-coffee-sip'],     // C2 trimmed sip (4.79s)
-      typing_rest:      ['branch-typing-loop'],   // T2 seamless loop (2.33s)
+      typing_rest:      ['branch-typing-alt'],    // user pick: clean alt typing loop
       tidy_f1:          ['branch-tidy-f1'],       // F1 folding, seamless loop (6.79s, branch-only)
       tidy_f2:          ['tidy-f2'],              // F3 folding (3.79s, also in free rotation)
       tidy_f3:          ['tidy-f3'],              // F4 folding (4.50s, also in free rotation)
@@ -2792,7 +2792,7 @@
       _pool() {
         const files = this._lib().filter(f => f && f.url && !isImagePlate(f.url));
         const V = f => String((f && f.variant) || '');
-        const loops = files.filter(f => V(f) === 'branch-typing-loop' || V(f) === 'branch-typing-alt');
+        const loops = files.filter(f => V(f) === 'branch-typing-alt');
         const FOLD = ['tidy-f1', 'tidy-f2', 'tidy-f3', 'tidy-f4', 'tidy-f5'];
         const acts = files.filter(f => V(f).indexOf('-act-') !== -1 || FOLD.indexOf(V(f)) !== -1);
         const lookAB = files.filter(f => V(f) === 'branch-look-a' || V(f) === 'branch-look-b');
@@ -2950,7 +2950,7 @@
           if (freeBedroom.start(plateEngine.character)) {
             try {
               const files = plateEngine.library.files(plateEngine.character, 'idle') || [];
-              files.filter(f => f.variant === 'branch-typing-loop' || f.variant === 'branch-typing-alt')
+              files.filter(f => f.variant === 'branch-typing-alt')
                 .forEach(f => { if (f.url) idleStream._preload(f.url); });
             } catch (_) {}
             return;
@@ -2974,7 +2974,7 @@
         const files = plateEngine.library.files(plateEngine.character, 'idle');
         if (idleStream.start(plateEngine.character, files)) {
           // Warm both typing mains so the typing-sync cut is instant on first use.
-          (files || []).filter(f => f.variant === 'branch-typing-loop' || f.variant === 'branch-typing-alt')
+          (files || []).filter(f => f.variant === 'branch-typing-alt')
             .forEach(f => { if (f.url) idleStream._preload(f.url); });
           return;
         }
@@ -3072,7 +3072,7 @@
           const files = plateEngine.library.files(plateEngine.character, beat) || [];
           hits = files.filter(f => f && f.url && !isImagePlate(f.url) &&
             (variant ? f.variant === variant
-                     : (f.variant === 'branch-typing-loop' || f.variant === 'branch-typing-alt')));
+                     : f.variant === 'branch-typing-alt'));
         } catch (_) {}
         if (!hits.length) continue;
         // Alternate when multiple takes share the variant (typing mains, etc.)
