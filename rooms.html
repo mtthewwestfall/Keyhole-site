@@ -511,32 +511,35 @@
       height: 100%;
       object-fit: contain;
     }
-    /* Typing mode (mobile): keep her visible while the keyboard is up.
-       The stage shrinks to a compact strip pinned at the top. */
+    /* Typing mode (mobile): FaceTime-style PiP. She shrinks to a small
+       floating square in the top-left while the keyboard is up. */
     @media (max-width: 819px) {
       .room-container.typing-mode .stage-panel {
-        position: sticky;
-        top: 0;
-        z-index: 20;
+        position: fixed;
+        top: 70px;
+        left: 12px;
+        width: 110px;
+        z-index: 50;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        border: 1px solid rgba(255,255,255,0.15);
       }
       .room-container.typing-mode .stage-media-wrap {
-        aspect-ratio: auto;
-        height: 170px;
+        aspect-ratio: 3/4;
+        height: auto;
       }
       .room-container.typing-mode .stage-media-wrap .stage-video,
       .room-container.typing-mode .stage-media-wrap .stage-fallback-img {
         object-fit: cover;
-        object-position: center 30%;
+        object-position: center 25%;
       }
       .room-container.typing-mode .stage-bar,
       .room-container.typing-mode .stage-grain,
       .room-container.typing-mode .stage-watermark,
-      .room-container.typing-mode .stage-cam-tag {
+      .room-container.typing-mode .stage-cam-tag,
+      .room-container.typing-mode .stage-live-overlay {
         display: none;
-      }
-      .room-container.typing-mode .chat-panel {
-        height: calc(100dvh - 170px - 65px);
-        min-height: 0;
       }
     }
     .stage-video {
