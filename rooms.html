@@ -1714,6 +1714,7 @@
       await syncAccountEntitlement();
       await loadMyBookings();
       maybeResumePendingPrivate();
+      resumeShowTimerIfNeeded();
       if (!liveBadgeTimer) {
         liveBadgeTimer = setInterval(() => { renderMyShows(); updateLiveOverlay(); }, 30000);
       }
@@ -3262,6 +3263,18 @@
       if (showTimerInterval) { clearInterval(showTimerInterval); showTimerInterval = null; }
       const el = document.getElementById('show-time-left');
       if (el) el.style.display = 'none';
+    }
+    function resumeShowTimerIfNeeded() {
+      // After a reload mid-show: restart the countdown from the saved start time.
+      try {
+        if (state.showMode === 'show' && !state.groupShow && state.showStartedAt > 0) {
+          const el = document.getElementById('show-time-left');
+          if (el) el.style.display = '';
+          updateShowTimer();
+          if (showTimerInterval) clearInterval(showTimerInterval);
+          showTimerInterval = setInterval(updateShowTimer, 1000);
+        }
+      } catch (_) {}
     }
     function updateShowTimer() {
       const el = document.getElementById('show-time-left');
