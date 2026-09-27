@@ -3028,9 +3028,19 @@
       if (typeof VoicePresets === 'undefined') return voiceState.presets[charId];
       try {
         const res = await fetch(VoicePresets.presetDir(charId) + '/presets.json', { cache: 'no-store' });
-        if (!res.ok) return voiceState.presets[charId];
-        voiceState.presets[charId] = VoicePresets.normalizeManifest(charId, await res.json());
+        if (res.ok) voiceState.presets[charId] = VoicePresets.normalizeManifest(charId, await res.json());
       } catch (_) { /* voice stays silent; video is unaffected */ }
+      // Merge in the 96 banked Grok reply lines alongside the presets.
+      try {
+        const res2 = await fetch('voice-lines/manifest.json', { cache: 'no-store' });
+        if (res2.ok) {
+          const banked = await res2.json();
+          const extra = (Array.isArray(banked) ? banked : [])
+            .filter(function (e) { return e && e.file; })
+            .map(function (e) { return { id: e.id, text: e.text || '', url: e.file }; });
+          voiceState.presets[charId] = voiceState.presets[charId].concat(extra);
+        }
+      } catch (_) { /* banked lines are optional */ }
       return voiceState.presets[charId];
     }
 
