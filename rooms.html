@@ -3514,18 +3514,18 @@
       saveSessionState();
       renderChatMessages();
 
-      noteUserMessage(); // resets the idle timer; pulls her back from coffee to the keyboard
-      triggerReactionClip();
-
-      // If she's mid-folding, finish the fold then cut straight to
-      // typing main and reply. No waiting scene.
+      // If she's mid-folding, don't touch the video — let the fold finish
+      // naturally, then cut to typing and reply.
       if (isTidyingPlaying()) {
         pendingTidyingResponse = char;
         waitForTidyingDone(() => {
           pendingTidyingResponse = null;
+          noteUserMessage();
           generateCharacterResponse(char);
         });
       } else {
+        noteUserMessage(); // resets the idle timer; pulls her back from coffee to the keyboard
+        triggerReactionClip();
         setTimeout(() => {
           generateCharacterResponse(char);
         }, 700);
