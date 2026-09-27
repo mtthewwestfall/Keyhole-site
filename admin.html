@@ -622,7 +622,6 @@
       <div class="admin-card">
         <div class="card-title">
           <span>WebCam Shows & Booking Control Center</span>
-          <button id="btn-demo-simulate" class="btn btn-teal">Simulate Private Request</button>
         </div>
         <p class="card-subtitle">Manage private show requests, schedule public shows, control start/end transitions, and approve previews for Telegram/Website publishing.</p>
 
@@ -2611,12 +2610,6 @@
         updateGeminiPrompt();
       });
 
-      document.getElementById('btn-demo-simulate').addEventListener('click', async () => {
-        try {
-          const d = await api('/admin/keyhole/shows/demo-simulate', { body: { action: 'private_request' } });
-          if (d.show) replaceShow(d.show); else await loadShows();
-        } catch (e) { alert(`Demo request failed: ${e.message}`); }
-      });
 
       document.getElementById('btn-create-pub-show').addEventListener('click', async () => {
         try {
