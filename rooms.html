@@ -1916,6 +1916,7 @@
        `variant` (e.g. "branch-coffee-rest"). No local paths, no hardcoded URLs.
        Her voice runs through the whole show; chat texts wait for the voice and
        send together, falling back to text alone if voice never comes back. */
+    let goodbyeAltFlip = false; // alternate the two goodbye waves, one per show
 
     const BRANCH = {
       enabled: true,
@@ -1961,7 +1962,7 @@
       give_knees_down:  ['branch-give-knees-down'], // G3: lie-back once + 10s still, one-shot opener
       give_action_1:    ['branch-give-crawl'],    // crawl closer (give beat)
       give_action_2:    ['branch-give-lift'],     // slow lift   (give beat)
-      goodbye:          ['branch-goodbye-wave'],  // seated wave, show over
+      goodbye:          ['branch-give-goodbye'],  // two seated waves, alternate one per show
     };
 
     /* Fallback durations (seconds) until real metadata resolves. */
@@ -2179,12 +2180,24 @@
                         variant: this.clips[r].variant });
           pt += this.dur[r] || 8;
         }
-        if (this.clips.goodbye) {
-          script.push({ kind: 'clip', role: 'goodbye', url: this.clips.goodbye.url,
-                        variant: this.clips.goodbye.variant });
+        const gb = this._pickGoodbye();
+        if (gb) {
+          script.push({ kind: 'clip', role: 'goodbye', url: gb.url, variant: gb.variant });
         }
         script.push({ kind: 'action', name: 'show_over' });
         return script;
+      },
+
+      /* Two goodbye waves alternate, one per show. Falls back to the resolved
+         single clip if only one is uploaded. */
+      _pickGoodbye() {
+        try {
+          const files = plateEngine.library.files(BRANCH.character, 'give') || [];
+          const waves = files.filter(f => f.variant === 'branch-give-goodbye');
+          if (!waves.length) return this.clips.goodbye;
+          goodbyeAltFlip = !goodbyeAltFlip;
+          return waves[goodbyeAltFlip ? 1 : 0] || waves[0];
+        } catch (_) { return this.clips.goodbye; }
       },
 
       /* ---- playback: two-layer hard-cut machinery (multicam illusion) ---- */
