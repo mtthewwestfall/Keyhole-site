@@ -643,11 +643,11 @@
     }
     .chat-messages {
       flex: 1;
-      padding: 18px;
+      padding: 12px 14px;
       overflow-y: auto;
       display: flex;
       flex-direction: column;
-      gap: 14px;
+      gap: 3px;
     }
     .typing-dots span {
       animation: typingBlink 1.2s infinite;
@@ -658,24 +658,25 @@
     .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
     @keyframes typingBlink { 0%, 60%, 100% { opacity: 0.2; } 30% { opacity: 1; } }
     .chat-bubble {
-      max-width: 85%;
-      padding: 12px 16px;
-      border-radius: 8px;
-      font-size: 0.9rem;
-      line-height: 1.45;
+      max-width: 75%;
+      padding: 8px 14px;
+      border-radius: 19px;
+      font-size: 0.95rem;
+      line-height: 1.4;
       word-break: break-word;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
     }
     .bubble-model {
       align-self: flex-start;
-      background: rgba(18, 16, 14, 0.6);
-      border: 1px solid var(--line);
-      color: var(--ink);
+      background: #2C2C2E;
+      color: #fff;
+      border-bottom-left-radius: 4px;
     }
     .bubble-user {
       align-self: flex-end;
-      background: var(--gold);
-      color: var(--bg-charcoal);
-      font-weight: 500;
+      background: #007AFF;
+      color: #fff;
+      border-bottom-right-radius: 4px;
     }
     .bubble-system {
       align-self: center;
@@ -841,32 +842,45 @@
     }
 
     .chat-input-wrap {
-      padding: 14px 18px;
+      padding: 8px 12px;
       background: rgba(0,0,0,0.2);
       border-top: 1px solid var(--line);
       display: flex;
-      gap: 10px;
+      gap: 8px;
+      align-items: center;
     }
     .chat-input {
       flex: 1;
-      background: var(--bg-charcoal);
-      border: 1px solid var(--line);
-      color: var(--ink);
-      padding: 10px 14px;
-      border-radius: 4px;
+      background: transparent;
+      border: 1px solid #3A3A3C;
+      color: #fff;
+      padding: 8px 14px;
+      border-radius: 19px;
       outline: none;
+      font-size: 0.95rem;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
+    }
+    .chat-input::placeholder {
+      color: #8E8E93;
     }
     .chat-input:focus {
-      border-color: var(--gold);
+      border-color: #007AFF;
     }
     .btn-send {
-      background: var(--cream);
-      color: var(--bg-charcoal);
+      background: #007AFF;
+      color: #fff;
       border: none;
-      padding: 0 18px;
-      border-radius: 4px;
+      width: 32px;
+      height: 32px;
+      min-width: 32px;
+      border-radius: 50%;
+      font-size: 1.1rem;
       font-weight: 600;
       cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
     }
 
     /* Modal Gate */
@@ -1137,8 +1151,8 @@
         <div class="chat-messages" id="chat-messages"></div>
 
         <div class="chat-input-wrap">
-          <input type="text" id="chat-input" class="chat-input" placeholder="Type a message..." maxlength="280" />
-          <button id="chat-send-btn" class="btn-send">Send</button>
+          <input type="text" id="chat-input" class="chat-input" placeholder="AI message" maxlength="280" />
+          <button id="chat-send-btn" class="btn-send" aria-label="Send">&#8593;</button>
         </div>
       </div>
     </div>
