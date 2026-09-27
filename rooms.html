@@ -2309,6 +2309,8 @@
 
       _openGallery(imgs) {
         this.galleryOpen = true;
+        // Gallery browsing is part of the paid show: the clock keeps running.
+        this._galleryOpenedAt = Date.now();
         // Freeze the stage behind the gallery.
         for (const v of this._layers()) {
           if (!v) continue;
@@ -2332,7 +2334,9 @@
           document.getElementById('lingerie-gallery-next').onclick = null;
           document.getElementById('lingerie-gallery-close').onclick = null;
           this.galleryOpen = false;
-          // Back to her sitting in the give main, then the wave.
+          // The show kept running while they browsed: skip ahead by the
+          // elapsed gallery time, then rejoin wherever the show is now.
+          this._skipAheadByGalleryTime();
           this._playCurrent();
         };
         document.getElementById('lingerie-gallery-prev').onclick = () => {
@@ -2344,6 +2348,28 @@
         document.getElementById('lingerie-gallery-close').onclick = close;
         gal.style.display = 'flex';
         render();
+      },
+
+      /* Gallery time counts against the show: walk the script forward by
+         the seconds spent browsing, so closing the gallery rejoins the live
+         show instead of rewinding to where it was frozen. */
+      _skipAheadByGalleryTime() {
+        if (!this._galleryOpenedAt) return;
+        let remaining = (Date.now() - this._galleryOpenedAt) / 1000;
+        this._galleryOpenedAt = 0;
+        if (!(remaining > 0) || !this.active) return;
+        // Start from the next item: don't double-count the partially-played clip.
+        let i = this.idx + 1;
+        while (remaining > 0 && i < this.script.length) {
+          const it = this.script[i];
+          if (!it || it.kind !== 'clip') break;
+          const d = this.dur[it.role] || 0;
+          if (!(d > 0) || remaining < d) break;
+          remaining -= d;
+          i++;
+        }
+        // Land _playCurrent on the first item not fully consumed by gallery time.
+        this.idx = Math.min(i, this.script.length - 1);
       },
 
       /* ---- show over: straight into the 100 messages ---- */
