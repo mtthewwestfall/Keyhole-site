@@ -3481,13 +3481,23 @@
     }
 
     function waitForTidyingDone(callback) {
-      // Poll until she's done folding, then switch to typing and respond.
+      // Wait for the folding scene to actually finish on screen — not just the
+      // script index advancing (which happens before the next clip loads).
       const check = () => {
-        if (!isTidyingPlaying()) {
-          callback();
-        } else {
-          setTimeout(check, 1000);
-        }
+        try {
+          const p = (typeof activePlayer === 'function') ? activePlayer() : null;
+          const item = (p && p.script && p.idx >= 0 && p.idx < p.script.length) ? p.script[p.idx] : null;
+          const isTidyItem = item && item.role && item.role.indexOf('tidy_') === 0;
+          // Script still on a tidy item — keep waiting.
+          if (isTidyItem) { setTimeout(check, 500); return; }
+          // Script moved past tidy, but the new clip may still be loading.
+          // Wait until the stage is actually showing it.
+          if (item && item.url && typeof stageShows === 'function' && !stageShows(item.url)) {
+            setTimeout(check, 500);
+            return;
+          }
+        } catch (_) {}
+        callback();
       };
       check();
     }
