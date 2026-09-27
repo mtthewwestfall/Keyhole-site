@@ -2522,7 +2522,9 @@
       resume() {
         if (!this.session || !this.clips || !this.script.length || this.idx < 0) return false;
         this.active = true;
-        this._advance();
+        // Replay the current item, don't skip ahead. If we were mid-folding
+        // cycle, we stay in the cycle instead of jumping to main.
+        this._playCurrent();
         return true;
       },
 
@@ -3432,9 +3434,34 @@
       elChatMessages.scrollTop = elChatMessages.scrollHeight;
     }
 
+    let pendingTidyingResponse = null;
+
+    function isTidyingPlaying() {
+      try {
+        const p = (typeof activePlayer === 'function') ? activePlayer() : null;
+        if (!p || !p.script || p.idx < 0 || p.idx >= p.script.length) return false;
+        const item = p.script[p.idx];
+        return item && item.role && item.role.indexOf('tidy_') === 0;
+      } catch (_) { return false; }
+    }
+
+    function waitForTidyingDone(callback) {
+      // Poll until she's done folding, then switch to typing and respond.
+      const check = () => {
+        if (!isTidyingPlaying()) {
+          callback();
+        } else {
+          setTimeout(check, 1000);
+        }
+      };
+      check();
+    }
+
     async function handleSendMessage() {
       const text = elChatInput.value.trim();
       if (!text || !state.activeCharId) return;
+
+
 
       if (KeyholeAccount.token()) {
         try { await KeyholeAccount.refresh(); } catch (_) {}
@@ -3468,9 +3495,19 @@
       noteUserMessage(); // resets the idle timer; pulls her back from coffee to the keyboard
       triggerReactionClip();
 
-      setTimeout(() => {
-        generateCharacterResponse(char);
-      }, 700);
+      // If she's mid-folding, wait for the cycle to finish before responding.
+      // She'll switch to the typing main, then reply.
+      if (isTidyingPlaying()) {
+        pendingTidyingResponse = char;
+        waitForTidyingDone(() => {
+          pendingTidyingResponse = null;
+          generateCharacterResponse(char);
+        });
+      } else {
+        setTimeout(() => {
+          generateCharacterResponse(char);
+        }, 700);
+      }
     }
 
     function pushModelMessage(char, text, extra) {
