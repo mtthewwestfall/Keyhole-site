@@ -619,6 +619,13 @@
       justify-content: space-between;
       gap: 12px;
     }
+    .show-time-left {
+      font-variant-numeric: tabular-nums;
+      font-weight: 600;
+      color: var(--room-highlight);
+      font-size: 0.85rem;
+      white-space: nowrap;
+    }
     .message-credits {
       font-size: 0.75rem;
       font-weight: 600;
@@ -1123,6 +1130,7 @@
         <div class="chat-header">
           <span id="chat-header-title">Private Session with Chloe</span>
           <span id="message-credits" class="message-credits" title="Verified email gets 50 free messages while the preview plays. Each paid purchase adds 100. Unused messages roll over.">Messages left: —</span>
+          <span id="show-time-left" class="show-time-left" style="display:none;" title="Show time remaining">—</span>
           <span class="muted" style="font-size:0.75rem;" id="chat-status-text">Connected</span>
         </div>
 
@@ -1392,6 +1400,7 @@
       roomMode: 'living_room',
       showMode: 'preview', // 'preview' = free bedroom rotation, 'show' = paid show
       showMinutes: 30, // purchased show length; the give finale starts in its last 20%
+      showStartedAt: 0, // timestamp when the current paid show began
       previewSecondsLeft: CONFIG.defaultPreviewSeconds,
       isVerifiedMember: false,
       paidUnlocked: false,
@@ -1746,6 +1755,7 @@
       elNavBadge.textContent = 'KEYHOLE';
       elNavBadge.className = 'badge badge-member';
       if (timerInterval) clearInterval(timerInterval);
+      try { stopShowTimer(); } catch (_) {}
       stopVoiceScheduler();
     }
 
@@ -2377,6 +2387,7 @@
         this.active = false;
         this.locked = false;
         this.galleryOpen = false;
+        try { stopShowTimer(); } catch (_) {}
         state.showMode = 'preview';
         state.paidUnlocked = false;
         state.groupShow = null;
@@ -3177,6 +3188,33 @@
       // Voice only plays when it matches displayed text — no random greeting or gap fillers.
     }
 
+    /* Paid show countdown: wall-clock from show start. Gallery browsing,
+       reaction clips, everything counts — the timer never pauses. */
+    let showTimerInterval = null;
+    function startShowTimer() {
+      stopShowTimer();
+      state.showStartedAt = Date.now();
+      saveSessionState();
+      const el = document.getElementById('show-time-left');
+      if (el) el.style.display = '';
+      updateShowTimer();
+      showTimerInterval = setInterval(updateShowTimer, 1000);
+    }
+    function stopShowTimer() {
+      if (showTimerInterval) { clearInterval(showTimerInterval); showTimerInterval = null; }
+      const el = document.getElementById('show-time-left');
+      if (el) el.style.display = 'none';
+    }
+    function updateShowTimer() {
+      const el = document.getElementById('show-time-left');
+      if (!el || state.showMode !== 'show' || state.groupShow) { stopShowTimer(); return; }
+      const total = (Number(state.showMinutes) > 0 ? Number(state.showMinutes) : 30) * 60;
+      const elapsed = state.showStartedAt > 0 ? (Date.now() - state.showStartedAt) / 1000 : 0;
+      const left = Math.max(0, Math.floor(total - elapsed));
+      const m = Math.floor(left / 60), s = left % 60;
+      el.textContent = m + ':' + String(s).padStart(2, '0') + ' left';
+      if (left <= 0) stopShowTimer();
+    }
     function startPreviewTimer() {
       if (timerInterval) clearInterval(timerInterval);
       if (state.roomMode === 'bedroom' || state.isVerifiedMember) {
@@ -4013,6 +4051,7 @@
       saveSessionState();
       appendSystemMessage(`Payment confirmed — ${char.name}'s private show is starting.`);
       renderRoomView();
+      startShowTimer();
     }
 
     async function checkPaidAndEnter() {
