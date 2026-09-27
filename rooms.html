@@ -123,6 +123,7 @@
     .view-section {
       display: none;
       min-height: calc(100vh - 65px);
+      min-height: calc(100dvh - 65px);
     }
     .view-section.active {
       display: block;
@@ -458,6 +459,7 @@
       grid-template-columns: 1fr;
       gap: 0;
       min-height: calc(100vh - 65px);
+      min-height: calc(100dvh - 65px);
     }
     @media (min-width: 820px) {
       .room-container {
@@ -886,6 +888,7 @@
 
     .chat-input-wrap {
       padding: 8px 12px;
+      padding-bottom: calc(8px + env(safe-area-inset-bottom));
       background: rgba(0,0,0,0.2);
       border-top: 1px solid var(--line);
       display: flex;
