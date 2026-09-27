@@ -1797,7 +1797,9 @@
       elSwitchBtn.style.display = 'none';
 
       elStageCharName.textContent = char.name;
-      elChatHeaderTitle.textContent = `Private Session with ${char.name}`;
+      elChatHeaderTitle.textContent = (state.showMode === 'show' || state.groupShow)
+        ? `Private Session with ${char.name}`
+        : `Free Preview with ${char.name}`;
       elFooterCharNote.textContent = `${char.name} is a fictional AI personality.`;
 
       // One room: her bedroom. Preview is non-explicit; payment unlocks private + group shows.
@@ -1811,12 +1813,12 @@
         elNavBadge.className = 'badge badge-live';
         elPreviewBanner.style.display = 'none';
         if (elLeaveGroupBtn) elLeaveGroupBtn.style.display = '';
-      } else if (state.showMode === 'show' || state.paidUnlocked) {
+      } else if (state.showMode === 'show') {
         elNavBadge.textContent = 'Private Show • LIVE';
         elNavBadge.className = 'badge badge-live';
         elPreviewBanner.style.display = 'none';
       } else {
-        elNavBadge.textContent = 'Live Session';
+        elNavBadge.textContent = 'Free Preview • LIVE';
         elNavBadge.className = 'badge badge-live';
         elPreviewBanner.style.display = 'flex';
         document.getElementById('preview-status-label').textContent = 'Free Preview';
