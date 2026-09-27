@@ -511,6 +511,34 @@
       height: 100%;
       object-fit: contain;
     }
+    /* Typing mode (mobile): keep her visible while the keyboard is up.
+       The stage shrinks to a compact strip pinned at the top. */
+    @media (max-width: 819px) {
+      .room-container.typing-mode .stage-panel {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+      }
+      .room-container.typing-mode .stage-media-wrap {
+        aspect-ratio: auto;
+        height: 170px;
+      }
+      .room-container.typing-mode .stage-media-wrap .stage-video,
+      .room-container.typing-mode .stage-media-wrap .stage-fallback-img {
+        object-fit: cover;
+        object-position: top center;
+      }
+      .room-container.typing-mode .stage-bar,
+      .room-container.typing-mode .stage-grain,
+      .room-container.typing-mode .stage-watermark,
+      .room-container.typing-mode .stage-cam-tag {
+        display: none;
+      }
+      .room-container.typing-mode .chat-panel {
+        height: calc(100dvh - 170px - 65px);
+        min-height: 0;
+      }
+    }
     .stage-video {
       position: absolute;
       inset: 0;
@@ -1154,6 +1182,19 @@
           <input type="text" id="chat-input" class="chat-input" placeholder="AI message" maxlength="280" />
           <button id="chat-send-btn" class="btn-send" aria-label="Send">&#8593;</button>
         </div>
+        <script>
+        (function() {
+          var input = document.getElementById('chat-input');
+          var container = document.querySelector('.room-container');
+          if (!input || !container) return;
+          input.addEventListener('focus', function() {
+            container.classList.add('typing-mode');
+          });
+          input.addEventListener('blur', function() {
+            container.classList.remove('typing-mode');
+          });
+        })();
+        </script>
       </div>
     </div>
   </section>
