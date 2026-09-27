@@ -3029,33 +3029,50 @@
        describes a physical action, play the clip that shows it — matched
        by keyword against the give library — instead of a random rotation
        clip or a gaze hold. Returns true if a matched clip took the stage. */
+    // True when the paid show is inside its give window (last give_pct%).
+    function inGiveWindow() {
+      try {
+        if (state.showMode !== 'show' || state.groupShow) return false;
+        if (!state.showStartedAt || !state.showMinutes) return false;
+        const elapsed = Date.now() - state.showStartedAt;
+        const total = Number(state.showMinutes) * 60 * 1000;
+        if (!(total > 0)) return false;
+        const pct = (typeof BRANCH !== 'undefined' && BRANCH.give_pct) || 20;
+        return elapsed >= total * (1 - pct / 100);
+      } catch (_) { return false; }
+    }
+
+    let replyTypingFlip = false; // alternate the two typing give mains
     function playActionClipForReply(text) {
       if (state.showMode !== 'show' || state.groupShow) return false;
       if (typeof plateEngine === 'undefined' || !plateEngine || !plateEngine.library) return false;
       const t = String(text || '').toLowerCase().replace(/\*/g, '');
       if (!t) return false;
-      // keyword phrases -> fragment to find in the give clip's title
+      const giveTime = inGiveWindow();
+      // keyword phrases -> variant tag (variants are reliable; titles are not).
+      // Explicit give clips only fire inside the give window (last 20%).
       const MAP = [
-        { k: ['top off', 'taking it off', 'take it off', 'taking off', 'pulling my tank', 'tank top over my head', 'shirt off', 'slipping it off', 'nothing underneath', 'peeling it off', 'lifting it over'], title: 'shirt off' },
-        { k: ['crawl'], title: 'crawling' },
-        { k: ['lift tease', 'lifting my top', 'lift my top'], title: 'lift tease' },
-        { k: ['arch my back', 'arching'], title: 'arch' },
-        { k: ['over the shoulder', 'over my shoulder', 'look back'], title: 'shoulder' },
-        { k: ['body roll', 'rolling my body'], title: 'body roll' },
-        { k: ['hip sway', 'sway my hips', 'swaying my hips'], title: 'hip sway' },
-        { k: ['on the floor', 'floor'], title: 'sitting on floor' },
-        { k: ['cross-legged', 'cross legged'], title: 'cross-legged' },
-        { k: ['bed edge', 'edge of the bed'], title: 'bed edge' },
+        { k: ['top off', 'taking it off', 'take it off', 'taking off', 'shirt off', 'slipping it off', 'nothing underneath', 'peeling it off'], variant: 'branch-give-main-v2', explicit: true },
+        { k: ['crawl'], variant: 'branch-give-crawl', explicit: true },
+        { k: ['lift tease', 'lifting my top', 'lift my top', 'slow lift'], variant: 'branch-give-lift', explicit: true },
+        { k: ['knees down', 'lie back', 'lying back'], variant: 'branch-give-knees-down', explicit: true },
+        { k: ['typing', 'on my laptop', 'at my laptop'], variant: 'branch-give-typing-main', explicit: false },
       ];
       for (const m of MAP) {
         if (!m.k.some(kw => t.indexOf(kw) !== -1)) continue;
-        let hit = null;
+        if (m.explicit && !giveTime) continue; // hold the give to the last 20%
+        let hits = [];
         try {
           const files = plateEngine.library.files(plateEngine.character, 'give') || [];
-          hit = files.find(f => f && f.url && !isImagePlate(f.url) &&
-            String(f.title || '').toLowerCase().indexOf(m.title) !== -1);
+          hits = files.filter(f => f && f.url && !isImagePlate(f.url) && f.variant === m.variant);
         } catch (_) {}
-        if (!hit) continue;
+        if (!hits.length) continue;
+        // Alternate when multiple takes share the variant (typing mains, etc.)
+        let hit = hits[0];
+        if (hits.length > 1 && m.variant === 'branch-give-typing-main') {
+          replyTypingFlip = !replyTypingFlip;
+          hit = hits[replyTypingFlip ? 1 : 0] || hits[0];
+        }
         try {
           const p = activePlayer();
           if (p && (p.locked || p.galleryOpen)) return false; // never interrupt the finale
