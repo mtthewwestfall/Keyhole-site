@@ -3164,6 +3164,7 @@
         try {
           const p = activePlayer();
           if (p && (p.locked || p.galleryOpen)) return false; // never interrupt the finale
+          if (typeof isTidyingPlaying === 'function' && isTidyingPlaying()) return false; // never cut a folding scene
           if (p) p.suspendForCut();
           reportPlatePlay(hit.url, hit.variant);
           const char = CHARACTERS[state.activeCharId];
