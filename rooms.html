@@ -3056,20 +3056,28 @@
         { k: ['crawl'], variant: 'branch-give-crawl', explicit: true },
         { k: ['lift tease', 'lifting my top', 'lift my top', 'slow lift'], variant: 'branch-give-lift', explicit: true },
         { k: ['knees down', 'lie back', 'lying back'], variant: 'branch-give-knees-down', explicit: true },
-        { k: ['typing', 'on my laptop', 'at my laptop'], variant: 'branch-give-typing-main', explicit: true },
+        { k: ['typing', 'on my laptop', 'at my laptop'], variant: 'branch-give-typing-main', explicit: true, phaseAware: true },
       ];
       for (const m of MAP) {
         if (!m.k.some(kw => t.indexOf(kw) !== -1)) continue;
-        if (m.explicit && !giveTime) continue; // hold the give to the last 20%
+        if (m.explicit && !giveTime && !m.phaseAware) continue; // hold the give to the last 20%
         let hits = [];
         try {
-          const files = plateEngine.library.files(plateEngine.character, 'give') || [];
-          hits = files.filter(f => f && f.url && !isImagePlate(f.url) && f.variant === m.variant);
+          // Phase-aware typing: topless typing mains during the give, clothed
+          // typing loops before it. Every other explicit clip stays give-only.
+          const beat = (m.phaseAware && !giveTime) ? 'idle' : 'give';
+          const variant = (m.phaseAware && !giveTime)
+            ? null // any clothed typing loop
+            : m.variant;
+          const files = plateEngine.library.files(plateEngine.character, beat) || [];
+          hits = files.filter(f => f && f.url && !isImagePlate(f.url) &&
+            (variant ? f.variant === variant
+                     : (f.variant === 'branch-typing-loop' || f.variant === 'branch-typing-alt')));
         } catch (_) {}
         if (!hits.length) continue;
         // Alternate when multiple takes share the variant (typing mains, etc.)
         let hit = hits[0];
-        if (hits.length > 1 && m.variant === 'branch-give-typing-main') {
+        if (hits.length > 1) {
           replyTypingFlip = !replyTypingFlip;
           hit = hits[replyTypingFlip ? 1 : 0] || hits[0];
         }
