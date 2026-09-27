@@ -1937,7 +1937,8 @@
       character: 'chloe',
       give_pct: 20,           // give finale occupies the last N% of the show
       show_length_min: 30,    // planning length; sessions may run shorter/longer
-      typing_hold_s: 150,     // typing gets more airtime than coffee
+      typing_hold_s: 150,
+      presence_hold_s: 25,    // gaze-at-camera hold between coffee branches     // typing gets more airtime than coffee
       coffee_hold_s: 60,
       tidying_hold_s: 30,     // tidying plays ONCE per show (the 5 folding clips, ~27s)
       sip_interval_s: 12.5,   // coffee rest bursts between sips (C1 loop is 2.5s x5)
@@ -2064,11 +2065,14 @@
 
       _holdFor(s) {
         return s === 'coffee' ? BRANCH.coffee_hold_s
+             : s === 'presence' ? BRANCH.presence_hold_s
              : s === 'typing' ? BRANCH.typing_hold_s : BRANCH.tidying_hold_s;
       },
 
       _restRoles(s) {
         if (s === 'coffee') return ['coffee_rest'];
+        if (s === 'presence') return ['look_a', 'look_hold_a', 'look_b', 'look_hold_b']
+          .filter(r => this.clips[r]);
         if (s === 'typing') return ['typing_rest'];
         // Tidying plays ONCE per show: the five folding clips in sequence,
         // no internal loops (0.25s dip-to-black between clips at play time).
@@ -2091,10 +2095,13 @@
         return t;
       },
 
-      /* Pre-give state sequence: typing/coffee alternate back-and-forth
-         (typing holds are longer, so there's more of it); tidying is inserted
-         ONCE when the timeline crosses the midpoint. */
+      /* Pre-give state sequence: presence/coffee alternate back-and-forth;
+         tidying is inserted ONCE when the timeline crosses the midpoint.
+         Typing never appears here -- only via typingTakeover while composing. */
       _stateSequence(pregiveSec, includeTidy) {
+        // Typing is NEVER ambient: she is only shown typing while actually
+        // composing a reply (typingTakeover). The scheduled pre-give cycles
+        // presence (gaze at camera) and coffee; tidying inserts once at midpoint.
         const seq = [];
         let t = 0, turn = 0, tidyDone = !includeTidy;
         const tidyAt = pregiveSec / 2;
@@ -2102,7 +2109,7 @@
         while (t < pregiveSec && guard++ < 500) {
           let s;
           if (!tidyDone && t >= tidyAt) { s = 'tidying'; tidyDone = true; }
-          else { s = (turn % 2 === 0) ? 'typing' : 'coffee'; turn++; }
+          else { s = (turn % 2 === 0) ? 'presence' : 'coffee'; turn++; }
           const hold = Math.min(this._holdFor(s), pregiveSec - t);
           if (hold < 10) break;
           seq.push({ state: s, hold });
@@ -3067,11 +3074,12 @@
           // typing loops before it. Every other explicit clip stays give-only.
           const beat = (m.phaseAware && !giveTime) ? 'idle' : 'give';
           const variant = (m.phaseAware && !giveTime)
-            ? 'branch-typing-alt' // user's pick: alt typing loop only, pre-give
+            ? null // any clothed typing loop
             : m.variant;
           const files = plateEngine.library.files(plateEngine.character, beat) || [];
           hits = files.filter(f => f && f.url && !isImagePlate(f.url) &&
-            f.variant === variant);
+            (variant ? f.variant === variant
+                     : (f.variant === 'branch-typing-loop' || f.variant === 'branch-typing-alt')));
         } catch (_) {}
         if (!hits.length) continue;
         // Alternate when multiple takes share the variant (typing mains, etc.)
