@@ -3867,6 +3867,7 @@
     function voiceWaitTakeover() {
       if (voiceBranchUrl) return true;
       if (!voiceWaitAllowed()) return false;
+      if (typeof isTidyingPlaying === 'function' && isTidyingPlaying()) return false;
       endLookBeat();
       const p = activePlayer();
       if (!p) return false;
