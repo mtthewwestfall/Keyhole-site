@@ -1714,7 +1714,6 @@
       await syncAccountEntitlement();
       await loadMyBookings();
       maybeResumePendingPrivate();
-      resumeShowTimerIfNeeded();
       if (!liveBadgeTimer) {
         liveBadgeTimer = setInterval(() => { renderMyShows(); updateLiveOverlay(); }, 30000);
       }
@@ -3264,18 +3263,6 @@
       const el = document.getElementById('show-time-left');
       if (el) el.style.display = 'none';
     }
-    function resumeShowTimerIfNeeded() {
-      // After a reload mid-show: restart the countdown from the saved start time.
-      try {
-        if (state.showMode === 'show' && !state.groupShow && state.showStartedAt > 0) {
-          const el = document.getElementById('show-time-left');
-          if (el) el.style.display = '';
-          updateShowTimer();
-          if (showTimerInterval) clearInterval(showTimerInterval);
-          showTimerInterval = setInterval(updateShowTimer, 1000);
-        }
-      } catch (_) {}
-    }
     function updateShowTimer() {
       const el = document.getElementById('show-time-left');
       if (!el || state.showMode !== 'show' || state.groupShow) { stopShowTimer(); return; }
@@ -3534,11 +3521,10 @@
       let hit = null;
       try {
         const files = plateEngine.library.files(plateEngine.character, 'idle') || [];
-        // Two typing mains alternate: T2 (branch-typing-loop) <-> alt (branch-typing-alt).
-        // Falls back to whichever exists if only one is uploaded.
-        const loops = files.filter(f => f.variant === 'branch-typing-loop' || f.variant === 'branch-typing-alt');
-        typingAltFlip = !typingAltFlip;
-        hit = loops[typingAltFlip ? 1 : 0] || loops[0] || null;
+        // User's pick: alt typing loop only (branch-typing-alt). Falls back to
+        // T2 only if the alt is missing.
+        const loops = files.filter(f => f.variant === 'branch-typing-alt');
+        hit = loops[0] || files.find(f => f.variant === 'branch-typing-loop') || null;
       } catch (_) { /* fall through */ }
       if (!hit || !hit.url) return;
       idleStream.suspendForCut();
@@ -3557,11 +3543,19 @@
       if (!typingTakeoverUntil) return;
       typingTakeoverUntil = 0;
       typingOnStage = false;
-      try { elStageVideo.pause(); } catch (_) {}
-      // Director: the reply landed, so she does one NEW activity, then holds
-      // her smile. resume() is never used here -- it must not advance activities.
-      if (freeBedroomActive()) { freeBedroom.replyLanded(); return; }
-      if (typeof idleStream !== 'undefined') idleStream.resume();
+      // Smooth handoff: brief dip instead of a hard jump cut.
+      try {
+        elStageVideo.style.transition = 'opacity 0.3s';
+        elStageVideo.style.opacity = '0';
+      } catch (_) {}
+      setTimeout(() => {
+        try { elStageVideo.pause(); } catch (_) {}
+        try { elStageVideo.style.transition = ''; } catch (_) {}
+        // Director: the reply landed, so she does one NEW activity, then holds
+        // her smile. resume() is never used here -- it must not advance activities.
+        if (freeBedroomActive()) { freeBedroom.replyLanded(); return; }
+        if (typeof idleStream !== 'undefined') idleStream.resume();
+      }, 320);
     }
     setInterval(() => {
       if (typingTakeoverUntil && Date.now() > typingTakeoverUntil) endTypingTakeover();
