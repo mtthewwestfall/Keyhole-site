@@ -2002,6 +2002,11 @@
       tidy_f3:          ['tidy-f3'],              // F4 folding (4.50s, also in free rotation)
       tidy_f4:          ['tidy-f4'],              // F5 folding (6.21s, also in free rotation)
       tidy_f5:          ['tidy-f5'],              // F7 hanging (5.54s, also in free rotation)
+      waiting_1:        ['branch-waiting'],       // waiting 1 (7.25s)
+      waiting_2:        ['branch-waiting'],       // waiting 2 (7.25s)
+      waiting_3:        ['branch-waiting'],       // waiting 3 (7.25s)
+      waiting_4:        ['branch-waiting'],       // waiting 4 (7.25s)
+      waiting_5:        ['branch-waiting'],       // waiting 5 (7.25s)
       bridge_coffee_typing: ['branch-b1'],        // B1
       bridge_typing_coffee: ['branch-b2'],        // B2
       bridge_typing_tidying: null,                // D1-based B8 retired with the folding branch
@@ -2108,6 +2113,7 @@
       },
 
       _holdFor(s) {
+        if (s === 'waiting') return 7;
         return s === 'coffee' ? BRANCH.coffee_hold_s
              : s === 'typing' ? BRANCH.typing_hold_s : BRANCH.tidying_hold_s;
       },
@@ -2115,6 +2121,7 @@
       _restRoles(s) {
         if (s === 'coffee') return ['coffee_rest'];
         if (s === 'typing') return ['typing_rest'];
+        if (s === 'waiting') return ['waiting_1', 'waiting_2', 'waiting_3', 'waiting_4', 'waiting_5'].filter(r => this.clips[r]);
         // Tidying plays ONCE per show: the five folding clips in sequence,
         // no internal loops (0.25s dip-to-black between clips at play time).
         return ['tidy_f1', 'tidy_f2', 'tidy_f3', 'tidy_f4', 'tidy_f5']
@@ -2152,6 +2159,20 @@
           if (hold < 10) break;
           seq.push({ state: s, hold });
           t += hold;
+          // After folding finishes, go straight to typing.
+          if (s === 'tidying' && t < pregiveSec) {
+            const typeHold = Math.min(this._holdFor('typing'), pregiveSec - t);
+            if (typeHold >= 10) {
+              seq.push({ state: 'typing', hold: typeHold });
+              t += typeHold;
+              turn++;
+            }
+          }
+        }
+        // If there's leftover time before the give, she waits — looking at
+        // the camera until the customer responds or the give begins.
+        if (t < pregiveSec - 7) {
+          seq.push({ state: 'waiting', hold: pregiveSec - t });
         }
         return seq;
       },
@@ -3457,6 +3478,7 @@
       check();
     }
 
+
     async function handleSendMessage() {
       const text = elChatInput.value.trim();
       if (!text || !state.activeCharId) return;
@@ -3495,8 +3517,8 @@
       noteUserMessage(); // resets the idle timer; pulls her back from coffee to the keyboard
       triggerReactionClip();
 
-      // If she's mid-folding, wait for the cycle to finish before responding.
-      // She'll switch to the typing main, then reply.
+      // If she's mid-folding, finish the fold then cut straight to
+      // typing main and reply. No waiting scene.
       if (isTidyingPlaying()) {
         pendingTidyingResponse = char;
         waitForTidyingDone(() => {
