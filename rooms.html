@@ -1999,7 +1999,8 @@
                              'bridge_coffee_typing', 'bridge_typing_coffee',
                              'joint_typing_coffee', 'joint_coffee_typing',
                              'look_a', 'look_b', 'look_hold_a', 'look_hold_b'];
-        const needShow = needPreview.concat(['give_knees_down', 'give_main', 'goodbye']);
+        const needShow = needPreview.concat(['give_knees_down', 'give_main']);
+        // 'goodbye' (branch-goodbye-wave) is optional: the show runs without it until a wave clip is tagged.
         const need = (mode === 'show') ? needShow : needPreview;
         for (const role of Object.keys(BRANCH_CLIPS)) {
           const vs = BRANCH_CLIPS[role];
@@ -2148,35 +2149,40 @@
           console.info('[branch] no bridge for ' + lastState + '->give; hard cut');
         }
 
-        // Give opener: knees-down hold, played exactly once (never looped).
+        // Give opener: crawl in, take the shirt off, then the seated main.
+        // Played once each, in order — the striptease before the hold.
+        const openerRoles = ['give_action_1', 'give_action_2'].filter(r => this.clips[r]);
         let openerSec = 0;
-        if (this.clips.give_knees_down) {
-          script.push({ kind: 'clip', role: 'give_knees_down', url: this.clips.give_knees_down.url,
-                        variant: this.clips.give_knees_down.variant });
-          openerSec = this.dur.give_knees_down || 12;
+        for (const r of openerRoles) {
+          script.push({ kind: 'clip', role: r, url: this.clips[r].url,
+                        variant: this.clips[r].variant });
+          openerSec += this.dur[r] || 6;
         }
 
-        // Give body: give main looped, actions interleaved on cadence.
-        const actions = ['give_action_1', 'give_action_2'].filter(r => this.clips[r]);
-        const giveBodySec = Math.max(60, giveSec - 90 - openerSec); // reserve room for the endgame
-        let gt = 0, ai = 0, guard = 0;
+        // Give body: seated shirtless main on loop (breathing, blinking).
+        // Chat stays live the whole time — she keeps replying while this plays.
+        const giveBodySec = Math.max(60, giveSec - 120 - openerSec); // reserve room for gallery + alternation
+        let gt = 0, guard = 0;
         while (gt < giveBodySec && guard++ < 500) {
           const chunk = Math.min(BRANCH.give_action_cadence_s, giveBodySec - gt);
           gt += this._fill(script, ['give_main'], chunk);
-          if (gt < giveBodySec && actions.length) {
-            const a = actions[ai++ % actions.length];
-            script.push({ kind: 'clip', role: a, url: this.clips[a].url, variant: this.clips[a].variant });
-            gt += this.dur[a];
-          }
         }
 
-        // Endgame: lingerie card over the give main -> gallery -> give main
-        // -> goodbye wave -> handoff to chat.
+        // Endgame: lingerie card over the give main -> gallery ->
+        // alternate knees-up / knees-down seated -> goodbye (if tagged) -> handoff.
         script.push({ kind: 'action', name: 'lingerie_card' });
-        script.push({ kind: 'clip', role: 'give_main', url: this.clips.give_main.url,
-                      variant: this.clips.give_main.variant });
-        script.push({ kind: 'clip', role: 'goodbye', url: this.clips.goodbye.url,
-                      variant: this.clips.goodbye.variant });
+        const postRoles = ['give_main', 'give_knees_down'].filter(r => this.clips[r]);
+        let pt = 0, pg = 0;
+        while (pt < 60 && pg++ < 20 && postRoles.length) {
+          const r = postRoles[pg % postRoles.length];
+          script.push({ kind: 'clip', role: r, url: this.clips[r].url,
+                        variant: this.clips[r].variant });
+          pt += this.dur[r] || 8;
+        }
+        if (this.clips.goodbye) {
+          script.push({ kind: 'clip', role: 'goodbye', url: this.clips.goodbye.url,
+                        variant: this.clips.goodbye.variant });
+        }
         script.push({ kind: 'action', name: 'show_over' });
         return script;
       },
