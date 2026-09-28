@@ -1470,7 +1470,7 @@
       activeCharId: null,
       roomMode: 'living_room',
       showMode: 'preview', // 'preview' = free bedroom rotation, 'show' = paid show
-      showMinutes: 30, // purchased show length; the give finale starts in its last 20%
+      showMinutes: 30, // purchased show length; the give finale starts in its last 33%
       showStartedAt: 0, // timestamp when the current paid show began
       previewSecondsLeft: CONFIG.defaultPreviewSeconds,
       isVerifiedMember: false,
@@ -2005,7 +2005,7 @@
     const BRANCH = {
       enabled: true,
       character: 'chloe',
-      give_pct: 20,           // give finale occupies the last N% of the show
+      give_pct: 33,           // give finale occupies the last N% of the show
       show_length_min: 30,    // planning length; sessions may run shorter/longer
       typing_hold_s: 150,     // typing gets more airtime than coffee
       coffee_hold_s: 60,
@@ -3143,7 +3143,7 @@
       if (!t) return false;
       const giveTime = inGiveWindow();
       // keyword phrases -> variant tag (variants are reliable; titles are not).
-      // Explicit give clips only fire inside the give window (last 20%).
+      // Explicit give clips only fire inside the give window (last 33%).
       const MAP = [
         { k: ['top off', 'taking it off', 'take it off', 'taking off', 'shirt off', 'slipping it off', 'nothing underneath', 'peeling it off'], variant: 'branch-give-main-v2', explicit: true },
         { k: ['crawl'], variant: 'branch-give-crawl', explicit: true },
@@ -3153,7 +3153,7 @@
       ];
       for (const m of MAP) {
         if (!m.k.some(kw => t.indexOf(kw) !== -1)) continue;
-        if (m.explicit && !giveTime && !m.phaseAware) continue; // hold the give to the last 20%
+        if (m.explicit && !giveTime && !m.phaseAware) continue; // hold the give to the last 33%
         let hits = [];
         try {
           // Phase-aware typing: topless typing mains during the give, clothed
@@ -4061,7 +4061,10 @@
                 message: lastUser ? lastUser.text : '',
                 history: history.slice(0, -1),
                 voice: true,
-                room: chatRoom
+                room: chatRoom,
+                show_progress: (state.showMode === 'show' && state.showStartedAt > 0 && Number(state.showMinutes) > 0)
+                  ? Math.min(1, Math.max(0, (Date.now() - state.showStartedAt) / (Number(state.showMinutes) * 60 * 1000)))
+                  : 0
               });
               const timeout = new Promise(resolve => setTimeout(() => resolve(null), BRANCH.voice_timeout_ms));
               res = await Promise.race([req, timeout]);
@@ -4088,7 +4091,10 @@
               message: lastUser ? lastUser.text : '',
               history: history.slice(0, -1),
               voice: false,
-              room: chatRoom
+              room: chatRoom,
+              show_progress: (state.showMode === 'show' && state.showStartedAt > 0 && Number(state.showMinutes) > 0)
+                ? Math.min(1, Math.max(0, (Date.now() - state.showStartedAt) / (Number(state.showMinutes) * 60 * 1000)))
+                : 0
             });
           } catch (e) { /* fall through to canned response */ }
           if (res && res.reply) {
