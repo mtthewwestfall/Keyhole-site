@@ -2237,31 +2237,24 @@
       },
 
       _buildPreviewScript() {
-        // Free bedroom: typing is the main. Coffee and folding rotate in as
-        // individual activities, each separated by typing -- one sip at a time,
-        // each folding clip on its own, never stacked back-to-back.
+        // Free bedroom: she lives in her room -- coffee, folding, resting.
+        // Typing ONLY happens via typingTakeover() when she's actually
+        // composing a reply, never as idle filler.
         const script = [];
         const tidyRoles = ['tidy_f1', 'tidy_f2', 'tidy_f3', 'tidy_f4', 'tidy_f5']
           .filter(r => this.clips[r]);
         const coffeeRoles = ['coffee_rest', 'coffee_sip'].filter(r => this.clips[r]);
-        // 12-minute loop: typing blocks with single coffee/folding activities
-        // spaced between them.
         const activities = [];
         if (coffeeRoles.length) activities.push(...coffeeRoles);
         if (tidyRoles.length) activities.push(...tidyRoles);
+        // 12-minute loop: natural activities, one at a time, no typing filler.
         let t = 0;
         const total = 12 * 60;
         let ai = 0;
-        while (t < total) {
-          // Typing block (main)
-          t += this._fill(script, ['typing_rest'], 150);
-          if (t >= total) break;
-          // One activity at a time, then back to typing
-          if (activities.length) {
-            const role = activities[ai % activities.length];
-            t += this._fill(script, [role], 45);
-            ai++;
-          }
+        while (t < total && activities.length) {
+          const role = activities[ai % activities.length];
+          t += this._fill(script, [role], 60);
+          ai++;
           if (t >= total) break;
         }
         return script;
