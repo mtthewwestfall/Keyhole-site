@@ -268,6 +268,11 @@
       line-height: 1;
       margin-bottom: 10px;
     }
+    .session-tier-price .per-month {
+      font-size: .95rem;
+      font-weight: 400;
+      color: var(--muted);
+    }
     .session-tier-messages {
       font-size: .8rem;
       color: var(--muted);
@@ -1114,8 +1119,8 @@
       <div class="character-grid" id="character-grid" style="display:none;"></div>
 
       <section class="session-pricing" id="session-pricing-panel" aria-labelledby="session-pricing-title">
-        <h2 class="session-pricing-title" id="session-pricing-title">Available Sessions</h2>
-        <p class="session-pricing-note" id="message-credit-policy">Messages included with every show. Unused messages roll over.</p>
+        <h2 class="session-pricing-title" id="session-pricing-title">Founders Day Prices</h2>
+        <p class="session-pricing-note" id="message-credit-policy">First-month pricing — messages included with every show. Unused messages roll over.</p>
         <div class="session-tier-grid">
           <div class="session-tier featured" data-minutes="10" data-free-preview="true">
             <div class="session-tier-time">Free Preview</div>
@@ -1142,6 +1147,24 @@
           <button id="book-show-btn" class="btn-book-show">Book a Private Show</button>
           <p class="book-show-note">Pick a time and a character — check out through Stripe and her webcam goes live for you.</p>
         </div>
+      </section>
+
+      <section class="session-pricing" id="subscription-panel" aria-labelledby="subscription-title">
+        <h2 class="session-pricing-title" id="subscription-title">Founders Subscriptions</h2>
+        <p class="session-pricing-note">Three private shows a month for less than the price of two. Founders lock this in — once the month ends, it's gone.</p>
+        <div class="session-tier-grid">
+          <div class="session-tier" data-sub-stripe="https://buy.stripe.com/9B67sE9qXeRp3Lh4bDdjO0c">
+            <div class="session-tier-time">BOGO Nights</div>
+            <div class="session-tier-price">$9.99<span class="per-month">/mo</span></div>
+            <div class="session-tier-messages">3 × 10-min private shows · 200 messages · billed monthly</div>
+          </div>
+          <div class="session-tier featured" data-sub-stripe="https://buy.stripe.com/bJecMYdHd38H81xfUldjO0d">
+            <div class="session-tier-time">BOGO After Dark</div>
+            <div class="session-tier-price">$19.99<span class="per-month">/mo</span></div>
+            <div class="session-tier-messages">3 × 30-min private shows · 500 messages · billed monthly</div>
+          </div>
+        </div>
+        <p class="book-show-note" id="subscription-status-note" style="display:none; text-align:center;"></p>
       </section>
 
       <section class="my-shows" id="my-shows-section" aria-labelledby="my-shows-title">
@@ -1974,6 +1997,7 @@
         saveSessionState();
         renderAccountStatus();
         renderMessageCredits();
+        renderSubscriptionStatus();
         if (state.view === 'room') {
           renderRoomView();
           startPreviewTimer();
@@ -4639,6 +4663,36 @@
       window.location = url;
     }
 
+    function startSubscriptionCheckout(url) {
+      // Keyhole subscription Payment Link: the khsub_ prefix on
+      // client_reference_id routes the webhook to the subscription lane.
+      try {
+        const me = KeyholeAccount.me && KeyholeAccount.me();
+        const u = new URL(url);
+        if (me && me.user_id) u.searchParams.set('client_reference_id', 'khsub_' + me.user_id);
+        url = u.toString();
+      } catch (_) {}
+      window.location = url;
+    }
+
+    function renderSubscriptionStatus() {
+      const note = document.getElementById('subscription-status-note');
+      if (!note) return;
+      const me = KeyholeAccount.me && KeyholeAccount.me();
+      const sub = me && me.subscription;
+      if (sub && sub.tier) {
+        let text = `You're on ${sub.label || sub.tier} — ${sub.minutes_included} show minutes + ${sub.messages_included} messages every month.`;
+        if (sub.period_end) {
+          const d = new Date(sub.period_end);
+          if (!isNaN(d)) text += ` Renews ${d.toLocaleDateString()}.`;
+        }
+        note.textContent = text;
+        note.style.display = 'block';
+      } else {
+        note.style.display = 'none';
+      }
+    }
+
     function enterPrivateRoom(char, minutes) {
       if (!char) return;
       state.isVerifiedMember = true;
@@ -5211,6 +5265,11 @@
           minutes: card.dataset.minutes || '',
           url: card.dataset.stripe,
         }));
+      });
+      // Subscription cards -> Stripe subscription checkout (khsub_ ref).
+      document.querySelectorAll('.session-tier[data-sub-stripe]').forEach(card => {
+        card.style.cursor = 'pointer';
+        card.addEventListener('click', () => startSubscriptionCheckout(card.dataset.subStripe));
       });
       if (elMemberKeyInput) {
         elMemberKeyInput.addEventListener('keydown', (e) => {
