@@ -3429,8 +3429,10 @@
       el.textContent = m + ':' + String(s).padStart(2, '0') + ' left';
       if (left <= 0) stopShowTimer();
     }
-    /* Preview give: in the last 60s of the free preview, tease the give finale
+    /* Preview give: in the last PREVIEW_GIVE_PCT% of the free preview (same
+       window as the paid show's give finale), tease the give sequence
        with the stage video blurred so nudity stays hidden. Chat keeps working. */
+    const PREVIEW_GIVE_PCT = 33; // matches the paid give window (PR #40)
     let previewGiveActive = false;
     let previewGiveClips = [];
     let previewGiveIdx = 0;
@@ -3477,12 +3479,14 @@
         return;
       }
 
+      // Blurred give tease starts with the last PREVIEW_GIVE_PCT% of the preview.
+      const previewGiveAt = Math.round(CONFIG.defaultPreviewSeconds * PREVIEW_GIVE_PCT / 100);
       timerInterval = setInterval(() => {
         if (state.previewSecondsLeft > 0) {
           state.previewSecondsLeft--;
           saveSessionState();
           updateTimerDisplay();
-          if (state.previewSecondsLeft === 60) startPreviewGive();
+          if (state.previewSecondsLeft <= previewGiveAt) startPreviewGive();
         } else {
           clearInterval(timerInterval);
           onPreviewTimeExpired();
