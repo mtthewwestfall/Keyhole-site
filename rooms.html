@@ -123,6 +123,7 @@
     .view-section {
       display: none;
       min-height: calc(100vh - 65px);
+      min-height: calc(100dvh - 65px);
     }
     .view-section.active {
       display: block;
@@ -458,6 +459,7 @@
       grid-template-columns: 1fr;
       gap: 0;
       min-height: calc(100vh - 65px);
+      min-height: calc(100dvh - 65px);
     }
     @media (min-width: 820px) {
       .room-container {
@@ -888,6 +890,7 @@
 
     .chat-input-wrap {
       padding: 8px 12px;
+      padding-bottom: calc(8px + env(safe-area-inset-bottom));
       background: rgba(0,0,0,0.2);
       border-top: 1px solid var(--line);
       display: flex;
@@ -899,10 +902,10 @@
       background: transparent;
       border: 1px solid #3A3A3C;
       color: #fff;
-      padding: 8px 14px;
+      padding: 12px 16px;
       border-radius: 19px;
       outline: none;
-      font-size: 0.95rem;
+      font-size: 16px;
       font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
     }
     .chat-input::placeholder {
@@ -915,11 +918,11 @@
       background: #007AFF;
       color: #fff;
       border: none;
-      width: 48px;
-      height: 48px;
-      min-width: 48px;
+      width: 56px;
+      height: 56px;
+      min-width: 56px;
       border-radius: 50%;
-      font-size: 1.3rem;
+      font-size: 1.6rem;
       flex-shrink: 0;
       font-weight: 600;
       cursor: pointer;
@@ -928,6 +931,7 @@
       justify-content: center;
       line-height: 1;
     }
+    .btn-send:active { transform: scale(0.92); }
 
     /* Modal Gate */
     .modal-backdrop {
@@ -1197,7 +1201,7 @@
         <div class="chat-messages" id="chat-messages"></div>
 
         <div class="chat-input-wrap">
-          <input type="text" id="chat-input" class="chat-input" placeholder="AI message" maxlength="280" />
+          <input type="text" id="chat-input" class="chat-input" placeholder="AI message" maxlength="280" enterkeyhint="send" />
           <button id="chat-send-btn" class="btn-send" aria-label="Send">&#8593;</button>
         </div>
         <script>
@@ -3640,6 +3644,7 @@
       });
 
       elChatInput.value = '';
+      elChatInput.focus();
       state.userMessageCount++;
       saveSessionState();
       renderChatMessages();
