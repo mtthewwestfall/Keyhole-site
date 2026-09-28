@@ -2053,6 +2053,7 @@
       give_knees_down:  ['branch-give-knees-down'], // G3: lie-back once + 10s still, one-shot opener
       give_action_1:    ['branch-give-crawl'],    // crawl closer (give beat)
       give_action_2:    ['branch-give-lift'],     // slow lift   (give beat)
+      give_remove:      ['branch-give-remove', 'branch-give-remove-b', 'branch-give-remove-c'], // take-offs: 1/show, rotating
       goodbye:          ['branch-give-goodbye'],  // two seated waves, alternate one per show
     };
 
@@ -2064,7 +2065,7 @@
       joint_typing_coffee: 5.04, joint_coffee_typing: 5.04,
       look_a: 5.04, look_b: 5.04, look_hold_a: 8, look_hold_b: 8,
       bridge_coffee_give: 13.9, bridge_typing_give: 11.5,
-      give_main: 25.5, give_knees_down: 12, give_action_1: 5.9, give_action_2: 5.9, goodbye: 5,
+      give_main: 25.5, give_knees_down: 12, give_action_1: 5.9, give_action_2: 5.9, give_remove: 5.9, goodbye: 5,
     };
 
     const branchScheduler = {
@@ -2233,6 +2234,24 @@
         return script;
       },
 
+      /* One take-off per show, rotating across the three takes via a
+         persistent counter. Returns the picked plate file or null. */
+      _pickTakeoff() {
+        try {
+          if (typeof plateEngine === 'undefined' || !plateEngine) return null;
+          const order = ['branch-give-remove', 'branch-give-remove-b', 'branch-give-remove-c'];
+          const files = plateEngine.library.files(BRANCH.character, 'give')
+            .filter(f => f && f.url && !isImagePlate(f.url) && order.indexOf(f.variant) !== -1);
+          if (!files.length) return null;
+          files.sort((a, b) => order.indexOf(a.variant) - order.indexOf(b.variant));
+          let n = 0;
+          try { n = parseInt(localStorage.getItem('keyhole_takeoff_take') || '0', 10) || 0; } catch (_) {}
+          const pick = files[n % files.length];
+          try { localStorage.setItem('keyhole_takeoff_take', String(n + 1)); } catch (_) {}
+          return pick;
+        } catch (_) { return null; }
+      },
+
       _scriptDuration(script) {
         return script.reduce((s, e) => s + (e.kind === 'clip' ? (this.dur[e.role] || 0) : 0), 0);
       },
@@ -2257,14 +2276,25 @@
           console.info('[branch] no bridge for ' + lastState + '->give; hard cut');
         }
 
-        // Give opener: crawl in, take the shirt off, then the seated main.
-        // Played once each, in order — the striptease before the hold.
+        // Give opener: crawl in, lift, then ONE take-off (rotating), hold 5s,
+        // then the seated main. Played once each, in order — the striptease before the hold.
         const openerRoles = ['give_action_1', 'give_action_2'].filter(r => this.clips[r]);
         let openerSec = 0;
         for (const r of openerRoles) {
           script.push({ kind: 'clip', role: r, url: this.clips[r].url,
                         variant: this.clips[r].variant });
           openerSec += this.dur[r] || 6;
+        }
+
+        // Take-off: exactly one per show, rotating across the three takes.
+        // Its opening (shirt rising) reads as the second lift, then the removal.
+        const takeoff = this._pickTakeoff();
+        if (takeoff) {
+          script.push({ kind: 'clip', role: 'give_remove', url: takeoff.url,
+                        variant: takeoff.variant });
+          openerSec += this.dur.give_remove || 6;
+          script.push({ kind: 'action', name: 'takeoff_hold' });
+          openerSec += 5;
         }
 
         // Give body: seated shirtless main on loop (breathing, blinking).
@@ -2371,6 +2401,7 @@
         if (item.kind === 'action') {
           if (item.name === 'lingerie_card') this._lingerieCardAction();
           else if (item.name === 'show_over') this._onShowOver();
+          else if (item.name === 'takeoff_hold') this._takeoffHoldAction();
           else this._advance();
           return;
         }
@@ -2407,6 +2438,16 @@
           return plateEngine.library.files(BRANCH.character, 'give')
             .filter(f => f && f.url && isImagePlate(f.url));
         } catch (_) { return []; }
+      },
+
+      /* Freeze on the take-off's last frame for 5s, then continue the script. */
+      _takeoffHoldAction() {
+        try {
+          const L = this._layers();
+          const cur = L && L[this.vis];
+          if (cur) { try { cur.pause(); } catch (_) {} }
+        } catch (_) {}
+        setTimeout(() => { if (this.active) this._advance(); }, 5000);
       },
 
       _lingerieCardAction() {
