@@ -2082,6 +2082,7 @@
       look_hold_a:      ['branch-look-hold-a'], // breathing zoom hold on her gaze (8s loop)
       look_hold_b:      ['branch-look-hold-b'], // breathing zoom hold on her gaze (8s loop)
       give_main:        ['branch-give-main-v2'],  // G2
+      give_main_alt:    ['branch-give-main'],      // knees-up: alternates with G2 (user pick 2026-09-28)
       give_knees_down:  ['branch-give-knees-down'], // G3: lie-back once + 10s still, one-shot opener
       give_action_1:    ['branch-give-crawl'],    // crawl closer (give beat)
       give_action_2:    ['branch-give-lift'],     // slow lift   (give beat)
@@ -2438,13 +2439,13 @@
         let gt = 0, guard = 0;
         while (gt < giveBodySec && guard++ < 500) {
           const chunk = Math.min(BRANCH.give_action_cadence_s, giveBodySec - gt);
-          gt += this._fill(script, ['give_main'], chunk);
+          gt += this._fill(script, ['give_main', 'give_main_alt'].filter(r => this.clips[r]), chunk);
         }
 
         // Endgame: lingerie card over the give main -> gallery ->
         // alternate knees-up / knees-down seated -> goodbye (if tagged) -> handoff.
         script.push({ kind: 'action', name: 'lingerie_card' });
-        const postRoles = ['give_main', 'give_knees_down'].filter(r => this.clips[r]);
+        const postRoles = ['give_main', 'give_main_alt', 'give_knees_down'].filter(r => this.clips[r]);
         let pt = 0, pg = 0;
         while (pt < 60 && pg++ < 20 && postRoles.length) {
           const r = postRoles[pg % postRoles.length];
@@ -2495,7 +2496,7 @@
         // Endgame mirrors paid: lingerie card (non-blocking) -> short post
         // alternation -> one alternating goodbye -> quiet hold.
         script.push({ kind: 'action', name: 'lingerie_card' });
-        const postRoles = ['give_main', 'give_knees_down'].filter(r => this.clips[r]);
+        const postRoles = ['give_main', 'give_main_alt', 'give_knees_down'].filter(r => this.clips[r]);
         let pt = 0, pg = 0;
         while (pt < 15 && pg++ < 10 && postRoles.length) {
           const r = postRoles[pg % postRoles.length];
