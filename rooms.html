@@ -2237,11 +2237,29 @@
       },
 
       _buildPreviewScript() {
-        // Free bedroom: she is in a web chat, so her typing is the permanent
-        // main. Coffee and folding appear only as event-driven branches
-        // (voice-wait, user-idle lull) -- never in the rotation.
+        // Free bedroom: typing is the main, but coffee and folding rotate in
+        // naturally so she feels like a real person in her room, not one loop.
         const script = [];
-        this._fill(script, ['typing_rest'], 12 * 60);
+        const tidyRoles = ['tidy_f1', 'tidy_f2', 'tidy_f3', 'tidy_f4', 'tidy_f5']
+          .filter(r => this.clips[r]);
+        const coffeeRoles = ['coffee_rest', 'coffee_sip'].filter(r => this.clips[r]);
+        // 12-minute loop: typing blocks with coffee and folding breaks mixed in.
+        let t = 0;
+        const total = 12 * 60;
+        let cycle = 0;
+        while (t < total) {
+          // Typing block (main)
+          t += this._fill(script, ['typing_rest'], 150);
+          if (t >= total) break;
+          // Alternate: coffee break, then folding, then coffee, then folding...
+          if (cycle % 2 === 0 && coffeeRoles.length) {
+            t += this._fill(script, coffeeRoles, 60);
+          } else if (tidyRoles.length) {
+            t += this._fill(script, tidyRoles, 60);
+          }
+          if (t >= total) break;
+          cycle++;
+        }
         return script;
       },
 
