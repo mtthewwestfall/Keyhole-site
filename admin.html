@@ -668,6 +668,10 @@
               <input type="text" id="pub-show-price" class="form-input" value="$4.99" />
             </div>
             <div>
+              <label class="form-label" for="pub-show-duration">Duration (min, max 30)</label>
+              <input type="number" id="pub-show-duration" class="form-input" value="30" min="1" max="30" />
+            </div>
+            <div>
               <label class="form-label" for="pub-show-details">Show Details</label>
               <input type="text" id="pub-show-details" class="form-input" value="Special Live Room Experience" />
             </div>
@@ -2625,11 +2629,14 @@
 
       document.getElementById('btn-create-pub-show').addEventListener('click', async () => {
         try {
+          const durRaw = parseInt(document.getElementById('pub-show-duration').value, 10);
+          const duration = Math.max(1, Math.min(30, isNaN(durRaw) ? 30 : durRaw));
           const d = await api('/admin/keyhole/shows/create-public', { body: {
             character: document.getElementById('pub-show-char').value,
             scheduled_at: document.getElementById('pub-show-time').value,
             price: document.getElementById('pub-show-price').value,
-            details: document.getElementById('pub-show-details').value
+            details: document.getElementById('pub-show-details').value,
+            duration_minutes: duration
           } });
           replaceShow(d.show);
         } catch (e) { alert(`Create show failed: ${e.message}`); }

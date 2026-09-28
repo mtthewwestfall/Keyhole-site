@@ -4681,12 +4681,15 @@
     }
 
     function startGroupTicketCheckout(btn) {
-      let url = btn.dataset.ticketUrl || '';
+      const url = btn.dataset.ticketUrl || '';
       if (!url) {
-        const tiers = privateRoomTiers();
-        url = tiers.length ? tiers[0].url : '';
+        const err = document.getElementById('group-shows-error');
+        if (err) {
+          err.textContent = 'Ticket link is not configured for this show yet — please try again in a moment.';
+          err.style.display = 'block';
+        }
+        return;
       }
-      if (!url) return;
       try {
         const me = KeyholeAccount.me && KeyholeAccount.me();
         const u = new URL(url);
