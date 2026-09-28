@@ -1731,7 +1731,10 @@
 
     function renderShowActions(show) {
       if (show.status === 'READY' || show.status === 'SCHEDULED' || show.status === 'BLOCKED_NO_PLATES') {
-        return `<button class="btn btn-secondary" onclick="startShow('${show.id}')" style="padding:4px 8px; font-size:0.75rem;">Start Show</button>`;
+        const delBtn = show.status === 'SCHEDULED'
+          ? `<button class="btn btn-danger" onclick="deleteShow('${show.id}')" style="padding:4px 8px; font-size:0.75rem; margin-left:4px;">Delete</button>`
+          : '';
+        return `<button class="btn btn-secondary" onclick="startShow('${show.id}')" style="padding:4px 8px; font-size:0.75rem;">Start Show</button>${delBtn}`;
       }
       if (show.status === 'LIVE') {
         return `<button class="btn btn-danger" onclick="endShow('${show.id}')" style="padding:4px 8px; font-size:0.75rem;">End Show</button>`;
@@ -1782,6 +1785,15 @@
         const d = await api(`/admin/keyhole/shows/${encodeURIComponent(id)}/end`, { method: 'POST' });
         replaceShow(d.show);
       } catch (e) { alert(`End failed: ${e.message}`); }
+    }
+
+    async function deleteShow(id) {
+      if (!confirm('Delete this scheduled show? This cannot be undone.')) return;
+      try {
+        await api(`/admin/keyhole/shows/${encodeURIComponent(id)}`, { method: 'DELETE' });
+        showsData = showsData.filter(s => s.id !== id);
+        renderShowsTable();
+      } catch (e) { alert(`Delete failed: ${e.message}`); }
     }
 
     async function approvePreview(id, approved) {
