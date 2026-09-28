@@ -508,6 +508,7 @@
     }
     /* Preview give: blur the stage video only (nudity stays hidden in free preview). */
       .stage-media-wrap.preview-give-blur .stage-video { filter: blur(24px); }
+      #lingerie-gallery.preview-give-blur #lingerie-gallery-img { filter: blur(24px); }
       .stage-video, .stage-fallback-img {
       width: 100%;
       height: 100%;
@@ -2097,8 +2098,10 @@
                              'joint_typing_coffee', 'joint_coffee_typing',
                              'look_a', 'look_b', 'look_hold_a', 'look_hold_b'];
         const needShow = needPreview.concat(['give_knees_down', 'give_main']);
+        const needPreviewGive = ['give_action_1', 'give_action_2', 'give_typing',
+                                 'give_knees_up_sway', 'give_main'];
         // 'goodbye' (branch-goodbye-wave) is optional: the show runs without it until a wave clip is tagged.
-        const need = (mode === 'show') ? needShow : needPreview;
+        const need = (mode === 'show') ? needShow : (mode === 'preview-give' ? needPreviewGive : needPreview);
         for (const role of Object.keys(BRANCH_CLIPS)) {
           const vs = BRANCH_CLIPS[role];
           if (!vs) { c[role] = null; continue; }
@@ -2329,6 +2332,72 @@
         return script;
       },
 
+      /* Blurred preview give: same beats as the paid give (crawl -> lift ->
+         one rotating take-off -> 5s hold -> sway loop with give-typing/waiting
+         takeovers -> gallery -> goodbye), sized to the remaining preview time.
+         The 24px stage blur stays on throughout. */
+      _buildPreviewGiveScript() {
+        const script = [];
+        const totalSec = Math.max(30, Number(state.previewSecondsLeft) || 99);
+        // Opener: crawl in, lift, ONE rotating take-off, 5s hold.
+        let openerSec = 0;
+        for (const r of ['give_action_1', 'give_action_2'].filter(r => this.clips[r])) {
+          script.push({ kind: 'clip', role: r, url: this.clips[r].url,
+                        variant: this.clips[r].variant });
+          openerSec += this.dur[r] || 6;
+        }
+        const takeoff = this._pickTakeoff();
+        if (takeoff) {
+          script.push({ kind: 'clip', role: 'give_remove', url: takeoff.url,
+                        variant: takeoff.variant });
+          openerSec += this.dur.give_remove || 6;
+          script.push({ kind: 'action', name: 'takeoff_hold' });
+          openerSec += 5;
+        }
+        // Give body: knees-up sway on loop. The global voice-wait takeovers
+        // cut to give-typing while her reply generates (inGiveBody is set by
+        // the takeoff hold) and back to the sway while waiting on the user.
+        const tailSec = 30; // gallery card + post alternation + goodbye
+        const bodySec = Math.max(15, totalSec - openerSec - tailSec);
+        let gt = 0, guard = 0;
+        while (gt < bodySec && guard++ < 200) {
+          const chunk = Math.min(BRANCH.give_action_cadence_s, bodySec - gt);
+          gt += this._fill(script, ['give_knees_up_sway'], chunk);
+        }
+        // Endgame mirrors paid: lingerie card (non-blocking) -> short post
+        // alternation -> one alternating goodbye -> quiet hold.
+        script.push({ kind: 'action', name: 'lingerie_card' });
+        const postRoles = ['give_main', 'give_knees_down'].filter(r => this.clips[r]);
+        let pt = 0, pg = 0;
+        while (pt < 15 && pg++ < 10 && postRoles.length) {
+          const r = postRoles[pg % postRoles.length];
+          script.push({ kind: 'clip', role: r, url: this.clips[r].url,
+                        variant: this.clips[r].variant });
+          pt += this.dur[r] || 8;
+        }
+        const gb = this._pickGoodbye();
+        if (gb) {
+          script.push({ kind: 'clip', role: 'goodbye', url: gb.url, variant: gb.variant });
+        }
+        script.push({ kind: 'action', name: 'preview_give_over' });
+        return script;
+      },
+
+      /* End of the blurred preview give: hold the sway until the preview
+         timer expires (stopPreviewGive does the teardown). */
+      _previewGiveOver() {
+        this.inGiveBody = false;
+        this.locked = false;
+        const sway = this.clips && this.clips.give_knees_up_sway;
+        if (sway && this.active && Number(state.previewSecondsLeft) > 0) {
+          this._playClip({ kind: 'clip', role: 'give_knees_up_sway',
+                           url: sway.url, variant: sway.variant },
+                         () => { if (this.active && this.mode === 'preview-give') this._previewGiveOver(); });
+        } else {
+          this.active = false;
+        }
+      },
+
       /* Two goodbye waves alternate, one per show. Falls back to the resolved
          single clip if only one is uploaded. */
       _pickGoodbye() {
@@ -2406,6 +2475,7 @@
           if (item.name === 'lingerie_card') this._lingerieCardAction();
           else if (item.name === 'show_over') this._onShowOver();
           else if (item.name === 'takeoff_hold') this._takeoffHoldAction();
+          else if (item.name === 'preview_give_over') this._previewGiveOver();
           else this._advance();
           return;
         }
@@ -2421,6 +2491,18 @@
       },
 
       _onScriptEnd() {
+        if (this.mode === 'preview-give' && this.active) {
+          // Blurred preview give ran out of script before the timer expired:
+          // hold the knees-up sway until stopPreviewGive().
+          if (this.clips && this.clips.give_knees_up_sway) {
+            this.script.push({ kind: 'clip', role: 'give_knees_up_sway',
+                               url: this.clips.give_knees_up_sway.url,
+                               variant: this.clips.give_knees_up_sway.variant });
+            this._advance();
+            return;
+          }
+          this.active = false; return;
+        }
         if (this.mode === 'preview' && this.active) {
           // Free bedroom: rebuild the typing main and keep going.
           this.script = this._buildPreviewScript();
@@ -2593,7 +2675,8 @@
         this.session = true;
         this._resolveDurations(d => {
           this.dur = d;
-          this.script = (mode === 'show') ? this._buildShowScript() : this._buildPreviewScript();
+          this.script = (mode === 'show') ? this._buildShowScript()
+                    : (mode === 'preview-give' ? this._buildPreviewGiveScript() : this._buildPreviewScript());
           this.idx = -1;
           this.active = true;
           this.locked = false;
@@ -3110,6 +3193,8 @@
         // Don't restart a session that's already running in the right mode
         // (e.g. entitlement syncs re-render the room mid-show).
         if (branchScheduler.session && branchScheduler.mode === mode && branchScheduler.clips) return;
+        // Blurred preview give owns the stage until the timer expires; re-renders must not restart it.
+        if (branchScheduler.session && branchScheduler.mode === 'preview-give' && branchScheduler.clips) return;
         if (branchScheduler.start(plateEngine.character, mode)) return;
       }
 
@@ -3437,6 +3522,20 @@
     function startPreviewGive() {
       if (previewGiveActive) return;
       if (state.showMode !== 'preview' || state.groupShow) return;
+      previewGiveActive = true;
+      const wrap = document.getElementById('stage-media-wrap');
+      if (wrap) wrap.classList.add('preview-give-blur');
+      const gal = document.getElementById('lingerie-gallery');
+      if (gal) gal.classList.add('preview-give-blur');
+      try {
+        // Run the paid give sequence (crawl -> lift -> rotating take-off ->
+        // typing/sway -> gallery -> goodbye) through the branch scheduler in
+        // preview-give mode; the 24px blur stays on throughout.
+        if (typeof branchScheduler !== 'undefined' && typeof plateEngine !== 'undefined' && plateEngine) {
+          if (branchScheduler.start(plateEngine.character, 'preview-give')) return;
+        }
+      } catch (_) {}
+      // Fallback: cycle give clips blurred, as before.
       try {
         const lib = (typeof plateEngine !== 'undefined' && plateEngine && plateEngine.library)
           ? plateEngine.library : null;
@@ -3444,12 +3543,9 @@
           || state.activeCharId || 'chloe';
         const files = lib ? (lib.files(charId, 'give') || []) : [];
         const vids = files.filter(f => f && f.url && !isImagePlate(f.url));
-        if (!vids.length) return;
-        previewGiveActive = true;
+        if (!vids.length) { previewGiveActive = false; return; }
         previewGiveClips = vids;
         previewGiveIdx = 0;
-        const wrap = document.getElementById('stage-media-wrap');
-        if (wrap) wrap.classList.add('preview-give-blur');
         const p = (typeof activePlayer === 'function') ? activePlayer() : null;
         if (p && p.suspendForCut) { try { p.suspendForCut(); } catch (_) {} }
         playNextPreviewGiveClip();
@@ -3468,6 +3564,11 @@
       try {
         const wrap = document.getElementById('stage-media-wrap');
         if (wrap) wrap.classList.remove('preview-give-blur');
+        const gal = document.getElementById('lingerie-gallery');
+        if (gal) gal.classList.remove('preview-give-blur');
+      } catch (_) {}
+      try {
+        if (typeof branchScheduler !== 'undefined' && branchScheduler.mode === 'preview-give') branchScheduler.stop();
       } catch (_) {}
     }
 
@@ -3482,7 +3583,9 @@
           state.previewSecondsLeft--;
           saveSessionState();
           updateTimerDisplay();
-          if (state.previewSecondsLeft === 60) startPreviewGive();
+          // Blurred give runs the last 33% of the preview, mirroring the paid give window.
+          const giveAtSec = Math.round(CONFIG.defaultPreviewSeconds * 33 / 100);
+          if (state.previewSecondsLeft <= giveAtSec) startPreviewGive();
         } else {
           clearInterval(timerInterval);
           onPreviewTimeExpired();
