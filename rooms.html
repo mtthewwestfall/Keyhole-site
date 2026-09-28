@@ -2136,6 +2136,7 @@
       // the reply lands -> message shows -> return_rest plays -> resume.
       // replyFlowActive tells replaceSpeakingIndicator the scheduler owns the video.
       replyTypingPending: false, replyTypingActive: false, replyFlowActive: false,
+      bufferedReply: null,   // reply that landed while she was finishing an activity
 
       /* ---- clip resolution ---- */
       _find(variants, beats) {
@@ -2630,7 +2631,9 @@
       },
 
       /* A reply started generating: hold the stage on the typing loop until
-         the reply lands. The scheduler is suspended; _endReplyTyping resumes. */
+         the reply lands. The scheduler is suspended; _endReplyTyping resumes.
+         If the reply already landed while she was finishing her activity, it
+         sends now that typing is on stage -- never before. */
       _startReplyTyping() {
         try {
           const t = this.clips && this.clips.typing_rest;
@@ -2639,6 +2642,23 @@
           this.replyTypingActive = true;
           hardCutToClip(t.url); // loops by design
         } catch (_) { this.replyTypingActive = false; }
+        this._flushBufferedReply();
+      },
+
+      /* A reply that landed while she was still finishing her activity: send
+         it now that typing has taken the stage. Runs the normal
+         replaceSpeakingIndicator -> endTypingTakeover -> _endReplyTyping chain
+         (return video -> resume). */
+      _flushBufferedReply() {
+        const b = this.bufferedReply;
+        this.bufferedReply = null;
+        if (!b || !b.text) return;
+        try {
+          const ch = (typeof CHARACTERS !== 'undefined' && state.activeCharId)
+            ? CHARACTERS[state.activeCharId] : null;
+          replaceSpeakingIndicator(ch, b.text, { skipLook: true });
+        } catch (_) {}
+        if (b.audio) { try { playChatAudio(b.audio); } catch (_) {} }
       },
 
       /* The reply landed and the message sent: play the return-to resting
@@ -3167,8 +3187,9 @@
        - Paid shows are untouched: the director never starts in show mode. */
     const freeBedroom = {
       session: false, charId: null,
-      state: null,               // 'typing' | 'activity' | 'hold'
+      state: null,               // 'typing' | 'activity' | 'hold' | 'return'
       typingLoops: [], activities: [], holds: [],
+      returnClip: null,          // post-reply resting clip (branch-return-rest)
       lastActVariant: null, holdIdx: 0, typingFlip: false,
       pendingTyping: false,
       _currentAct: null,
@@ -3194,7 +3215,8 @@
         const lookAB = files.filter(f => V(f) === 'branch-look-a' || V(f) === 'branch-look-b');
         let holds = files.filter(f => V(f).indexOf('-still-') !== -1);
         if (!holds.length) holds = files.filter(f => V(f) === 'branch-look-hold-a' || V(f) === 'branch-look-hold-b');
-        return { loops, acts: acts.concat(lookAB), holds };
+        const returnClip = files.find(f => V(f) === 'branch-return-rest') || null;
+        return { loops, acts: acts.concat(lookAB), holds, returnClip };
       },
 
       start(charId) {
@@ -3205,6 +3227,7 @@
         this.typingLoops = p.loops;
         this.activities = p.acts;
         this.holds = p.holds;
+        this.returnClip = p.returnClip;
         this.charId = charId;
         this.session = true;
         this.lastActVariant = null;
@@ -3216,6 +3239,7 @@
       stop() {
         this.session = false; this.charId = null; this.state = null;
         this.typingLoops = []; this.activities = []; this.holds = [];
+        this.returnClip = null;
         this.lastActVariant = null; this.pendingTyping = false;
         this._currentAct = null; this.suspended = null;
         try { elStageVideo.onended = null; elStageVideo.onerror = null; } catch (_) {}
@@ -3286,17 +3310,32 @@
         if (!this.session) return false;
         if (this.suspended) this.suspended = null; // composing outranks a parked branch
         if (this.state === 'typing') return 'typing';
-        if (this.state === 'activity') { this.pendingTyping = true; return 'pending'; }
+        // Never cut her mid-clip: finish the activity (or the return-to clip)
+        // first, then typing.
+        if (this.state === 'activity' || this.state === 'return') { this.pendingTyping = true; return 'pending'; }
         this._toTyping();
         return 'typing';
       },
 
-      /* The reply landed and nothing is still composing: one NEW activity,
-         then she settles back to her smile. */
+      /* The reply landed and nothing is still composing: she settles back to
+         the return-to resting clip, then holds her smile. */
       replyLanded() {
         if (!this.session) return;
         if (this.suspended) this.suspended = null;
-        this._toActivity();
+        const r = this.returnClip;
+        if (r && r.url) {
+          this.state = 'return';
+          this._currentAct = null;
+          const self = this;
+          reportPlatePlay(r.url, r.variant);
+          playOnceThen(r.url, function () {
+            if (!self.session) return;
+            if (self.pendingTyping) { self._toTyping(); return; }
+            self._toHold();
+          });
+        } else {
+          this._toActivity();
+        }
       },
 
       /* A branch moment (reaction clip, idle coffee lull) takes the stage. */
@@ -4579,6 +4618,7 @@
               if (state.showMode === 'show' && bs && bs.session && !inGive) {
                 bs.replyFlowActive = true;
                 bs.replyTypingPending = true;
+                bs.bufferedReply = null; // a newer message discards any held reply
               } else {
                 voiceWaitTakeover();
               }
@@ -4600,6 +4640,17 @@
               res = await Promise.race([req, timeout]);
             } catch (e) { res = null; }
             if (mySeq !== chatVoiceSeq) return; // a newer message took over; drop this one
+            // If she's still finishing her activity (typing hasn't taken the
+            // stage), hold the reply: it sends when typing starts, never before.
+            {
+              const bs = (typeof branchScheduler !== 'undefined') ? branchScheduler : null;
+              if (bs && bs.replyFlowActive && bs.replyTypingPending && !bs.replyTypingActive) {
+                bs.bufferedReply = (res && res.reply)
+                  ? { text: res.reply, audio: res.audio || null }
+                  : { text: cannedResponse(char), audio: null };
+                return;
+              }
+            }
             if (res && res.reply) {
               replaceSpeakingIndicator(char, res.reply, { skipLook: true });
               // Paid show reply-typing flow: replaceSpeakingIndicator hands the
@@ -4623,8 +4674,9 @@
           }
 
           // Preview: text-only AI reply, with a voice upsell every 10th reply.
-          // She visibly types while the reply is being composed.
-          showSpeakingIndicator(char);
+          // She visibly types while the reply is being composed; the message
+          // sends only after she finishes her typing pass.
+          const speakingMsg = showSpeakingIndicator(char);
           let res = null;
           try {
             res = await KeyholeAccount.api('/keyhole/chat-reply', {
@@ -4638,14 +4690,33 @@
                 : 0
             });
           } catch (e) { /* fall through to canned response */ }
+          // Hold the message one typing pass so she visibly finishes typing
+          // before it sends. If a newer message took over meanwhile, drop this.
+          const sendHeld = (text) => {
+            setTimeout(() => {
+              try {
+                const logs = state.chatLogs[state.activeCharId] || [];
+                const li = logs.indexOf(speakingMsg);
+                if (li === -1 || !speakingMsg.speaking) return;
+                const latestSpeaking = [...logs].reverse().find(m => m.speaking);
+                if (latestSpeaking !== speakingMsg) {
+                  logs.splice(li, 1); // superseded: drop this reply's indicator
+                  saveSessionState();
+                  renderChatMessages();
+                  return;
+                }
+              } catch (_) { return; }
+              replaceSpeakingIndicator(char, text);
+              playVoiceForText(state.activeCharId, text);
+            }, 2500);
+          };
           if (res && res.reply) {
             previewReplyCount++;
             let text = res.reply;
             if (previewReplyCount % 10 === 0) text += ' ' + VOICE_UPSELL;
-            replaceSpeakingIndicator(char, text);
-            playVoiceForText(state.activeCharId, text);
+            sendHeld(text);
           } else {
-            replaceSpeakingIndicator(char, cannedResponse(char));
+            sendHeld(cannedResponse(char));
           }
           return;
         } catch (e) {
@@ -4655,6 +4726,7 @@
             if (typeof branchScheduler !== 'undefined' && branchScheduler &&
                 (branchScheduler.replyTypingActive || branchScheduler.replyTypingPending)) {
               branchScheduler.replyTypingPending = false;
+              branchScheduler.bufferedReply = null;
               branchScheduler._endReplyTyping();
             }
           } catch (_) {}
