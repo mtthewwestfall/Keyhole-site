@@ -3187,12 +3187,13 @@
        - Paid shows are untouched: the director never starts in show mode. */
     const freeBedroom = {
       session: false, charId: null,
-      state: null,               // 'typing' | 'activity' | 'hold' | 'return'
-      typingLoops: [], activities: [], holds: [],
-      returnClip: null,          // post-reply resting clip (branch-return-rest)
-      lastActVariant: null, holdIdx: 0, typingFlip: false,
+      state: null,               // 'typing' | 'activity' | 'main'
+      typingLoops: [], activities: [],
+      mainClip: null,            // the main home video (idle-main-home): she lives here
+      lastActVariant: null, typingFlip: false,
       pendingTyping: false,
       _currentAct: null,
+      idleTimer: null,           // while she's on main waiting, one activity drops in at a time
       suspended: null,           // {state, act} snapshot while a branch owns the stage
       locked: false, galleryOpen: false,
 
@@ -3203,45 +3204,49 @@
         } catch (_) { return []; }
       },
 
-      /* Activities: authored idle-main-act-* clips plus every folding clip as its
-         own activity, plus the look-up beats. New uploads with an -act- variant
-         join the rotation with no code change. */
+      /* Main video + activities. Activities are the 15 approved autofill clips
+         (by filename, same list the paid show uses) plus the 5 folding clips.
+         One plays at a time, always returning to the main loop — never chained. */
       _pool() {
         const files = this._lib().filter(f => f && f.url && !isImagePlate(f.url));
         const V = f => String((f && f.variant) || '');
         const loops = files.filter(f => V(f) === 'branch-typing-alt');
+        const main = files.find(f => V(f) === 'idle-main-home') || null;
         const FOLD = ['tidy-f1', 'tidy-f2', 'tidy-f3', 'tidy-f4', 'tidy-f5'];
-        const acts = files.filter(f => V(f).indexOf('-act-') !== -1 || FOLD.indexOf(V(f)) !== -1);
-        const lookAB = files.filter(f => V(f) === 'branch-look-a' || V(f) === 'branch-look-b');
-        let holds = files.filter(f => V(f).indexOf('-still-') !== -1);
-        if (!holds.length) holds = files.filter(f => V(f) === 'branch-look-hold-a' || V(f) === 'branch-look-hold-b');
-        const returnClip = files.find(f => V(f) === 'branch-return-rest') || null;
-        return { loops, acts: acts.concat(lookAB), holds, returnClip };
+        const acts = files.filter(f => {
+          const url = String(f.url || '');
+          if (FOLD.indexOf(V(f)) !== -1) return true;
+          try {
+            return APPROVED_ACTS.some(suf => url.endsWith(suf));
+          } catch (_) { return false; }
+        });
+        return { loops, main, acts };
       },
 
       start(charId) {
         if (state.showMode === 'show' || state.groupShow) return false;
         const p = this._pool();
-        if (!p.loops.length || !p.acts.length) return false;
+        if (!p.loops.length || !p.main) return false;
         this.stop();
         this.typingLoops = p.loops;
+        this.mainClip = p.main;
         this.activities = p.acts;
-        this.holds = p.holds;
-        this.returnClip = p.returnClip;
         this.charId = charId;
         this.session = true;
         this.lastActVariant = null;
         this.pendingTyping = false;
-        this._toHold(); // main idle: she waits on her smile loop until his first message
+        this._toMain(); // main idle: she waits on the main video loop until his first message
         return true;
       },
 
       stop() {
         this.session = false; this.charId = null; this.state = null;
-        this.typingLoops = []; this.activities = []; this.holds = [];
-        this.returnClip = null;
+        this.typingLoops = []; this.activities = [];
+        this.mainClip = null;
         this.lastActVariant = null; this.pendingTyping = false;
         this._currentAct = null; this.suspended = null;
+        try { clearTimeout(this.idleTimer); } catch (_) {}
+        this.idleTimer = null;
         try { elStageVideo.onended = null; elStageVideo.onerror = null; } catch (_) {}
       },
 
@@ -3276,13 +3281,14 @@
       _activityDone(self) {
         if (!self.session || self.state !== 'activity') return; // superseded
         if (self.pendingTyping) { self._toTyping(); return; }
-        self._toHold();
+        self._toMain(); // always back to the main loop — activities never chain
       },
 
       _toActivity() {
         if (!this.session) return;
+        try { clearTimeout(this.idleTimer); } catch (_) {}
         const a = this._pickActivity();
-        if (!a || !a.url) { this._toHold(); return; }
+        if (!a || !a.url) { this._toMain(); return; }
         this.state = 'activity';
         this._currentAct = a;
         reportPlatePlay(a.url, a.variant);
@@ -3290,17 +3296,27 @@
         playOnceThen(a.url, function () { self._activityDone(self); });
       },
 
-      _toHold() {
+      _toMain() {
         if (!this.session) return;
-        this.state = 'hold';
+        this.state = 'main';
         this._currentAct = null;
-        if (this.holds.length) {
-          const h = this.holds[this.holdIdx++ % this.holds.length];
-          if (h && h.url) { reportPlatePlay(h.url, h.variant); hardCutToClip(h.url); return; }
+        const m = this.mainClip;
+        if (m && m.url) {
+          reportPlatePlay(m.url, m.variant);
+          hardCutToClip(m.url); // loops by design
         }
-        // No smile still uploaded yet: freeze on the last frame so the feed
-        // holds on her instead of looping or going black.
-        try { elStageVideo.pause(); } catch (_) {}
+        this._armIdleTimer();
+      },
+
+      /* While she's on the main loop waiting for him, one activity drops in
+         at a time, then it's back to main. Never chains. */
+      _armIdleTimer() {
+        try { clearTimeout(this.idleTimer); } catch (_) {}
+        const self = this;
+        this.idleTimer = setTimeout(function () {
+          if (!self.session || self.state !== 'main' || self.pendingTyping) return;
+          self._toActivity();
+        }, 45000);
       },
 
       /* Composing started. Returns 'typing' (stage is on the typing main now),
@@ -3310,32 +3326,24 @@
         if (!this.session) return false;
         if (this.suspended) this.suspended = null; // composing outranks a parked branch
         if (this.state === 'typing') return 'typing';
-        // Never cut her mid-clip: finish the activity (or the return-to clip)
-        // first, then typing.
-        if (this.state === 'activity' || this.state === 'return') { this.pendingTyping = true; return 'pending'; }
+        // Never cut her mid-clip: finish the activity first, then typing.
+        if (this.state === 'activity') { this.pendingTyping = true; return 'pending'; }
+        try { clearTimeout(this.idleTimer); } catch (_) {}
         this._toTyping();
         return 'typing';
       },
 
-      /* The reply landed and nothing is still composing: she settles back to
-         the return-to resting clip, then holds her smile. */
+      /* The reply landed and nothing is still composing: back to the main loop,
+         then one activity, then main. One per reply — never chained. */
       replyLanded() {
         if (!this.session) return;
         if (this.suspended) this.suspended = null;
-        const r = this.returnClip;
-        if (r && r.url) {
-          this.state = 'return';
-          this._currentAct = null;
-          const self = this;
-          reportPlatePlay(r.url, r.variant);
-          playOnceThen(r.url, function () {
-            if (!self.session) return;
-            if (self.pendingTyping) { self._toTyping(); return; }
-            self._toHold();
-          });
-        } else {
-          this._toActivity();
-        }
+        this._toMain();
+        const self = this;
+        setTimeout(function () {
+          if (!self.session || self.state !== 'main' || self.pendingTyping) return;
+          self._toActivity();
+        }, 8000);
       },
 
       /* A branch moment (reaction clip, idle coffee lull) takes the stage. */
@@ -3349,7 +3357,7 @@
       },
 
       /* Resume restores the beat she was on: the SAME activity replays from its
-         start, or the hold returns. It never advances into a new activity. */
+         start, or the main loop returns. It never advances into a new activity. */
       resume() {
         if (!this.session || !this.suspended) return false;
         const s = this.suspended;
@@ -3362,7 +3370,7 @@
           playOnceThen(s.act.url, function () { self._activityDone(self); });
           return true;
         }
-        this._toHold();
+        this._toMain();
         return true;
       }
     };
