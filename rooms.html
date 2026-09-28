@@ -2054,6 +2054,8 @@
       give_action_1:    ['branch-give-crawl'],    // crawl closer (give beat)
       give_action_2:    ['branch-give-lift'],     // slow lift   (give beat)
       give_remove:      ['branch-give-remove', 'branch-give-remove-b', 'branch-give-remove-c'], // take-offs: 1/show, rotating
+      give_typing:       ['branch-give-typing-main'], // give-typing: 2 takes (#429/#428), alternate while reply generates
+      give_knees_up_sway: ['branch-give-main'], // waiting pose: the give_main take (#368) — upright topless sway
       goodbye:          ['branch-give-goodbye'],  // two seated waves, alternate one per show
     };
 
@@ -2066,12 +2068,14 @@
       look_a: 5.04, look_b: 5.04, look_hold_a: 8, look_hold_b: 8,
       bridge_coffee_give: 13.9, bridge_typing_give: 11.5,
       give_main: 25.5, give_knees_down: 12, give_action_1: 5.9, give_action_2: 5.9, give_remove: 5.9, goodbye: 5,
+      give_typing: 3.5, give_knees_up_sway: 8,
     };
 
     const branchScheduler = {
       clips: null, dur: null, script: [], idx: -1,
       active: false, session: false, mode: 'preview',
       locked: false, galleryOpen: false,
+      inGiveBody: false, // true during the give body loop (typing/waiting takeovers use give variants)
       layers: null, vis: 0, preloader: null, _cardTimer: null,
 
       /* ---- clip resolution ---- */
@@ -2447,13 +2451,16 @@
           const cur = L && L[this.vis];
           if (cur) { try { cur.pause(); } catch (_) {} }
         } catch (_) {}
+        // Give body starts after this hold: typing/waiting takeovers use give variants.
+        this.inGiveBody = true;
         setTimeout(() => { if (this.active) this._advance(); }, 5000);
       },
 
       _lingerieCardAction() {
         const imgs = this._galleryImages();
-        if (!imgs.length) { this._advance(); return; } // no photos: skip straight on
+        if (!imgs.length) { this.inGiveBody = false; this._advance(); return; } // no photos: skip straight on
         this.locked = true; // finale is never interrupted by reaction clips
+        this.inGiveBody = false; // gallery phase: give-typing/waiting takeovers stand down
         const card = document.getElementById('lingerie-card');
         const closeBtn = document.getElementById('lingerie-card-close');
         const cleanup = () => {
@@ -2553,7 +2560,7 @@
       _onShowOver() {
         this.active = false;
         this.locked = false;
-        this.galleryOpen = false;
+        this.galleryOpen = false; this.inGiveBody = false;
         try { stopShowTimer(); } catch (_) {}
         state.showMode = 'preview';
         state.paidUnlocked = false;
@@ -2622,7 +2629,7 @@
         this.session = false;
         this.script = []; this.idx = -1;
         this.clips = null; this.vis = 0;
-        this.locked = false; this.galleryOpen = false;
+        this.locked = false; this.galleryOpen = false; this.inGiveBody = false;
         if (this._cardTimer) { clearTimeout(this._cardTimer); this._cardTimer = null; }
         try {
           const card = document.getElementById('lingerie-card');
@@ -3813,6 +3820,9 @@
     let voiceBranchUrl = null;
     let voiceBranchLeg = null; // 'coffee' | 'folding'
     let voiceBranchFlip = false;
+    let giveTypingUrl = null;   // give-body typing takeover: which take is on stage
+    let giveTypingFlip = false; // alternates the two branch-give-typing-main takes
+    let giveWaitResumeTimer = null; // resumes the give-body script after idle waiting
     let idleBranchUrl = null;
     let idleBranchPhase = null; // 'joint_out' | 'rest'
     let lastUserMsgAt = Date.now();
@@ -3973,15 +3983,54 @@
       return true;
     }
 
+    /* Give-body typing takeover: while her reply generates during the give,
+       cut to the give-typing takes (#429/#428), alternating. Mirrors the
+       pre-give voiceWait pattern but with give variants. */
+    function giveTypingTakeover(p) {
+      if (giveTypingUrl) return true;
+      if (giveWaitResumeTimer) { clearTimeout(giveWaitResumeTimer); giveWaitResumeTimer = null; }
+      try {
+        const files = (plateEngine.library.files(BRANCH.character, 'give') || [])
+          .filter(f => f && f.variant === 'branch-give-typing-main' && f.url);
+        if (!files.length) return false;
+        giveTypingFlip = !giveTypingFlip;
+        const pick = files[giveTypingFlip ? 1 : 0] || files[0];
+        try { p.suspendForCut(); } catch (_) {}
+        giveTypingUrl = pick.url;
+        hardCutToClip(pick.url);
+        return true;
+      } catch (_) { return false; }
+    }
+    /* Waiting on the user during the give: knees-up sway (the give_main take).
+       Falls back to the resolved give_main clip. */
+    function giveWaitingTakeover(p) {
+      try {
+        const url = (p.clips && p.clips.give_knees_up_sway && p.clips.give_knees_up_sway.url)
+          || (p.clips && p.clips.give_main && p.clips.give_main.url);
+        if (!url) return false;
+        try { p.suspendForCut(); } catch (_) {}
+        hardCutToClip(url);
+        // If she keeps waiting with no new message, let the give-body script
+        // resume so the show still advances to the gallery on schedule.
+        if (giveWaitResumeTimer) clearTimeout(giveWaitResumeTimer);
+        giveWaitResumeTimer = setTimeout(() => {
+          giveWaitResumeTimer = null;
+          try { if (p && p.inGiveBody && !giveTypingUrl) p.resume(); } catch (_) {}
+        }, 20000);
+        return true;
+      } catch (_) { return false; }
+    }
     /* Voice-wait branch: folding clothes sometimes, coffee sip sometimes.
        The coffee leg rides the Luma joints both ways; the folding leg cuts. */
     function voiceWaitTakeover() {
-      if (voiceBranchUrl) return true;
+      if (voiceBranchUrl || giveTypingUrl) return true;
       if (!voiceWaitAllowed()) return false;
       if (typeof isTidyingPlaying === 'function' && isTidyingPlaying()) return false;
       endLookBeat();
       const p = activePlayer();
       if (!p) return false;
+      // Give body: while her reply generates, cut to the give-typing takes.
+      if (p.inGiveBody) return giveTypingTakeover(p);
       // If the legacy typing-sync grabbed the stage, let it go quietly.
       if (typeof typingTakeoverUntil !== 'undefined' && typingTakeoverUntil) {
         typingTakeoverUntil = 0;
@@ -4023,6 +4072,19 @@
     /* The reply landed: coffee leg rides the return joint, folding cuts,
        then her gaze beat takes the stage. Returns false when no branch ran. */
     function endVoiceWaitBranch() {
+      // Give-body typing takeover: her reply landed, so she's now waiting on
+      // the user — cut to the knees-up sway (give_main take), then resume.
+      if (giveTypingUrl) {
+        const url = giveTypingUrl;
+        giveTypingUrl = null;
+        const p = (typeof activePlayer === 'function') ? activePlayer() : null;
+        if (p && p.inGiveBody) {
+          if (!stageShows(url)) return true; // stage moved on; don't stomp it
+          giveWaitingTakeover(p);
+          return true;
+        }
+        // Left the give body mid-takeover: fall through to normal handling.
+      }
       if (!voiceBranchUrl) return false;
       const leg = voiceBranchLeg;
       const url = voiceBranchUrl;
