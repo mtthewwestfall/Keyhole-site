@@ -2052,7 +2052,8 @@
       give_main:        ['branch-give-main-v2'],  // G2
       give_knees_down:  ['branch-give-knees-down'], // G3: lie-back once + 10s still, one-shot opener
       give_action_1:    ['branch-give-crawl'],    // crawl closer (give beat)
-      give_action_2:    ['branch-give-lift'],     // slow lift   (give beat)
+      give_action_2:    ['branch-give-lift', 'branch-give-lift-b'], // ONE lift take per show, rotated
+      give_remove:      ['branch-give-remove'],  // shirt-off moment, once per show
       goodbye:          ['branch-give-goodbye'],  // two seated waves, alternate one per show
     };
 
@@ -2064,7 +2065,7 @@
       joint_typing_coffee: 5.04, joint_coffee_typing: 5.04,
       look_a: 5.04, look_b: 5.04, look_hold_a: 8, look_hold_b: 8,
       bridge_coffee_give: 13.9, bridge_typing_give: 11.5,
-      give_main: 25.5, give_knees_down: 12, give_action_1: 5.9, give_action_2: 5.9, goodbye: 5,
+      give_main: 25.5, give_knees_down: 12, give_action_1: 5.9, give_action_2: 5.9, give_remove: 5.9, goodbye: 5,
     };
 
     const branchScheduler = {
@@ -2257,14 +2258,29 @@
           console.info('[branch] no bridge for ' + lastState + '->give; hard cut');
         }
 
-        // Give opener: crawl in, take the shirt off, then the seated main.
+        // Give opener: crawl in, grab the shirt, ONE lift take (rotated per
+        // show), then the shirt comes off with a 5s hold on the last frame.
         // Played once each, in order — the striptease before the hold.
-        const openerRoles = ['give_action_1', 'give_action_2'].filter(r => this.clips[r]);
         let openerSec = 0;
-        for (const r of openerRoles) {
-          script.push({ kind: 'clip', role: r, url: this.clips[r].url,
-                        variant: this.clips[r].variant });
-          openerSec += this.dur[r] || 6;
+        if (this.clips.give_action_1) {
+          const c = this.clips.give_action_1;
+          script.push({ kind: 'clip', role: 'give_action_1', url: c.url, variant: c.variant });
+          openerSec += this.dur.give_action_1 || 6;
+        }
+        const liftTake = this._pickLiftTake();
+        if (liftTake) {
+          // Grab beat: first 1.5s of the chosen lift clip, then the rest of it.
+          script.push({ kind: 'clip', role: 'give_grab', url: liftTake.url,
+                        variant: liftTake.variant, playFor: 1.5 });
+          script.push({ kind: 'clip', role: 'give_action_2', url: liftTake.url,
+                        variant: liftTake.variant, startAt: 1.5 });
+          openerSec += this.dur.give_action_2 || 5.9;
+        }
+        if (this.clips.give_remove) {
+          const c = this.clips.give_remove;
+          script.push({ kind: 'clip', role: 'give_remove', url: c.url,
+                        variant: c.variant, holdLastFrame: 5 });
+          openerSec += (this.dur.give_remove || 5.9) + 5;
         }
 
         // Give body: seated shirtless main on loop (breathing, blinking).
@@ -2293,6 +2309,23 @@
         }
         script.push({ kind: 'action', name: 'show_over' });
         return script;
+      },
+
+      /* One lift take per show, rotating across the two tagged versions.
+         Counter persists in localStorage so private and group shows share
+         the rotation. */
+      _pickLiftTake() {
+        const takes = ['branch-give-lift', 'branch-give-lift-b'];
+        let n = 0;
+        try { n = parseInt(localStorage.getItem('keyhole_lift_take') || '0', 10) || 0; } catch (_) {}
+        const variant = takes[((n % takes.length) + takes.length) % takes.length];
+        try { localStorage.setItem('keyhole_lift_take', String((n + 1) % takes.length)); } catch (_) {}
+        try {
+          const files = plateEngine.library.files(BRANCH.character, 'give') || [];
+          const hit = files.find(f => f && f.variant === variant && f.url && !isImagePlate(f.url));
+          if (hit) return { url: hit.url, variant: hit.variant };
+        } catch (_) {}
+        return this.clips.give_action_2 || null; // fallback: resolved default
       },
 
       /* Two goodbye waves alternate, one per show. Falls back to the resolved
@@ -2338,8 +2371,15 @@
         reportPlatePlay(item.url, item.variant);
         const L = this._layers();
         const incoming = L[1 - this.vis], outgoing = L[this.vis];
+        // holdLastFrame: after the clip ends, keep the last frame up for N
+        // seconds before advancing (post-removal hold).
+        const done = () => {
+          const hold = Number(item.holdLastFrame) || 0;
+          if (hold > 0) setTimeout(() => { if (this.active) onDone(); }, hold * 1000);
+          else onDone();
+        };
         incoming.loop = false;
-        incoming.onerror = () => { onDone(); };
+        incoming.onerror = () => { done(); };
         incoming.onended = null; outgoing.onended = null;
         incoming.style.display = 'block';
         elStageFallbackImg.style.display = 'none';
@@ -2347,6 +2387,9 @@
         const begin = () => {
           if (started || !this.active) return;
           started = true; incoming.oncanplay = null;
+          if (Number(item.startAt) > 0) {
+            try { incoming.currentTime = Number(item.startAt); } catch (_) {}
+          }
           incoming.play().catch(() => {});
           requestAnimationFrame(() => requestAnimationFrame(() => {
             incoming.style.opacity = '1'; outgoing.style.opacity = '0';
@@ -2356,7 +2399,17 @@
             outgoing.pause();
             try { outgoing.removeAttribute('src'); outgoing.load(); } catch (_) {}
             this.vis = 1 - this.vis;
-            incoming.onended = onDone;
+            if (Number(item.playFor) > 0) {
+              // Sub-clip: advance after playFor seconds instead of on ended.
+              setTimeout(() => {
+                if (!this.active) return;
+                incoming.onended = null;
+                try { incoming.pause(); } catch (_) {}
+                done();
+              }, Number(item.playFor) * 1000);
+            } else {
+              incoming.onended = done;
+            }
           }, 160);
         };
         incoming.oncanplay = begin;
