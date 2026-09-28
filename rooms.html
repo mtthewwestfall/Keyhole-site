@@ -2414,13 +2414,13 @@
         } catch (_) { return this.clips.goodbye; }
       },
 
-      /* ---- playback: two-layer hard-cut machinery (multicam illusion) ---- */
+      /* ---- playback: two-layer crossfade machinery ---- */
       _layers() {
         if (!this.layers) {
           this.layers = [elStageVideo, elStageVideoB];
           for (const v of this.layers) {
             if (!v) continue;
-            v.style.transition = 'opacity 0.12s ease';
+            v.style.transition = 'opacity 0.6s ease'; // smooth crossfade between takes
             v.muted = true;
             v.setAttribute('playsinline', '');
           }
@@ -2464,7 +2464,7 @@
             try { outgoing.removeAttribute('src'); outgoing.load(); } catch (_) {}
             this.vis = 1 - this.vis;
             incoming.onended = onDone;
-          }, 160);
+          }, 650); // let the 0.6s crossfade finish before tearing down the outgoing layer
         };
         incoming.oncanplay = begin;
         incoming.src = item.url;
@@ -2751,9 +2751,9 @@
        stream grouped by take: clips that are variants of the same source
        (same `variant` tag) play back-to-back so they feel like one continuous
        shot, then the stream moves to the next take. Every clip plays once per
-       cycle, no take repeats adjacently across the cycle boundary, and every
-       cut is a hard cut between two stacked video layers -- like a multicam
-       webcam switching angles, no dip to black, no dissolve. A blinking
+       cycle, no take repeats adjacently across the cycle boundary, and takes
+       dissolve smoothly into each other with a gentle 0.6s crossfade between
+       the two stacked video layers. A blinking
        CAM 01 tag with a running timestamp and subtle animated sensor grain
        sit over the picture to sell the single-live-camera illusion.
        Reaction clips pause the stream; it resumes where it left off. */
@@ -2772,7 +2772,7 @@
           this.layers = [elStageVideo, elStageVideoB];
           for (const v of this.layers) {
             if (!v) continue;
-            v.style.transition = 'opacity 0.12s ease'; // multicam hard cut, not a dissolve
+            v.style.transition = 'opacity 0.6s ease'; // smooth crossfade between takes
             v.muted = true;
             v.setAttribute('playsinline', '');
           }
@@ -2833,8 +2833,8 @@
         const L = this._layers();
         const incoming = L[1 - this.vis];
         const outgoing = L[this.vis];
-        // Hard cut between clips, like a multicam webcam switching angles.
-        // Dissolves read as edited video; instant cuts read as live.
+        // Smooth crossfade between clips: the incoming take dissolves in over
+        // the outgoing one instead of cutting hard.
         incoming.loop = false;
         incoming.onerror = () => { this._advance(); };
         incoming.onended = null;
@@ -2857,7 +2857,7 @@
             try { outgoing.removeAttribute('src'); outgoing.load(); } catch (_) {}
             this.vis = 1 - this.vis;
             incoming.onended = () => { this._advance(); };
-          }, 160);
+          }, 650); // let the 0.6s crossfade finish before tearing down the outgoing layer
         };
         incoming.oncanplay = begin;
         incoming.src = clip.url;
@@ -3928,6 +3928,7 @@
     let voiceBranchUrl = null;
     let voiceBranchLeg = null; // 'coffee' | 'folding'
     let voiceBranchFlip = false;
+    let foldExitPending = false; // a voice-wait fold is finishing its pass; the exit owns the stage
     let giveTypingUrl = null;   // give-body typing takeover: which take is on stage
     let giveTypingFlip = false; // alternates the two branch-give-typing-main takes
     let giveWaitResumeTimer = null; // resumes the give-body script after idle waiting
@@ -4132,6 +4133,7 @@
        The coffee leg rides the Luma joints both ways; the folding leg cuts. */
     function voiceWaitTakeover() {
       if (voiceBranchUrl || giveTypingUrl) return true;
+      if (foldExitPending) return true; // fold finishing its pass; the exit owns the stage
       if (!voiceWaitAllowed()) return false;
       if (typeof isTidyingPlaying === 'function' && isTidyingPlaying()) return false;
       endLookBeat();
@@ -4177,9 +4179,11 @@
       hardCutToClip(url);
       return true;
     }
-    /* The reply landed: coffee leg rides the return joint, folding cuts,
-       then her gaze beat takes the stage. Returns false when no branch ran. */
+    /* The reply landed: coffee leg rides the return joint, the folding leg
+       finishes its current pass before handing off, then her gaze beat takes
+       the stage. Returns false when no branch ran. */
     function endVoiceWaitBranch() {
+      if (foldExitPending) return true; // a fold is finishing its pass; don't stomp it
       // Give-body typing takeover: her reply landed, so she's now waiting on
       // the user — cut to the knees-up sway (give_main take), then resume.
       if (giveTypingUrl) {
@@ -4199,6 +4203,28 @@
       voiceBranchUrl = null;
       voiceBranchLeg = null;
       if (!stageShows(url)) return true; // stage moved on; don't stomp it
+      if (leg === 'folding') {
+        // Never cut her mid-fold: finish the current pass, then hand off.
+        foldExitPending = true;
+        const vid = elStageVideo;
+        vid.loop = false;
+        const finish = () => {
+          if (!foldExitPending) return; // already exited
+          foldExitPending = false;
+          vid.onended = null;
+          finishVoiceBranchExit(leg);
+        };
+        vid.onended = finish;
+        setTimeout(finish, 15000); // failsafe: fold clips are ~7s; never hang here
+        return true;
+      }
+      finishVoiceBranchExit(leg);
+      return true;
+    }
+
+    /* Shared voice-branch exit: return joint for the coffee leg, then the gaze
+       beat (or resume the scheduler in a paid show). */
+    function finishVoiceBranchExit(leg) {
       try { elStageVideo.pause(); } catch (_) {}
       const p = (typeof activePlayer === 'function') ? activePlayer() : null;
       const j = (leg === 'coffee' && p) ? findBranchClipUrl(p, 'joint_coffee_typing') : null;
