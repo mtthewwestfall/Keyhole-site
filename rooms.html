@@ -506,7 +506,9 @@
       background: #000;
       overflow: hidden;
     }
-    .stage-video, .stage-fallback-img {
+    /* Preview give: blur the stage video only (nudity stays hidden in free preview). */
+      .stage-media-wrap.preview-give-blur .stage-video { filter: blur(24px); }
+      .stage-video, .stage-fallback-img {
       width: 100%;
       height: 100%;
       object-fit: contain;
@@ -1113,7 +1115,7 @@
           <div class="session-tier featured" data-minutes="10" data-free-preview="true">
             <div class="session-tier-time">Free Preview</div>
             <div class="session-tier-price">FREE</div>
-            <div class="session-tier-messages">10 minutes · messages included · one per account</div>
+            <div class="session-tier-messages">5 minutes · messages included · one per account</div>
           </div>
           <div class="session-tier" data-minutes="10" data-package="intro" data-once="intro" data-stripe="https://buy.stripe.com/9B69AM0Ur38HchN0ZrdjO0a">
             <div class="session-tier-time">10 minutes</div>
@@ -1458,9 +1460,9 @@
     };
 
     const CONFIG = {
-      defaultPreviewSeconds: 600,
+      defaultPreviewSeconds: 300,
       invitationMessageThreshold: 3,
-      freePreviewMinutes: 10,
+      freePreviewMinutes: 5,
       verifiedPreviewMessages: 50,
       purchaseMessageGrant: 100
     };
@@ -3379,6 +3381,48 @@
       el.textContent = m + ':' + String(s).padStart(2, '0') + ' left';
       if (left <= 0) stopShowTimer();
     }
+    /* Preview give: in the last 60s of the free preview, tease the give finale
+       with the stage video blurred so nudity stays hidden. Chat keeps working. */
+    let previewGiveActive = false;
+    let previewGiveClips = [];
+    let previewGiveIdx = 0;
+    function startPreviewGive() {
+      if (previewGiveActive) return;
+      if (state.showMode !== 'preview' || state.groupShow) return;
+      try {
+        const lib = (typeof plateEngine !== 'undefined' && plateEngine && plateEngine.library)
+          ? plateEngine.library : null;
+        const charId = (typeof plateEngine !== 'undefined' && plateEngine && plateEngine.character)
+          || state.activeCharId || 'chloe';
+        const files = lib ? (lib.files(charId, 'give') || []) : [];
+        const vids = files.filter(f => f && f.url && !isImagePlate(f.url));
+        if (!vids.length) return;
+        previewGiveActive = true;
+        previewGiveClips = vids;
+        previewGiveIdx = 0;
+        const wrap = document.getElementById('stage-media-wrap');
+        if (wrap) wrap.classList.add('preview-give-blur');
+        const p = (typeof activePlayer === 'function') ? activePlayer() : null;
+        if (p && p.suspendForCut) { try { p.suspendForCut(); } catch (_) {} }
+        playNextPreviewGiveClip();
+      } catch (_) { previewGiveActive = false; }
+    }
+    function playNextPreviewGiveClip() {
+      if (!previewGiveActive || !previewGiveClips.length) return;
+      const clip = previewGiveClips[previewGiveIdx % previewGiveClips.length];
+      previewGiveIdx++;
+      try { playOnceThen(clip.url, playNextPreviewGiveClip); }
+      catch (_) { previewGiveActive = false; }
+    }
+    function stopPreviewGive() {
+      previewGiveActive = false;
+      previewGiveClips = [];
+      try {
+        const wrap = document.getElementById('stage-media-wrap');
+        if (wrap) wrap.classList.remove('preview-give-blur');
+      } catch (_) {}
+    }
+
     function startPreviewTimer() {
       if (timerInterval) clearInterval(timerInterval);
       if (state.roomMode === 'bedroom' || state.isVerifiedMember) {
@@ -3390,6 +3434,7 @@
           state.previewSecondsLeft--;
           saveSessionState();
           updateTimerDisplay();
+          if (state.previewSecondsLeft === 60) startPreviewGive();
         } else {
           clearInterval(timerInterval);
           onPreviewTimeExpired();
@@ -3402,6 +3447,7 @@
     }
 
     function onPreviewTimeExpired() {
+      stopPreviewGive();
       const char = CHARACTERS[state.activeCharId];
       if (!char) return;
 
