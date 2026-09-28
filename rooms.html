@@ -2060,6 +2060,7 @@
       tidy_f3:          ['tidy-f3'],              // F4 folding (4.50s, also in free rotation)
       tidy_f4:          ['tidy-f4'],              // F5 folding (6.21s, also in free rotation)
       tidy_f5:          ['tidy-f5'],              // F7 hanging (5.54s, also in free rotation)
+      return_rest:      ['branch-return-rest'],  // post-reply resting clip (11s, show-only)
       waiting_1:        ['branch-waiting'],       // waiting 1 (7.25s)
       waiting_2:        ['branch-waiting'],       // waiting 2 (7.25s)
       waiting_3:        ['branch-waiting'],       // waiting 3 (7.25s)
@@ -2090,7 +2091,7 @@
       goodbye:          ['branch-give-goodbye'],  // two seated waves, alternate one per show
     };
 
-    /* The approved autofill activity clips (#443-456, 2026-09-28). Matched by
+    /* The approved autofill activity clips (#443-456 + #458, 2026-09-28). Matched by
        file so older same-variant takes (#423-427) stay out of the paid show.
        New uploads keep working in the free room via the -act- variant match;
        add their filenames here to include them in paid shows too. */
@@ -2109,6 +2110,7 @@
       'chloe_e29224a69d9b8483.mp4', // secret whisper (#454)
       'chloe_cf36372b31ad8399.mp4', // yawn (#455)
       'chloe_4e7fb93e53370b6a.mp4', // water sip (#456)
+      'chloe_526ff559f269109a.mp4', // phone selfie (#458)
     ];
 
     /* Fallback durations (seconds) until real metadata resolves. */
@@ -2129,6 +2131,11 @@
       locked: false, galleryOpen: false,
       inGiveBody: false, // true during the give body loop (typing/waiting takeovers use give variants)
       layers: null, vis: 0, preloader: null, _cardTimer: null,
+      // Reply-typing flow (paid shows): a reply starts -> replyTypingPending;
+      // the current clip finishes -> cut to the typing loop (replyTypingActive);
+      // the reply lands -> message shows -> return_rest plays -> resume.
+      // replyFlowActive tells replaceSpeakingIndicator the scheduler owns the video.
+      replyTypingPending: false, replyTypingActive: false, replyFlowActive: false,
 
       /* ---- clip resolution ---- */
       _find(variants, beats) {
@@ -2172,6 +2179,16 @@
             const role = 'act_' + i;
             c[role] = { url: f.url, variant: f.variant };
             this.actRoles.push(role);
+          });
+          // The 5 tidying clips join the same pool: paid shows shuffle all
+          // 19 (14 approved acts + 5 folding) as one activity rotation,
+          // no separate midpoint tidying slot.
+          ['tidy_f1', 'tidy_f2', 'tidy_f3', 'tidy_f4', 'tidy_f5'].forEach(tr => {
+            if (c[tr] && c[tr].url) {
+              const role = 'act_' + this.actRoles.length;
+              c[role] = { url: c[tr].url, variant: c[tr].variant };
+              this.actRoles.push(role);
+            }
           });
         } catch (_) {}
         if (missing.length) {
@@ -2276,9 +2293,12 @@
           let s;
           if (!tidyDone && t >= tidyAt) { s = 'tidying'; tidyDone = true; }
           else {
+            // Typing is reply-only now: she never types as scheduled filler.
+            // Pre-give rotates coffee -> activities; a reply cuts to typing
+            // via replyTypingPending (current clip finishes first, never cut).
             const order = (this.actRoles && this.actRoles.length)
-              ? ['typing', 'coffee', 'activities']
-              : ['typing', 'coffee'];
+              ? ['coffee', 'activities']
+              : ['coffee'];
             s = order[turn % order.length]; turn++;
           }
           const hold = Math.min(this._holdFor(s), pregiveSec - t);
@@ -2375,9 +2395,8 @@
                          : BRANCH.show_length_min) * 60;
         const giveSec = showSec * BRANCH.give_pct / 100;
         const pregiveSec = showSec - giveSec;
-        const includeTidy = ['tidy_f1', 'tidy_f2', 'tidy_f3', 'tidy_f4', 'tidy_f5']
-          .some(r => !!this.clips[r]);
-        const seq = this._stateSequence(pregiveSec, includeTidy);
+        // Tidying lives inside the activities pool now — no separate midpoint slot.
+        const seq = this._stateSequence(pregiveSec, false);
         const script = this._buildSeqScript(seq, false);
 
         // Give bridge in from whichever state is active.
@@ -2598,8 +2617,47 @@
 
       _advance() {
         if (!this.active) return;
+        // Reply-typing takeover: the current clip finished without being cut,
+        // so now she cuts to typing until the reply is ready. Never fires in
+        // the give finale (the give has its own typing takes).
+        if (this.replyTypingPending && !this.locked && !this.galleryOpen && !this.inGiveBody) {
+          this.replyTypingPending = false;
+          this._startReplyTyping();
+          return;
+        }
         this.idx++;
         this._playCurrent();
+      },
+
+      /* A reply started generating: hold the stage on the typing loop until
+         the reply lands. The scheduler is suspended; _endReplyTyping resumes. */
+      _startReplyTyping() {
+        try {
+          const t = this.clips && this.clips.typing_rest;
+          if (!t || !t.url) return;
+          this.suspendForCut();
+          this.replyTypingActive = true;
+          hardCutToClip(t.url); // loops by design
+        } catch (_) { this.replyTypingActive = false; }
+      },
+
+      /* The reply landed and the message sent: play the return-to resting
+         clip once, then resume the show where it left off. Never stalls. */
+      _endReplyTyping() {
+        const wasActive = this.replyTypingActive;
+        this.replyTypingPending = false;
+        this.replyTypingActive = false;
+        // Typing never took the stage (reply beat the clip end, or the give
+        // owned the video): the scheduler is already running, touch nothing.
+        if (!wasActive) return;
+        try {
+          const r = this.clips && this.clips.return_rest;
+          if (r && r.url) {
+            playOnceThen(r.url, () => { try { this.resume(); } catch (_) {} });
+          } else {
+            this.resume();
+          }
+        } catch (_) { try { this.resume(); } catch (_) {} }
       },
 
       _onScriptEnd() {
@@ -3828,7 +3886,8 @@
         const p = (typeof activePlayer === 'function') ? activePlayer() : null;
         if (!p || !p.script || p.idx < 0 || p.idx >= p.script.length) return false;
         const item = p.script[p.idx];
-        return item && item.role && item.role.indexOf('tidy_') === 0;
+        // Tidy clips now play as act_N roles in the merged pool — match by variant.
+        return item && String(item.variant || '').indexOf('tidy') !== -1;
       } catch (_) { return false; }
     }
 
@@ -3967,6 +4026,18 @@
       const stillTyping = logs.some(m => m.speaking);
       if (!stillTyping) {
         endTypingTakeover();
+        // Paid show reply-typing flow: the scheduler owns the video — the
+        // message is already shown above; play the return-to clip, then resume.
+        // Skips the action-match cut and the gaze beat (the return video is
+        // the post-reply beat now).
+        {
+          const bs = (typeof branchScheduler !== 'undefined') ? branchScheduler : null;
+          if (bs && bs.replyFlowActive) {
+            bs.replyFlowActive = false;
+            try { bs._endReplyTyping(); } catch (_) {}
+            return;
+          }
+        }
         // Paid show: if her reply described a physical action, show it.
         // Otherwise she looks up at the camera and holds his gaze until he
         // replies. Voice path skips this and chains via endVoiceWaitBranch.
@@ -4498,7 +4569,20 @@
             // While the voice generates she does something with her hands:
             // folding clothes sometimes, coffee sip sometimes.
             showSpeakingIndicator(char);
-            voiceWaitTakeover();
+            // Paid show (pre-give): she finishes the current clip, then types
+            // until the reply is ready — no folding/coffee voice-wait branch.
+            // The give body keeps its own typing takes via voiceWaitTakeover.
+            // Preview keeps the folding/coffee branch.
+            {
+              const bs = (typeof branchScheduler !== 'undefined') ? branchScheduler : null;
+              const inGive = !!(bs && bs.session && bs.inGiveBody);
+              if (state.showMode === 'show' && bs && bs.session && !inGive) {
+                bs.replyFlowActive = true;
+                bs.replyTypingPending = true;
+              } else {
+                voiceWaitTakeover();
+              }
+            }
             const mySeq = ++chatVoiceSeq;
             let res = null;
             try {
@@ -4518,11 +4602,22 @@
             if (mySeq !== chatVoiceSeq) return; // a newer message took over; drop this one
             if (res && res.reply) {
               replaceSpeakingIndicator(char, res.reply, { skipLook: true });
-              if (!endVoiceWaitBranch()) startLookBeat(); // no branch ran; still do the gaze beat
+              // Paid show reply-typing flow: replaceSpeakingIndicator hands the
+              // video to the scheduler (return video -> resume). Otherwise the
+              // voice-wait branch exits and the gaze beat runs as before.
+              {
+                const bs = (typeof branchScheduler !== 'undefined') ? branchScheduler : null;
+                const showFlow = !!(bs && bs.session && !bs.inGiveBody && state.showMode === 'show' && !bs.replyFlowActive);
+                if (!showFlow && !endVoiceWaitBranch()) startLookBeat();
+              }
               if (res.audio) playChatAudio(res.audio);
             } else {
               replaceSpeakingIndicator(char, cannedResponse(char), { skipLook: true });
-              if (!endVoiceWaitBranch()) startLookBeat();
+              {
+                const bs = (typeof branchScheduler !== 'undefined') ? branchScheduler : null;
+                const showFlow = !!(bs && bs.session && !bs.inGiveBody && state.showMode === 'show' && !bs.replyFlowActive);
+                if (!showFlow && !endVoiceWaitBranch()) startLookBeat();
+              }
             }
             return;
           }
@@ -4556,6 +4651,13 @@
         } catch (e) {
           // Safety net: never leave her stuck typing (or on a branch clip).
           try { endVoiceWaitBranch(); } catch (_) {}
+          try {
+            if (typeof branchScheduler !== 'undefined' && branchScheduler &&
+                (branchScheduler.replyTypingActive || branchScheduler.replyTypingPending)) {
+              branchScheduler.replyTypingPending = false;
+              branchScheduler._endReplyTyping();
+            }
+          } catch (_) {}
           try { replaceSpeakingIndicator(char, cannedResponse(char)); } catch (_) {}
           return;
         }
