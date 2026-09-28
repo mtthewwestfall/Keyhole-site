@@ -2024,7 +2024,7 @@
     };
 
     /* Role -> variant key(s) in the plate library. Arrays = priority order.
-       null = intentionally unbuilt bridge (hard cut + console note, never stalls). */
+       null = intentionally unbuilt bridge (smooth crossfade + console note, never stalls). */
     const BRANCH_CLIPS = {
       coffee_rest:      ['branch-coffee-rest'],    // C1 seamless loop (2.5s)
       coffee_sip:       ['branch-coffee-sip'],     // C2 trimmed sip (4.79s)
@@ -2229,7 +2229,7 @@
               script.push({ kind: 'clip', role: bRole, url: this.clips[bRole].url,
                             variant: this.clips[bRole].variant });
             } else {
-              console.info('[branch] no bridge for ' + state + '->' + next.state + '; hard cut');
+              console.info('[branch] no bridge for ' + state + '->' + next.state + '; smooth crossfade');
             }
           }
         }
@@ -2284,7 +2284,7 @@
           script.push({ kind: 'clip', role: gbRole, url: this.clips[gbRole].url,
                         variant: this.clips[gbRole].variant });
         } else {
-          console.info('[branch] no bridge for ' + lastState + '->give; hard cut');
+          console.info('[branch] no bridge for ' + lastState + '->give; smooth crossfade');
         }
 
         // Give opener: crawl in, lift, then ONE take-off (rotating), hold 5s,
@@ -3369,17 +3369,12 @@
       // Never interrupt the give finale (card, gallery, wave).
       if (p && (p.locked || p.galleryOpen)) return;
       if (p) p.suspendForCut();
-      elStageVideo.src = clipUrl;
-      elStageVideo.style.display = 'block';
-      elStageFallbackImg.style.display = 'none';
-      elStageVideo.loop = false;
-      elStageVideo.play().catch(() => {});
-
-      elStageVideo.onended = () => {
+      // Smooth dip swap instead of an instant src cut.
+      smoothSwapToClip(clipUrl, false, () => {
         const p2 = activePlayer();
         if (p2 && p2.resume && p2.resume()) return;
         setupStageMedia(mediaGroup);
-      };
+      });
     }
 
     /* ---------------- Voice presets: she talks over the footage ----------------
@@ -3882,13 +3877,8 @@
       } catch (_) { /* fall through */ }
       if (!hit || !hit.url) return;
       idleStream.suspendForCut();
-      elStageVideo.loop = true;
-      elStageVideo.onended = null;
-      elStageVideo.style.display = 'block';
-      elStageVideo.style.opacity = '1';
-      elStageFallbackImg.style.display = 'none';
-      elStageVideo.src = hit.url;
-      elStageVideo.play().catch(() => {});
+      // Smooth dip swap instead of an instant src cut.
+      smoothSwapToClip(hit.url, true, null);
       typingOnStage = true;
       try { renderChatMessages(); } catch (_) {}
       typingTakeoverUntil = Date.now() + 45000; // safety: never stuck on typing
@@ -3965,33 +3955,62 @@
       return null;
     }
 
+    /* Smooth single-layer stage swap: 0.3s dip to black, swap src, fade back
+       in. Used everywhere a one-shot or looped clip takes the stage outside
+       the two-layer players (voice branches, gaze beat, preview give, idle
+       branches, reaction cuts, group-show stream) — no more hard snap cuts.
+       A generation counter supersedes stale swaps so rapid back-to-back calls
+       can't tear down a newer clip mid-dip. */
+    let stageSwapGen = 0;
+    function smoothSwapToClip(url, loop, onDone) {
+      const gen = ++stageSwapGen;
+      const v = elStageVideo;
+      try {
+        v.style.transition = 'opacity 0.3s ease';
+        v.style.opacity = '0';
+      } catch (_) {}
+      setTimeout(() => {
+        if (gen !== stageSwapGen) return; // superseded by a newer swap
+        try {
+          v.onended = null; v.onerror = null; v.oncanplay = null;
+          v.loop = !!loop;
+          v.style.display = 'block';
+          elStageFallbackImg.style.display = 'none';
+          const show = () => {
+            if (gen !== stageSwapGen) return;
+            try {
+              v.play().catch(() => {});
+              requestAnimationFrame(() => requestAnimationFrame(() => {
+                if (gen !== stageSwapGen) return;
+                v.style.opacity = '1';
+              }));
+            } catch (_) {}
+          };
+          if (onDone) {
+            const done = () => {
+              if (gen !== stageSwapGen) return;
+              v.onended = null; v.onerror = null;
+              try { onDone(); } catch (_) {}
+            };
+            v.onended = done;
+            v.onerror = done;
+          }
+          v.src = url;
+          if (v.readyState >= 2) show();
+          else v.oncanplay = () => { v.oncanplay = null; show(); };
+          setTimeout(() => { try { v.style.transition = ''; } catch (_) {} }, 700);
+        } catch (_) {}
+      }, 320);
+    }
+
+    /* Kept names for call-site compatibility — both are smooth dips now, not cuts. */
     function hardCutToClip(url) {
-      elStageVideo.loop = true;
-      elStageVideo.onended = null;
-      elStageVideo.style.display = 'block';
-      elStageVideo.style.opacity = '1';
-      elStageFallbackImg.style.display = 'none';
-      elStageVideo.src = url;
-      elStageVideo.play().catch(() => {});
+      smoothSwapToClip(url, true, null);
     }
 
     /* Play a clip once, then run next. Never stalls: a load error advances too. */
     function playOnceThen(url, next) {
-      elStageVideo.loop = false;
-      elStageVideo.onended = null;
-      elStageVideo.onerror = null;
-      elStageVideo.style.display = 'block';
-      elStageVideo.style.opacity = '1';
-      elStageFallbackImg.style.display = 'none';
-      elStageVideo.src = url;
-      const done = () => {
-        elStageVideo.onended = null;
-        elStageVideo.onerror = null;
-        try { if (next) next(); } catch (_) {}
-      };
-      elStageVideo.onended = done;
-      elStageVideo.onerror = done;
-      elStageVideo.play().catch(() => {});
+      smoothSwapToClip(url, false, next || null);
     }
 
     /* elStageVideo.src reads back absolute; clip urls are relative. */
@@ -4701,12 +4720,8 @@
         if (res && (res.action === 'plate' || res.action === 'generated')) {
           reportPlatePlay(res.url, res.variant);
           if (typeof idleStream !== 'undefined') idleStream.suspendForCut();
-          elStageVideo.src = res.url;
-          elStageVideo.style.display = 'block';
-          elStageFallbackImg.style.display = 'none';
-          elStageVideo.loop = false;
-          elStageVideo.play().catch(() => {});
-          elStageVideo.onended = () => { if (state.groupShow) playNextGroupShowClip(); };
+          // Smooth dip swap between give clips instead of an instant src cut.
+          smoothSwapToClip(res.url, false, () => { if (state.groupShow) playNextGroupShowClip(); });
           return;
         }
       } catch (_) {}
