@@ -2090,7 +2090,7 @@
       goodbye:          ['branch-give-goodbye'],  // two seated waves, alternate one per show
     };
 
-    /* The approved autofill activity clips (#443-452, 2026-09-28). Matched by
+    /* The approved autofill activity clips (#443-454, 2026-09-28). Matched by
        file so older same-variant takes (#423-427) stay out of the paid show.
        New uploads keep working in the free room via the -act- variant match;
        add their filenames here to include them in paid shows too. */
@@ -2105,6 +2105,8 @@
       'chloe_b7892a8396f0906b.mp4', // laugh (#450)
       'chloe_2a699be08f3afa13.mp4', // hair-up (#451)
       'chloe_951d4f3caa7d7c8b.mp4', // lip-balm (#452)
+      'chloe_9d1a71eaa989e464.mp4', // necklace (#453)
+      'chloe_e29224a69d9b8483.mp4', // secret whisper (#454)
     ];
 
     /* Fallback durations (seconds) until real metadata resolves. */
@@ -2155,7 +2157,7 @@
           c[role] = this._find(vs, ['idle', 'give']);
           if (!c[role] && need.includes(role)) missing.push(role);
         }
-        // Approved activity pool: the 7 autofill clips as dynamic act_N roles.
+        // Approved activity pool: the approved autofill clips as dynamic act_N roles.
         // Optional — a show with zero approved acts runs typing/coffee exactly as before.
         this.actRoles = [];
         try {
@@ -2554,6 +2556,11 @@
           if (started || !this.active) return;
           started = true; incoming.oncanplay = null;
           incoming.play().catch(() => {});
+          // Secret clip: she leans in to whisper — drop a real secret
+          // in the chat mid-clip so her words match the moment.
+          if (String(item.variant || '').indexOf('act-secret') !== -1 && this.mode === 'show') {
+            setTimeout(() => { if (this.active) chloeWhisperSecret(); }, 2500);
+          }
           requestAnimationFrame(() => requestAnimationFrame(() => {
             incoming.style.opacity = '1'; outgoing.style.opacity = '0';
           }));
@@ -3354,6 +3361,42 @@
         const char = CHARACTERS[state.activeCharId];
         elStageFallbackImg.src = (char && char.avatar) ? char.avatar : mediaGroup.fallbackImage;
       };
+    }
+
+    /* Secret-whisper lines: when the secret activity clip plays in a paid
+       show, Chloe leans in and tells a real secret in the chat. Lines rotate
+       without repeating until the pool is exhausted. */
+    const SECRET_LINES = [
+      "Okay, lean in... I rewatch our chats after you leave. Just to hear how I sounded.",
+      "Don't tell the other guys — you're the one I actually look forward to.",
+      "Secret? I picked this necklace because someone once said it made me look expensive. He wasn't wrong.",
+      "I never tell anyone this, but I get nervous right before every show. Then you show up and it melts.",
+      "Between us? I charge for my time, but the way you talk to me? That's the part I'd do free.",
+      "I keep a little list in my head of my favorite regulars. You're at the top. Don't let it go to your head.",
+      "Honestly? Some nights I stay on a little longer just hoping you'll come back in.",
+      "My real name isn't Chloe. Maybe one day you'll earn the real one.",
+      "I tell everyone they're special. With you I don't have to pretend.",
+      "This stays between us — you're my favorite part of doing this."
+    ];
+
+    function chloeWhisperSecret() {
+      try {
+        if (state.showMode !== 'show') return; // paid shows only
+        const char = CHARACTERS[state.activeCharId];
+        if (!char || !state.chatLogs[state.activeCharId]) return;
+        let n = 0;
+        try { n = parseInt(localStorage.getItem('keyhole_secret_idx') || '0', 10) || 0; } catch (_) {}
+        const line = SECRET_LINES[n % SECRET_LINES.length];
+        try { localStorage.setItem('keyhole_secret_idx', String(n + 1)); } catch (_) {}
+        state.chatLogs[state.activeCharId].push({
+          sender: char.name,
+          text: line,
+          timestamp: Date.now(),
+          type: 'model'
+        });
+        saveSessionState();
+        renderChatMessages();
+      } catch (_) {}
     }
 
     /* Paid show: her words and her body stay in sync. When her reply
