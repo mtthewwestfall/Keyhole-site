@@ -1113,6 +1113,23 @@
           </div>
           <div class="door-label">Bailey</div>
         </div>
+
+        <!-- Door 3: Companion AI (opens the companion app, not a webcam room) -->
+        <div class="door-card" data-id="companion" id="door-companion">
+          <div class="door-image-wrap">
+            <div class="door-marquee" aria-label="Companion AI" style="animation-duration: 38s;">
+              <img src="assets/chloe-1.jpg" alt="Companion AI" />
+              <img src="assets/chloe-2.jpg" alt="Companion AI" />
+              <img src="assets/chloe-3.jpg" alt="Companion AI" />
+              <img src="assets/chloe-4.jpg" alt="Companion AI" />
+              <img src="assets/chloe-1.jpg" alt="" aria-hidden="true" />
+              <img src="assets/chloe-2.jpg" alt="" aria-hidden="true" />
+              <img src="assets/chloe-3.jpg" alt="" aria-hidden="true" />
+              <img src="assets/chloe-4.jpg" alt="" aria-hidden="true" />
+            </div>
+          </div>
+          <div class="door-label">Companion AI <span class="badge">APP</span></div>
+        </div>
       </div>
 
       <!-- Hidden grid container for full compatibility with tests & background characters -->
@@ -1733,6 +1750,10 @@
     })();
 
     /* UI ELEMENTS */
+    // Companion AI lives in its own app — this door opens it in a new tab.
+    // Set to the companion app's live URL when it ships; while empty the
+    // door is inert (no dead link).
+    const COMPANION_APP_URL = "https://chloe-companion-production.up.railway.app";
     const elSelectionView = document.getElementById('selection-view');
     const elRoomView = document.getElementById('room-view');
     const elCharacterGrid = document.getElementById('character-grid');
@@ -1828,6 +1849,7 @@
       // Two doors listeners
       const doorChloe = document.getElementById('door-chloe');
       const doorBailey = document.getElementById('door-bailey');
+      const doorCompanion = document.getElementById('door-companion');
 
       if (doorChloe) {
         doorChloe.onclick = () => {
@@ -1837,6 +1859,11 @@
       if (doorBailey) {
         doorBailey.onclick = () => {
           selectDoor('bailey');
+        };
+      }
+      if (doorCompanion) {
+        doorCompanion.onclick = () => {
+          if (COMPANION_APP_URL) window.open(COMPANION_APP_URL, '_blank', 'noopener');
         };
       }
     }
