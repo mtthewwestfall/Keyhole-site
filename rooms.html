@@ -1214,6 +1214,7 @@
           <span class="badge badge-live" id="stage-status-badge">LIVE FEED</span>
           <button id="group-shows-btn" class="btn-decline" style="margin-left:8px;">Group Shows</button>
           <button id="leave-group-show-btn" class="btn-decline" style="margin-left:8px; display:none;">Leave show</button>
+          <button id="back-to-lounge-btn" class="btn-decline" style="margin-left:8px; display:none;">Back to lounge</button>
         </div>
 
         <div class="stage-media-wrap" id="stage-media-wrap">
@@ -1947,6 +1948,8 @@
 
       const elLeaveGroupBtn = document.getElementById('leave-group-show-btn');
       if (elLeaveGroupBtn && !state.groupShow) elLeaveGroupBtn.style.display = 'none';
+      const elLoungeBtn = document.getElementById('back-to-lounge-btn');
+      if (elLoungeBtn) elLoungeBtn.style.display = (state.showMode === 'show' && !state.groupShow) ? '' : 'none';
       if (state.groupShow) {
         elNavBadge.textContent = 'Group Show • LIVE';
         elNavBadge.className = 'badge badge-live';
@@ -5165,6 +5168,15 @@
       }
     }
 
+    /* Back to lounge: leave a private show and return to the rooms lobby. */
+    function backToLounge() {
+      state.showMode = 'preview';
+      state.paidUnlocked = false;
+      state.showStartedAt = 0;
+      state.showMinutes = 0;
+      showSelectionView();
+    }
+
     function leaveGroupShow() {
       state.groupShow = null;
       state.showMode = 'preview';
@@ -5508,6 +5520,7 @@
       document.getElementById('group-shows-btn').addEventListener('click', openGroupShowsModal);
       document.getElementById('group-shows-close-btn').addEventListener('click', closeGroupShowsModal);
       document.getElementById('leave-group-show-btn').addEventListener('click', leaveGroupShow);
+      document.getElementById('back-to-lounge-btn').addEventListener('click', backToLounge);
       document.getElementById('group-shows-list').addEventListener('click', (e) => {
         const btn = e.target.closest('button[data-act]');
         if (!btn || btn.disabled) return;
