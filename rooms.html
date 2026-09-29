@@ -4996,6 +4996,20 @@
       document.getElementById('group-shows-modal').classList.remove('active');
     }
 
+    function fmtShowTime(iso) {
+      try {
+        const d = new Date(iso);
+        if (isNaN(d.getTime())) return String(iso);
+        const now = new Date();
+        const sameDay = d.toDateString() === now.toDateString();
+        const tomorrow = new Date(now.getTime() + 864e5).toDateString() === d.toDateString();
+        const time = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+        if (sameDay) return 'Today at ' + time;
+        if (tomorrow) return 'Tomorrow at ' + time;
+        return d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }) + ' at ' + time;
+      } catch (_) { return String(iso); }
+    }
+
     async function renderGroupShows() {
       const list = document.getElementById('group-shows-list');
       const err = document.getElementById('group-shows-error');
@@ -5029,7 +5043,7 @@
         const card = document.createElement('div');
         card.className = 'booking-package-card';
         const price = sh.price ? String(sh.price) : '';
-        const when = sh.scheduled_at ? String(sh.scheduled_at) : '';
+        const when = sh.scheduled_at ? fmtShowTime(sh.scheduled_at) : '';
         const isLive = sh.status === 'LIVE';
         const hasTicket = !!held[sh.show_id];
         const isPending = pending && pending.showId === sh.show_id;
