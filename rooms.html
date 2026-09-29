@@ -1867,6 +1867,76 @@
           if (COMPANION_APP_URL) window.open(COMPANION_APP_URL, '_blank', 'noopener');
         };
       }
+      // Keyhole Characters (admin console): doors come from the backend.
+      loadCharacterDoors();
+    }
+
+    // Keyhole Characters: render door cards from GET /keyhole/characters
+    // (kh_site flag). The Companion APP tile is separate and stays put.
+    // Falls back to the hardcoded doors if the fetch fails.
+    async function loadCharacterDoors() {
+      let chars = [];
+      try {
+        const res = await fetch('/keyhole/characters', { cache: 'no-store' });
+        if (res.ok) chars = ((await res.json()).characters || []).filter(c => c.kh_site);
+      } catch (e) { return; }
+      if (!chars.length) return;
+      const grid = document.getElementById('doors-grid');
+      const companionTile = document.getElementById('door-companion');
+      if (!grid) return;
+      grid.querySelectorAll('.door-card[data-id]').forEach(d => {
+        if (d.id !== 'door-companion') d.remove();
+      });
+      chars.forEach((c, i) => {
+        if (!CHARACTERS[c.girl]) {
+          const av = c.avatar_url || 'assets/chloe-1.jpg';
+          const nm0 = c.name || c.girl;
+          CHARACTERS[c.girl] = {
+            id: c.girl, name: nm0, title: c.door_title || '',
+            vibe: c.door_title || '', bio: c.blurb || '',
+            avatar: av, styleSheet: av,
+            roomReferences: { primaryWebcamView: av },
+            livingRoomMedia: { idleVideo: '', reactionVideos: [], fallbackImage: av, roomImage: av },
+            bedroomMedia: { idleVideo: '', reactionVideos: [], fallbackImage: av, roomImage: av },
+            dialogue: {
+              greeting: "Hey, I'm " + nm0 + ". Glad you're here.",
+              freePreviewResponses: ["Tell me what you're thinking right now.",
+                "I was hoping you'd turn the key.", "It's nice to have company tonight."],
+              bedroomInvitation: "Want to unlock my private shows? Just you and me in here.",
+              acceptResponse: "I'll see you inside.",
+              declineResponse: "We can stay right here.",
+              freeTimeEnding: "Preview time is complete. Sign in or unlock access to continue."
+            }
+          };
+        }
+        const avatar = CHARACTERS[c.girl].avatar || 'assets/chloe-1.jpg';
+        const nm = String(c.name || c.girl).replace(/</g, '&lt;');
+        const card = document.createElement('div');
+        card.className = 'door-card';
+        card.dataset.id = c.girl;
+        card.id = 'door-' + c.girl;
+        card.innerHTML =
+          '<div class="door-image-wrap">' +
+            '<div class="door-marquee" aria-label="' + nm + ' photos" style="animation-duration:' + (28 + (i % 5) * 4) + 's;">' +
+              '<img src="' + avatar + '" alt="' + nm + '" />' +
+              '<img src="' + avatar + '" alt="" aria-hidden="true" />' +
+            '</div>' +
+          '</div>' +
+          '<div class="door-label">' + nm + '</div>';
+        card.onclick = () => selectDoor(c.girl);
+        if (companionTile) grid.insertBefore(card, companionTile);
+        else grid.appendChild(card);
+      });
+      if (elCharacterGrid) {
+        elCharacterGrid.innerHTML = '';
+        Object.values(CHARACTERS).forEach(char => {
+          const card = document.createElement('div');
+          card.className = 'character-card';
+          card.dataset.id = char.id;
+          card.innerHTML = `<button class="btn-enter-room" data-id="${char.id}">${char.name}</button>`;
+          elCharacterGrid.appendChild(card);
+        });
+      }
     }
 
     function selectDoor(charId) {
