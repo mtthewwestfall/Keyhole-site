@@ -2267,6 +2267,7 @@
       // replyFlowActive tells replaceSpeakingIndicator the scheduler owns the video.
       replyTypingPending: false, replyTypingActive: false, replyFlowActive: false,
       bufferedReply: null,   // reply that landed while she was finishing an activity
+      _suspendedAt: 0,       // wall-clock timestamp when the current suspension began (0 = not suspended)
 
       /* ---- clip resolution ---- */
       _find(variants, beats) {
@@ -2941,10 +2942,20 @@
          show instead of rewinding to where it was frozen. */
       _skipAheadByGalleryTime() {
         if (!this._galleryOpenedAt) return;
-        let remaining = (Date.now() - this._galleryOpenedAt) / 1000;
+        const sec = (Date.now() - this._galleryOpenedAt) / 1000;
         this._galleryOpenedAt = 0;
-        if (!(remaining > 0) || !this.active) return;
-        // Start from the next item: don't double-count the partially-played clip.
+        this._skipScriptAhead(sec);
+      },
+
+      /* Walk the script forward by `sec` seconds of wall-clock show time that
+         elapsed while the scheduler was suspended (gallery browsing, reply
+         typing, reaction clips). Starts from the next item so the
+         partially-played clip isn't double-counted, and lands on the first
+         item not fully consumed by the skipped time. If the skip runs past
+         the end, _playCurrent triggers the script's show_over action. */
+      _skipScriptAhead(sec) {
+        if (!(sec > 0) || !this.active) return;
+        let remaining = sec;
         let i = this.idx + 1;
         while (remaining > 0 && i < this.script.length) {
           const it = this.script[i];
@@ -2954,7 +2965,6 @@
           remaining -= d;
           i++;
         }
-        // Land _playCurrent on the first item not fully consumed by gallery time.
         this.idx = Math.min(i, this.script.length - 1);
       },
 
@@ -2967,7 +2977,6 @@
         state.showMode = 'preview';
         state.paidUnlocked = false;
         state.groupShow = null;
-        try { stopGroupShowStream(); } catch (_) {}
         const card = document.getElementById('lingerie-card');
         if (card) card.style.display = 'none';
         const gal = document.getElementById('lingerie-gallery');
@@ -2986,7 +2995,6 @@
       start(charId, mode) {
         if (!BRANCH.enabled || charId !== BRANCH.character) return false;
         if (typeof plateEngine === 'undefined' || !plateEngine) return false;
-        try { stopGroupShowStream(); } catch (_) {}
         const clips = this._resolve(mode);
         if (!clips) return false; // incomplete -> idleStream fallback
         if (typeof idleStream !== 'undefined') idleStream.stop();
@@ -3010,6 +3018,13 @@
       /* Reaction clips pause the scheduler; it resumes where it left off. */
       suspendForCut() {
         this.active = false;
+        // Wall-clock sync: remember when the suspension started so resume()
+        // can skip the script ahead by the suspended seconds. Paid shows run
+        // on wall-clock — suspended time counts against the show, same as
+        // gallery browsing — so the give finale still lands in the last 33%
+        // no matter how chatty the room gets. First suspend wins; nested
+        // suspends must not shrink the window.
+        if (!this._suspendedAt) this._suspendedAt = Date.now();
         const L = this._layers();
         for (const v of L) { if (v) { v.onended = null; v.oncanplay = null; } }
         const b = L[1];
@@ -3022,8 +3037,17 @@
       resume() {
         if (!this.session || !this.clips || !this.script.length || this.idx < 0) return false;
         this.active = true;
-        // Replay the current item, don't skip ahead. If we were mid-folding
-        // cycle, we stay in the cycle instead of jumping to main.
+        // Paid shows run on wall-clock: skip the script ahead by the seconds
+        // it spent suspended (reply typing, reaction clips, look beats) so the
+        // show — and its give finale — stays on schedule. Preview modes keep
+        // the old behavior and replay the current item.
+        if (this.mode === 'show' && this._suspendedAt) {
+          const sec = (Date.now() - this._suspendedAt) / 1000;
+          this._suspendedAt = 0;
+          this._skipScriptAhead(sec);
+        } else {
+          this._suspendedAt = 0;
+        }
         this._playCurrent();
         return true;
       },
@@ -3034,6 +3058,7 @@
         this.script = []; this.idx = -1;
         this.clips = null; this.vis = 0;
         this.locked = false; this.galleryOpen = false; this.inGiveBody = false;
+        this._suspendedAt = 0; // never carry a stale suspension into the next session
         if (this._cardTimer) { clearTimeout(this._cardTimer); this._cardTimer = null; }
         try {
           const card = document.getElementById('lingerie-card');
@@ -3547,19 +3572,18 @@
         }
       }
 
-      // Branch scheduler first (Chloe): private shows get the full scripted
-      // show, the free bedroom gets the clothed rotation. Group shows get the
-      // group activity stream (full shuffled pool, no give finale) — never the
-      // private scripted show. Falls back to idleStream.
+      // Branch scheduler first (Chloe): paid shows — private AND group — get
+      // the full scripted show with the give finale in the last 33% of
+      // wall-clock; the free bedroom gets the clothed rotation. Group shows
+      // are $4.99 a head with multiple viewers, and they get the give too.
+      // Falls back to idleStream.
       if (typeof branchScheduler !== 'undefined' && plateEngine) {
         if (state.groupShow) {
-          // Group owns the stage: stop anything the preview was running so two
-          // directors can't fight over the video element.
+          // Group joins from the preview: stop its directors so two can't
+          // fight over the video element, then fall through to the paid path.
           try { if (typeof idleStream !== 'undefined') idleStream.stop(); } catch (_) {}
           try { if (typeof freeBedroom !== 'undefined') freeBedroom.stop(); } catch (_) {}
           try { branchScheduler.stop(); } catch (_) {}
-          startGroupShowStream();
-          return;
         }
         const mode = (state.showMode === 'show') ? 'show' : 'preview';
         // Don't restart a session that's already running in the right mode
@@ -3668,7 +3692,9 @@
     // True when the paid show is inside its give window (last give_pct%).
     function inGiveWindow() {
       try {
-        if (state.showMode !== 'show' || state.groupShow) return false;
+        // Paid shows only — private and group alike. Group shows ($4.99 a
+        // head, multiple viewers) get the give finale too.
+        if (state.showMode !== 'show') return false;
         if (!state.showStartedAt || !state.showMinutes) return false;
         const elapsed = Date.now() - state.showStartedAt;
         const total = Number(state.showMinutes) * 60 * 1000;
@@ -3778,7 +3804,6 @@
       smoothSwapToClip(clipUrl, false, () => {
         const p2 = activePlayer();
         if (p2 && p2.resume && p2.resume()) return;
-        if (state.groupShow) { restartGroupShowStream(); return; }
         setupStageMedia(mediaGroup);
       });
     }
@@ -5135,9 +5160,6 @@
     /* GROUP SHOWS: list, ticket purchase, join live. Payment verification is the
        only gate — tickets are claimed from a verified Stripe payment, no passwords. */
     const PENDING_TICKET_KEY = 'kh_pending_ticket';
-    let groupShowClipTimer = null;
-    let groupStreamActive = false; // true while the group activity stream owns the stage
-    let groupActQueue = [];        // shuffled full-pool cycle: every activity once, then reshuffle
 
     function getHeldTickets() {
       try { return JSON.parse(localStorage.getItem('kh_tickets') || '{}'); }
@@ -5257,81 +5279,6 @@
       }
     }
 
-    /* Group-show stage pool: the FULL approved activity pool — the same clips
-       the paid show rotates (approved acts + the 5 folding clips). Identified
-       from the code, not hardcoded: APPROVED_ACTS filenames on the idle beat
-       plus the tidy roles, mirroring branchScheduler._resolve's actRoles.
-       Give-dedicated clips (branch-give-*) are excluded: they play only
-       inside the give flow, never in the general rotation. */
-    function groupActivityPool() {
-      const pool = [];
-      try {
-        if (typeof plateEngine === 'undefined' || !plateEngine || !plateEngine.library) return pool;
-        if (typeof BRANCH === 'undefined' || !BRANCH.character) return pool;
-        const files = plateEngine.library.files(BRANCH.character, 'idle') || [];
-        const acts = files.filter(f => f && f.url && !isImagePlate(f.url) &&
-          String(f.variant || '').indexOf('-act-') !== -1 &&
-          String(f.variant || '').indexOf('branch-give-') !== 0 &&
-          APPROVED_ACTS.some(suf => String(f.url).endsWith(suf)));
-        acts.sort((a, b) => String(a.variant).localeCompare(String(b.variant)));
-        acts.forEach(f => pool.push({ url: f.url, variant: f.variant }));
-        // The 5 folding clips join the same pool, mirroring the paid rotation.
-        ['tidy_f1', 'tidy_f2', 'tidy_f3', 'tidy_f4', 'tidy_f5'].forEach(tr => {
-          try {
-            const vs = (typeof BRANCH_CLIPS !== 'undefined') ? BRANCH_CLIPS[tr] : null;
-            const hit = (vs && typeof branchScheduler !== 'undefined' && branchScheduler._find)
-              ? branchScheduler._find(vs, ['idle', 'give']) : null;
-            if (hit && hit.url) pool.push(hit);
-          } catch (_) {}
-        });
-      } catch (_) {}
-      return pool;
-    }
-
-    function groupRefillQueue() {
-      const pool = groupActivityPool();
-      for (let i = pool.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        const t = pool[i]; pool[i] = pool[j]; pool[j] = t;
-      }
-      groupActQueue = pool;
-    }
-
-    /* Group-show stage: every activity clip plays exactly once per cycle in
-       shuffled order — no repeats until the whole pool is exhausted, then it
-       reshuffles. Never the explicit give library, and never the same couple
-       of clips on repeat. */
-    async function playNextGroupShowClip() {
-      if (!state.groupShow) return;
-      try {
-        if (!groupActQueue.length) groupRefillQueue();
-        const next = groupActQueue.shift();
-        if (next && next.url) {
-          reportPlatePlay(next.url, next.variant);
-          if (typeof idleStream !== 'undefined') idleStream.suspendForCut();
-          // Smooth dip swap between activity clips instead of an instant src cut.
-          smoothSwapToClip(next.url, false, () => { if (state.groupShow) playNextGroupShowClip(); });
-          return;
-        }
-      } catch (_) {}
-      // Pool empty or a swap failed: retry shortly rather than stalling the stage.
-      groupShowClipTimer = setTimeout(() => { if (state.groupShow) playNextGroupShowClip(); }, 3000);
-    }
-    function startGroupShowStream() {
-      if (groupStreamActive && state.groupShow) return; // already running: don't restart the clip
-      restartGroupShowStream();
-    }
-    function restartGroupShowStream() {
-      stopGroupShowStream();
-      groupStreamActive = true;
-      playNextGroupShowClip();
-    }
-    function stopGroupShowStream() {
-      groupStreamActive = false;
-      groupActQueue = [];
-      if (groupShowClipTimer) { clearTimeout(groupShowClipTimer); groupShowClipTimer = null; }
-    }
-
     async function joinGroupShow(showId, btn) {
       if (btn) { btn.disabled = true; btn.textContent = 'Joining…'; }
       const err = document.getElementById('group-shows-error');
@@ -5369,7 +5316,7 @@
       state.paidUnlocked = false;
       state.showStartedAt = 0;
       state.showMinutes = 0;
-      stopGroupShowStream();
+      try { branchScheduler.stop(); } catch (_) {}
       appendSystemMessage('You left the group show — back to the bedroom feed.');
       renderRoomView();
     }
