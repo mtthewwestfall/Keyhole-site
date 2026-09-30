@@ -320,6 +320,90 @@ body {
     padding: 36px 24px;
   }
 }
+/* ---- Cross-promo ad cards (companion + shows) ---- */
+.ads {
+  position: relative;
+  z-index: 5;
+  width: min(1100px, 94vw);
+  margin: 0 auto;
+  padding: 64px 0 80px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 28px;
+}
+.ad-card {
+  background: var(--panel-bg);
+  border: 1px solid var(--border-line);
+  border-radius: 18px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.ad-card img {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  display: block;
+}
+.ad-body { padding: 26px 26px 30px; display: flex; flex-direction: column; gap: 14px; flex: 1; }
+.ad-kicker {
+  font-size: 0.7rem;
+  letter-spacing: 0.28em;
+  color: var(--gold);
+  text-transform: uppercase;
+}
+.ad-body h2 {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1.7rem;
+  color: var(--warm-white);
+  font-weight: 500;
+}
+.ad-tag { color: var(--muted-stone); font-size: 0.95rem; line-height: 1.55; }
+.ad-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.ad-list li {
+  color: var(--muted-stone);
+  font-size: 0.9rem;
+  padding-left: 22px;
+  position: relative;
+  line-height: 1.5;
+}
+.ad-list li::before {
+  content: "✦";
+  position: absolute;
+  left: 0;
+  color: var(--gold);
+  font-size: 0.75rem;
+  top: 2px;
+}
+.ad-price { color: var(--warm-white); font-size: 0.95rem; }
+.ad-price strong { color: var(--gold); font-weight: 600; }
+.ad-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.ad-chips a {
+  font-size: 0.78rem;
+  color: var(--cream);
+  border: 1px solid var(--border-line);
+  border-radius: 999px;
+  padding: 7px 14px;
+  text-decoration: none;
+  transition: border-color 0.2s, color 0.2s;
+}
+.ad-chips a:hover { border-color: var(--gold); color: var(--gold); }
+.ad-cta {
+  margin-top: auto;
+  padding-top: 8px;
+  display: block;
+  text-align: center;
+  background: var(--gold);
+  color: #12100E;
+  font-weight: 700;
+  font-size: 0.95rem;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+  border-radius: 12px;
+  padding: 14px 20px;
+  transition: filter 0.2s;
+}
+.ad-cta:hover { filter: brightness(1.08); }
 </style>
 </head>
 <body>
@@ -339,6 +423,51 @@ body {
   <p class="hero-sub-title">Private sessions. Two rooms. Sign in to enter.</p>
   <p class="hero-companion">Miss me already? <a href="https://companion.lockeddoor.ai" target="_blank" rel="noopener">Take me home with you</a> — I remember everything, and I&rsquo;ll text you first. $0.99 for 100 messages.</p>
 </main>
+
+<section class="ads" id="more-chloe" aria-label="More ways to spend time with Chloe">
+  <article class="ad-card">
+    <img src="assets/chloe-companion.jpg" alt="Chloe in her room, smiling" loading="lazy">
+    <div class="ad-body">
+      <div class="ad-kicker">The app</div>
+      <h2>Take Chloe Home</h2>
+      <p class="ad-tag">She remembers everything, and she texts you first.</p>
+      <ul class="ad-list">
+        <li>Remembers your name and the little things you tell her</li>
+        <li>Texts first — checks in when you go quiet</li>
+        <li>Voice notes that sound like her</li>
+      </ul>
+      <p class="ad-price"><strong>$0.99</strong> — 100 messages to try her</p>
+      <div class="ad-chips">
+        <a href="https://companion.lockeddoor.ai" target="_blank" rel="noopener">$0.99 trial</a>
+        <a href="https://companion.lockeddoor.ai" target="_blank" rel="noopener">$9.99/mo</a>
+        <a href="https://companion.lockeddoor.ai" target="_blank" rel="noopener">$19.99/mo</a>
+        <a href="https://companion.lockeddoor.ai" target="_blank" rel="noopener">$29.99/mo</a>
+      </div>
+      <a class="ad-cta" href="https://companion.lockeddoor.ai" target="_blank" rel="noopener">Take her home</a>
+    </div>
+  </article>
+  <article class="ad-card">
+    <img src="assets/chloe-1.jpg" alt="Chloe on her webcam" loading="lazy">
+    <div class="ad-body">
+      <div class="ad-kicker">Live on this site</div>
+      <h2>Watch Her Live</h2>
+      <p class="ad-tag">Private webcam shows, right here on Keyhole.</p>
+      <ul class="ad-list">
+        <li>Free 5-minute preview to start</li>
+        <li>Private one-on-one sessions</li>
+        <li>Group shows every Friday</li>
+      </ul>
+      <p class="ad-price">Shows from <strong>$5.99</strong></p>
+      <div class="ad-chips">
+        <a href="rooms.html">Free preview</a>
+        <a href="rooms.html">10 min · $5.99</a>
+        <a href="rooms.html">15 min · $7.99</a>
+        <a href="rooms.html">30 min · $11.99</a>
+      </div>
+      <a class="ad-cta" href="rooms.html">Enter the rooms</a>
+    </div>
+  </article>
+</section>
 
 <aside class="slide-panel-overlay" id="auth-panel" aria-label="Sign in or Create Account">
   <button class="panel-close-btn" id="panel-close-btn" aria-label="Close panel">&times;</button>
